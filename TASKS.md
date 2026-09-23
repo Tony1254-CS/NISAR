@@ -252,7 +252,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Phase 8 — Hydrograph & compare (§27 row P8 — the signature interaction)
 
-- [ ] **P8.1** `hydrograph/Hydrograph.tsx` — stage curve, danger line, acquisition ticks, rain strip slot.
+- [x] **P8.1** `hydrograph/Hydrograph.tsx` — stage curve, danger line, acquisition ticks, rain strip slot.
   - Test: tick count equals `reach.json` ok-date count (E2E assertion reused later in P12).
   - Depends: P6.5, P5.6
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 50 / 63 tasks · Phase in progress: Phase 8 · Next task: P8.1`
+`Completed: 51 / 63 tasks · Phase in progress: Phase 8 · Next task: P8.2`
