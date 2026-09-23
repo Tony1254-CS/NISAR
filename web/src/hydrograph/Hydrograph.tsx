@@ -1,5 +1,7 @@
 import React, { useMemo } from 'react';
-import * as d3 from 'd3';
+import { scaleTime, scaleLinear } from 'd3-scale';
+import { line } from 'd3-shape';
+import { extent, min, max } from 'd3-array';
 import { useStore } from '../state/store';
 
 export function Hydrograph({ width = 800, height = 150 }) {
@@ -19,24 +21,24 @@ export function Hydrograph({ width = 800, height = 150 }) {
   if (series.length === 0) return null;
 
   const xScale = useMemo(() => {
-    return d3.scaleTime()
-      .domain(d3.extent(series, d => tParse(d.t)) as [Date, Date])
+    return scaleTime()
+      .domain(extent(series, d => tParse(d.t)) as [Date, Date])
       .range([0, innerWidth]);
   }, [series, innerWidth]);
 
   const yScale = useMemo(() => {
-    const minH = d3.min(series, d => d.h) || 0;
-    let maxH = d3.max(series, d => d.h) || 10;
+    const minH = min(series, d => d.h) || 0;
+    let maxH = max(series, d => d.h) || 10;
     if (stage.station?.danger_level_m && stage.station.danger_level_m > maxH) {
       maxH = stage.station.danger_level_m;
     }
-    return d3.scaleLinear()
+    return scaleLinear()
       .domain([Math.max(0, minH - 1), maxH + 1])
       .range([innerHeight, 0]);
   }, [series, stage.station, innerHeight]);
 
   const linePath = useMemo(() => {
-    return d3.line<{ t: string; h: number }>()
+    return line<{ t: string; h: number }>()
       .x(d => xScale(tParse(d.t)))
       .y(d => yScale(d.h))
       (series);
@@ -62,12 +64,15 @@ export function Hydrograph({ width = 800, height = 150 }) {
           {/* X Axis */}
           <g transform={`translate(0,${innerHeight})`}>
             <line x2={innerWidth} stroke="var(--line)" />
-            {ticks.map(tickValue => (
-              <g key={tickValue.toString()} transform={`translate(${xScale(tickValue)},0)`}>
-                <line y2={5} stroke="var(--line)" />
-                <text y={15} fill="var(--text-3)" fontSize="10" textAnchor="middle">{d3.timeFormat('%b %d')(tickValue)}</text>
-              </g>
-            ))}
+            {ticks.map(tickValue => {
+              const dateStr = tickValue.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+              return (
+                <g key={tickValue.toString()} transform={`translate(${xScale(tickValue)},0)`}>
+                  <line y2={5} stroke="var(--line)" />
+                  <text y={15} fill="var(--text-3)" fontSize="10" textAnchor="middle">{dateStr}</text>
+                </g>
+              );
+            })}
           </g>
 
           {/* Danger line */}
