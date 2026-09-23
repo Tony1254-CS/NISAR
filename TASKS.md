@@ -240,7 +240,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: fly-in completes in ≤5 s, is click-skippable, and jumps directly (no animation) when `prefers-reduced-motion` is set.
   - Depends: P7.1
 
-- [ ] **P7.3** `map/MapLegend.tsx` (≤4 items, mode-dependent).
+- [x] **P7.3** `map/MapLegend.tsx` (≤4 items, mode-dependent).
   - Test: legend never exceeds 4 entries in either browse or compare mode.
   - Depends: P7.1
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 48 / 63 tasks · Phase in progress: Phase 7 · Next task: P7.3`
+`Completed: 49 / 63 tasks · Phase in progress: Phase 7 · Next task: P7.4`
