@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 26 / 63 tasks · Phase in progress: Phase 3 · Next task: P3.5`
+`Completed: 27 / 63 tasks · Phase in progress: Phase 3 · Next task: P3.6`
