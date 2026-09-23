@@ -30,8 +30,15 @@ with open(os.path.join(bundle, "erosion.geojson"), "w") as f:
     
 reach = {
     "dates": [
-        {"date": "20260601", "status": "ok"}
-    ]
+        {"date": "20260601", "status": "ok"},
+        {"date": "20260613", "status": "ok"}
+    ],
+    "primary_pair": {
+        "t0": "20260601",
+        "t1": "20260613",
+        "type": "equal_stage",
+        "dh_m": 0.1
+    }
 }
 with open(os.path.join(bundle, "reach.json"), "w") as f:
     json.dump(reach, f)

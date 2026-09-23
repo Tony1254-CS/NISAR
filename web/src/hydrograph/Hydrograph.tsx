@@ -3,9 +3,10 @@ import { scaleTime, scaleLinear } from 'd3-scale';
 import { line } from 'd3-shape';
 import { extent, min, max } from 'd3-array';
 import { useStore } from '../state/store';
+import { MatchWaterButton } from './MatchWaterButton';
 
 export function Hydrograph({ width = 800, height = 150 }) {
-  const { stage, selectedDate, setSelectedDate } = useStore();
+  const { stage, reach, selectedDate, setSelectedDate, compare } = useStore();
   
   if (!stage) return <div className="hydrograph-skeleton" style={{ width, height }} />;
 
@@ -46,10 +47,20 @@ export function Hydrograph({ width = 800, height = 150 }) {
 
   const ticks = xScale.ticks(5);
 
+  const matchStage = useMemo(() => {
+    if (!compare.active || !compare.t0 || !stage) return null;
+    const acq = stage.acquisitions.find(a => a.date === compare.t0);
+    return acq ? acq.h : null;
+  }, [compare, stage]);
+
   return (
     <div style={{ position: 'relative', width, height, background: 'var(--panel)', borderTop: '1px solid var(--line)' }}>
       {/* Rain strip slot */}
       <div style={{ position: 'absolute', top: 0, left: margin.left, width: innerWidth, height: 16, borderBottom: '1px solid var(--line)' }} />
+      
+      <div style={{ position: 'absolute', top: 20, right: 20 }}>
+        <MatchWaterButton />
+      </div>
       
       <svg width={width} height={height}>
         <g transform={`translate(${margin.left},${margin.top})`}>
@@ -80,6 +91,13 @@ export function Hydrograph({ width = 800, height = 150 }) {
             <g transform={`translate(0,${yScale(stage.station.danger_level_m)})`}>
               <line x2={innerWidth} stroke="var(--fail)" strokeDasharray="4,4" opacity={0.5} />
               <text x={innerWidth} y={-5} fill="var(--fail)" fontSize="10" textAnchor="end" opacity={0.8}>Danger Level</text>
+            </g>
+          )}
+
+          {/* Match Stage line */}
+          {matchStage !== null && (
+            <g transform={`translate(0,${yScale(matchStage)})`}>
+              <line x2={innerWidth} stroke="var(--water)" opacity={0.8} />
             </g>
           )}
 
