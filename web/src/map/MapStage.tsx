@@ -5,9 +5,6 @@ import { layers, sources } from './layers';
 import { FlyIn } from './FlyIn';
 import { OutsideCoverage } from '../states/OutsideCoverage';
 import { MapLegend } from './MapLegend';
-import { layers, sources } from './layers';
-import { FlyIn } from './FlyIn';
-
 export function MapStage() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
