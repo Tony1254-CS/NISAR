@@ -232,7 +232,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Phase 7 — Map (§27 row P7)
 
-- [ ] **P7.1** `map/MapStage.tsx` + `layers.ts` — layer stack exactly in §22.1 order.
+- [x] **P7.1** `map/MapStage.tsx` + `layers.ts` — layer stack exactly in §22.1 order.
   - Test: dev-tools layer inspector shows the 12 layers in the specified z-order; missing GIBS/basemap falls back to solid background, not a broken tile grid.
   - Depends: P6.5, P5.6
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 46 / 63 tasks · Phase in progress: Phase 7 · Next task: P7.1`
+`Completed: 47 / 63 tasks · Phase in progress: Phase 7 · Next task: P7.2`

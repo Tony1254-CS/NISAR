@@ -2,6 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { layers, sources } from './layers';
+import { FlyIn } from './FlyIn';
 
 export function MapStage() {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -32,6 +33,11 @@ export function MapStage() {
         layers.forEach(layer => {
           map.addLayer(layer as maplibregl.LayerSpecification);
         });
+
+        // Hardcode approx Jamuna bounds for now until we load reach data
+        const bounds: [number, number, number, number] = [89.60, 24.25, 89.90, 25.75];
+        const flyIn = new FlyIn(map, bounds);
+        flyIn.start();
       });
     }
 
