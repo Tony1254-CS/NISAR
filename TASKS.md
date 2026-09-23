@@ -224,7 +224,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: Vitest covers each state transition (`selectedDate`, `compare.active`, `panel`).
   - Depends: P6.4
 
-- [ ] **P6.6** `states/{Loading,ErrorState,OutsideCoverage,Inconclusive}.tsx`.
+- [x] **P6.6** `states/{Loading,ErrorState,OutsideCoverage,Inconclusive}.tsx`.
   - Test: Storybook-less manual render check (or Vitest snapshot) for each of the 4 states using fixtures.
   - Depends: P6.5
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 45 / 63 tasks · Phase in progress: Phase 6 · Next task: P6.6`
+`Completed: 46 / 63 tasks · Phase in progress: Phase 7 · Next task: P7.1`

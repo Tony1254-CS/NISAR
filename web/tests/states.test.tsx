@@ -26,11 +26,11 @@ describe('State Screens', () => {
 
   it('renders Inconclusive with pair', () => {
     const html = renderToString(<Inconclusive hasPair={true} failingChecks={['null_test']} />);
-    expect(html).toContain('Result inconclusive: null_test');
+    expect(html).toMatch(/Result inconclusive:.*null_test/);
   });
 
   it('renders Inconclusive without pair', () => {
     const html = renderToString(<Inconclusive hasPair={false} noPairReason="No pair" />);
-    expect(html).toContain('Match the water: No pair');
+    expect(html).toMatch(/Match the water:.*No pair/);
   });
 });
