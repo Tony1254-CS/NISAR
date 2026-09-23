@@ -58,7 +58,7 @@ export function Hydrograph({ width = 800, height = 150 }) {
       {/* Rain strip slot */}
       <div style={{ position: 'absolute', top: 0, left: margin.left, width: innerWidth, height: 16, borderBottom: '1px solid var(--line)' }} />
       
-      <div style={{ position: 'absolute', top: 20, right: 20 }}>
+      <div style={{ position: 'absolute', top: 20, right: 20, zIndex: 10 }}>
         <MatchWaterButton />
       </div>
       
