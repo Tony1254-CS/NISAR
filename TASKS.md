@@ -108,11 +108,11 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: HAND-masked pixel count is small relative to AOI (documented in log); missing-HAND path sets `hand_mask: NOT_EVALUATED` per §17.
   - Depends: P1.5, P2.2
 
-- [ ] **P2.4** RFI screening flag (§9 row 11).
+- [x] **P2.4** RFI screening flag (§9 row 11).
   - Test: `pytest tests/test_rfi.py` on a synthetic striped fixture flags it; on real data, flagged dates (if any) are excluded from pairs later and logged.
   - Depends: P2.2
 
-- [ ] **P2.5** Human quicklook check — render 3 real dates as PNG, visually confirm the river reads correctly (dark=water).
+- [x] **P2.5** Human quicklook check — render 3 real dates as PNG, visually confirm the river reads correctly (dark=water).
   - Test: `docs/PLAUSIBILITY.md` gets an early entry noting this passed, with the 3 PNGs referenced.
   - Depends: P2.2, P2.3, P2.4
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 20 / 63 tasks · Phase in progress: Phase 2 · Next task: P2.4`
+`Completed: 22 / 63 tasks · Phase in progress: Phase 3 · Next task: P3.1`

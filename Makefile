@@ -61,3 +61,11 @@ ifndef REACH
 	$(error REACH is not set. Usage: make hand-mask REACH=jamuna-chilmari)
 endif
 	python src/pipeline/hand_mask.py --reach $(REACH)
+
+.PHONY: rfi-screen
+
+rfi-screen:
+ifndef REACH
+	$(error REACH is not set. Usage: make rfi-screen REACH=jamuna-chilmari)
+endif
+	python src/pipeline/rfi_screen.py --reach $(REACH)
