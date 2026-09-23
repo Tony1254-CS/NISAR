@@ -132,7 +132,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: `pytest tests/test_stage_interp.py`; real `stage.csv` has one row per valid acquisition, `null` where no reading within ±24h.
   - Depends: P1.7, P1.3
 
-- [ ] **P3.4** `pipeline/pairs.py` — equal-stage / later-lower selection (§10.5).
+- [x] **P3.4** `pipeline/pairs.py` — equal-stage / later-lower selection (§10.5).
   - Test: `pytest tests/test_pairs.py` covers equal-stage found, later-lower fallback, and no-pair cases exactly as specified.
   - Depends: P3.3
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 25 / 63 tasks · Phase in progress: Phase 3 · Next task: P3.4`
+`Completed: 26 / 63 tasks · Phase in progress: Phase 3 · Next task: P3.5`
