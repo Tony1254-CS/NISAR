@@ -292,7 +292,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: each sub-output either has a real-data file behind it or the corresponding UI toggle stays hidden (§27 P10 rule).
   - Depends: P5.6
 
-- [ ] **P10.2** Frontend toggles for optical/forecast-outline/rain-strip layers.
+- [x] **P10.2** Frontend toggles for optical/forecast-outline/rain-strip layers.
   - Test: toggles only appear when P10.1 produced real data for that layer.
   - Depends: P10.1, P9.1
 
@@ -300,11 +300,11 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Phase 11 — Error handling pass (§27 row P11)
 
-- [ ] **P11.1** Implement every row of §21.1's States table across the app (Loading, Success, Partial data, Empty, Error, INCONCLUSIVE, Stage proxy mode, Offline/frozen).
+- [x] **P11.1** Implement every row of §21.1's States table across the app (Loading, Success, Partial data, Empty, Error, INCONCLUSIVE, Stage proxy mode, Offline/frozen).
   - Test: manual pass through each state with crafted fixtures.
   - Depends: P9.4, P6.6
 
-- [ ] **P11.2** Playwright tests for error/empty/inconclusive states using broken fixtures.
+- [x] **P11.2** Playwright tests for error/empty/inconclusive states using broken fixtures.
   - Test: `npx playwright test` green for these specs.
   - Depends: P11.1
 
@@ -312,7 +312,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Phase 12 — Testing (§27 row P12, continuous + final pass)
 
-- [ ] **P12.1** Full pytest suite green (§29 unit list: `test_db`, `test_threshold`, `test_change`, `test_area`, `test_pairs`, `test_geom`, `test_manifest`, `test_check_bundle`, plus the ones added per-phase above).
+- [x] **P12.1** Full pytest suite green (§29 unit list: `test_db`, `test_threshold`, `test_change`, `test_area`, `test_pairs`, `test_geom`, `test_manifest`, `test_check_bundle`, plus the ones added per-phase above).
   - Test: `pytest` exit code 0, no skipped tests without documented reason.
   - Depends: all P1–P5 tasks
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 58 / 63 tasks · Phase in progress: Phase 10 · Next task: P10.2`
+`Completed: 63 / 63 tasks · Phase in progress: Done · Next task: None`
