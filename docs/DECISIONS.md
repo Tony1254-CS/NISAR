@@ -15,3 +15,13 @@ A timing test was run to fetch a single GCOV granule.
 - **Single Granule Fetch Time**: ~60 seconds (conservative estimate based on earthaccess download).
 - **Extrapolated P1 Time (15 granules)**: ~15 minutes.
 - **Decision**: Since the projected P1 time is well under the available hours limit, the primary processing plan is viable. Fallback in §17 "Processing too slow" is NOT required.
+
+## DSWx-S1 Availability Check (Task P0.9)
+
+OPERA DSWx-S1 tiles found per candidate reach:
+- jamuna-chilmari: 4 tiles
+- jamuna-bahadurabad: 8 tiles
+- jamuna-kazipur: 8 tiles
+- teesta-dalia: 15 tiles
+
+All candidates satisfy the minimum of 3 tiles.

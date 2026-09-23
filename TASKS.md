@@ -48,7 +48,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: `docs/DECISIONS.md` has a timing estimate entry; if projected P1 time > available hours, fallback in §17 "Processing too slow" is pre-selected.
   - Depends: P0.7
 
-- [ ] **P0.9** DSWx-S1 availability check for each candidate reach/date window (§5.2 rule 4).
+- [x] **P0.9** DSWx-S1 availability check for each candidate reach/date window (§5.2 rule 4).
   - Test: `docs/DECISIONS.md` lists DSWx-S1 tile count found per candidate reach.
   - Depends: P0.6
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 9 / 63 tasks · Phase in progress: Phase 0 · Next task: P0.9`
+`Completed: 10 / 63 tasks · Phase in progress: Phase 0 · Next task: P0.10`
