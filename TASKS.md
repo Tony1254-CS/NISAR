@@ -212,7 +212,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: visual check — no colour outside the token list appears anywhere in dev tools computed styles.
   - Depends: P6.1
 
-- [ ] **P6.3** Fixtures copied from first real intermediate outputs (or, if P5 hasn't run yet, from `tests/fixtures/real_crop/`) into `web/tests/fixtures` — never invented values (§27 P6 note).
+- [x] **P6.3** Fixtures copied from first real intermediate outputs (or, if P5 hasn't run yet, from `tests/fixtures/real_crop/`) into `web/tests/fixtures` — never invented values (§27 P6 note).
   - Test: fixture files are byte-copies of real pipeline output with a `PROVENANCE.md` noting their source run.
   - Depends: P1.3 (earliest real output) or P5.6 (final)
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 42 / 63 tasks · Phase in progress: Phase 6 · Next task: P6.3`
+`Completed: 43 / 63 tasks · Phase in progress: Phase 6 · Next task: P6.4`
