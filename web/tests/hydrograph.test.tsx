@@ -12,6 +12,8 @@ const stage = JSON.parse(fs.readFileSync(stagePath, 'utf8'));
 vi.mock('../src/state/store', () => ({
   useStore: () => ({
     stage,
+    reach: { primary_pair: { t0: '20260601', t1: '20260613', type: 'equal_stage' } },
+    compare: { active: false, t0: null, t1: null },
     selectedDate: null,
     setSelectedDate: vi.fn()
   })

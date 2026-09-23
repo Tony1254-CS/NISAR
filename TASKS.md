@@ -256,7 +256,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: tick count equals `reach.json` ok-date count (E2E assertion reused later in P12).
   - Depends: P6.5, P5.6
 
-- [ ] **P8.2** `hydrograph/MatchWaterButton.tsx` — reads `pairs.json`, activates compare.
+- [x] **P8.2** `hydrograph/MatchWaterButton.tsx` — reads `pairs.json`, activates compare.
   - Test: clicking it selects the exact `t0`/`t1` from `pairs.json`'s primary pair; horizontal stage-match line renders at the right height.
   - Depends: P8.1
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 51 / 63 tasks · Phase in progress: Phase 8 · Next task: P8.2`
+`Completed: 52 / 63 tasks · Phase in progress: Phase 8 · Next task: P8.3`
