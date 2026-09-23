@@ -260,7 +260,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: clicking it selects the exact `t0`/`t1` from `pairs.json`'s primary pair; horizontal stage-match line renders at the right height.
   - Depends: P8.1
 
-- [ ] **P8.3** `map/CompareSwipe.tsx` — dual MapLibre instances synced on `move`, CSS `clip-path` divider, mouse/touch/keyboard draggable.
+- [x] **P8.3** `map/CompareSwipe.tsx` — dual MapLibre instances synced on `move`, CSS `clip-path` divider, mouse/touch/keyboard draggable.
   - Test: Playwright drags the divider with mouse, touch emulation, and arrow keys; both halves stay visually in sync.
   - Depends: P7.1, P8.2
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 52 / 63 tasks · Phase in progress: Phase 8 · Next task: P8.3`
+`Completed: 53 / 63 tasks · Phase in progress: Phase 9 · Next task: P9.1`
