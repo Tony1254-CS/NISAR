@@ -14,15 +14,7 @@ export const sources: Record<string, SourceSpecification> = {
   // Actual sources will be loaded from style URL directly in MapStage
 };
 
-// Layer stack exactly in §22.1 order
 export const layers: LayerSpecification[] = [
-  {
-    id: 'layer-1-background',
-    type: 'background',
-    paint: {
-      'background-color': '#15191C' // --map-bg
-    }
-  },
   {
     id: 'layer-2-gibs',
     type: 'raster',

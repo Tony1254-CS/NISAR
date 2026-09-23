@@ -30,8 +30,11 @@ export function MapStage() {
         map.addSource('gibs', sources.gibs);
         
         // Add dummy sources for missing dynamic ones just to satisfy layers
-        ['radar-source', 'water-source', 'change-source', 'accretion-source', 'erosion-source', 'cegis-source', 'aoi-source'].forEach(id => {
+        ['change-source', 'accretion-source', 'erosion-source', 'cegis-source', 'aoi-source'].forEach(id => {
            map.addSource(id, { type: 'geojson', data: { type: 'FeatureCollection', features: [] }});
+        });
+        ['radar-source', 'water-source'].forEach(id => {
+           map.addSource(id, { type: 'raster', tiles: [''], tileSize: 256 });
         });
 
         // Add layers in order, before labels if they exist
