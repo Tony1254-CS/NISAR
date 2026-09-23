@@ -1,0 +1,969 @@
+{
+  "$defs": {
+    "AcqPoint": {
+      "properties": {
+        "date": {
+          "title": "Date",
+          "type": "string"
+        },
+        "t": {
+          "title": "T",
+          "type": "string"
+        },
+        "h": {
+          "title": "H",
+          "type": "number"
+        },
+        "status": {
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "date",
+        "t",
+        "h",
+        "status"
+      ],
+      "title": "AcqPoint",
+      "type": "object"
+    },
+    "AcquisitionStatus": {
+      "properties": {
+        "date": {
+          "title": "Date",
+          "type": "string"
+        },
+        "acq_utc": {
+          "title": "Acq Utc",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "rfi",
+            "rejected",
+            "implausible"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "stage_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Stage M"
+        },
+        "stage_source": {
+          "enum": [
+            "FFWC",
+            "proxy",
+            "null"
+          ],
+          "title": "Stage Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "date",
+        "acq_utc",
+        "status",
+        "stage_m",
+        "stage_source"
+      ],
+      "title": "AcquisitionStatus",
+      "type": "object"
+    },
+    "Bounds": {
+      "properties": {
+        "coordinates": {
+          "items": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array"
+          },
+          "title": "Coordinates",
+          "type": "array"
+        }
+      },
+      "required": [
+        "coordinates"
+      ],
+      "title": "Bounds",
+      "type": "object"
+    },
+    "ErosionProperties": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "class": {
+          "enum": [
+            "erosion",
+            "accretion"
+          ],
+          "title": "Class",
+          "type": "string"
+        },
+        "area_ha": {
+          "title": "Area Ha",
+          "type": "number"
+        },
+        "pixel_count": {
+          "title": "Pixel Count",
+          "type": "integer"
+        },
+        "t0": {
+          "title": "T0",
+          "type": "string"
+        },
+        "t1": {
+          "title": "T1",
+          "type": "string"
+        },
+        "confirmed_by_dswx": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confirmed By Dswx"
+        },
+        "centroid": {
+          "items": {
+            "type": "number"
+          },
+          "title": "Centroid",
+          "type": "array"
+        },
+        "nearest_place": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Nearest Place"
+        },
+        "in_cegis_reach": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "In Cegis Reach"
+        }
+      },
+      "required": [
+        "id",
+        "class",
+        "area_ha",
+        "pixel_count",
+        "t0",
+        "t1",
+        "centroid"
+      ],
+      "title": "ErosionProperties",
+      "type": "object"
+    },
+    "InputInfo": {
+      "properties": {
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "granule": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Granule"
+        },
+        "acq_utc": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Acq Utc"
+        },
+        "layer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Layer"
+        },
+        "doi": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Doi"
+        },
+        "station": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Station"
+        },
+        "value_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value M"
+        },
+        "time_local": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Time Local"
+        },
+        "source_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Url"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "InputInfo",
+      "type": "object"
+    },
+    "Manifest": {
+      "properties": {
+        "reach_id": {
+          "title": "Reach Id",
+          "type": "string"
+        },
+        "generated_at": {
+          "title": "Generated At",
+          "type": "string"
+        },
+        "code_commit": {
+          "title": "Code Commit",
+          "type": "string"
+        },
+        "metrics": {
+          "items": {
+            "$ref": "#/$defs/Metric"
+          },
+          "title": "Metrics",
+          "type": "array"
+        }
+      },
+      "required": [
+        "reach_id",
+        "generated_at",
+        "code_commit",
+        "metrics"
+      ],
+      "title": "Manifest",
+      "type": "object"
+    },
+    "Metric": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        },
+        "low": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Low"
+        },
+        "high": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "High"
+        },
+        "unit": {
+          "title": "Unit",
+          "type": "string"
+        },
+        "definition": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Definition"
+        },
+        "method_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Method Ref"
+        },
+        "inputs": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/InputInfo"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Inputs"
+        },
+        "params": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Params"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "pixel_area_m2": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pixel Area M2"
+        },
+        "pixel_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pixel Count"
+        },
+        "qc_refs": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Qc Refs"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "value",
+        "unit"
+      ],
+      "title": "Metric",
+      "type": "object"
+    },
+    "Params": {
+      "properties": {
+        "threshold_db_t0": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Threshold Db T0"
+        },
+        "threshold_db_t1": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Threshold Db T1"
+        },
+        "median_filter": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Median Filter"
+        },
+        "mmu_px": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mmu Px"
+        },
+        "hand_max_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Hand Max M"
+        }
+      },
+      "title": "Params",
+      "type": "object"
+    },
+    "PrimaryPair": {
+      "properties": {
+        "t0": {
+          "title": "T0",
+          "type": "string"
+        },
+        "t1": {
+          "title": "T1",
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "equal_stage",
+            "later_lower"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "dh_m": {
+          "title": "Dh M",
+          "type": "number"
+        }
+      },
+      "required": [
+        "t0",
+        "t1",
+        "type",
+        "dh_m"
+      ],
+      "title": "PrimaryPair",
+      "type": "object"
+    },
+    "QC": {
+      "properties": {
+        "checks": {
+          "items": {
+            "$ref": "#/$defs/QCCheck"
+          },
+          "title": "Checks",
+          "type": "array"
+        }
+      },
+      "required": [
+        "checks"
+      ],
+      "title": "QC",
+      "type": "object"
+    },
+    "QCCheck": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Label"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        },
+        "status": {
+          "enum": [
+            "PASS",
+            "WARN",
+            "FAIL",
+            "NOT_EVALUATED",
+            "INFO"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "rule": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rule"
+        },
+        "explanation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Explanation"
+        },
+        "inputs": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/InputInfo"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Inputs"
+        }
+      },
+      "required": [
+        "id",
+        "status"
+      ],
+      "title": "QCCheck",
+      "type": "object"
+    },
+    "ReachDetail": {
+      "properties": {
+        "reach_id": {
+          "title": "Reach Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "river": {
+          "title": "River",
+          "type": "string"
+        },
+        "bbox": {
+          "items": {
+            "type": "number"
+          },
+          "title": "Bbox",
+          "type": "array"
+        },
+        "crs_analysis": {
+          "title": "Crs Analysis",
+          "type": "string"
+        },
+        "track": {
+          "$ref": "#/$defs/Track"
+        },
+        "dates": {
+          "items": {
+            "$ref": "#/$defs/AcquisitionStatus"
+          },
+          "title": "Dates",
+          "type": "array"
+        },
+        "primary_pair": {
+          "$ref": "#/$defs/PrimaryPair"
+        },
+        "verdict": {
+          "enum": [
+            "SUPPORTED",
+            "LIMITED",
+            "INCONCLUSIVE"
+          ],
+          "title": "Verdict",
+          "type": "string"
+        },
+        "verdict_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Verdict Reasons",
+          "type": "array"
+        },
+        "headline_metric_id": {
+          "title": "Headline Metric Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reach_id",
+        "name",
+        "river",
+        "bbox",
+        "crs_analysis",
+        "track",
+        "dates",
+        "primary_pair",
+        "verdict",
+        "verdict_reasons",
+        "headline_metric_id"
+      ],
+      "title": "ReachDetail",
+      "type": "object"
+    },
+    "ReachListItem": {
+      "properties": {
+        "reach_id": {
+          "title": "Reach Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "river": {
+          "title": "River",
+          "type": "string"
+        },
+        "bbox": {
+          "items": {
+            "type": "number"
+          },
+          "title": "Bbox",
+          "type": "array"
+        },
+        "verdict": {
+          "enum": [
+            "SUPPORTED",
+            "LIMITED",
+            "INCONCLUSIVE"
+          ],
+          "title": "Verdict",
+          "type": "string"
+        },
+        "data_frozen_at": {
+          "title": "Data Frozen At",
+          "type": "string"
+        },
+        "bundle_version": {
+          "title": "Bundle Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reach_id",
+        "name",
+        "river",
+        "bbox",
+        "verdict",
+        "data_frozen_at",
+        "bundle_version"
+      ],
+      "title": "ReachListItem",
+      "type": "object"
+    },
+    "SeriesPoint": {
+      "properties": {
+        "t": {
+          "title": "T",
+          "type": "string"
+        },
+        "h": {
+          "title": "H",
+          "type": "number"
+        }
+      },
+      "required": [
+        "t",
+        "h"
+      ],
+      "title": "SeriesPoint",
+      "type": "object"
+    },
+    "Stage": {
+      "properties": {
+        "station": {
+          "$ref": "#/$defs/Station"
+        },
+        "series": {
+          "items": {
+            "$ref": "#/$defs/SeriesPoint"
+          },
+          "title": "Series",
+          "type": "array"
+        },
+        "acquisitions": {
+          "items": {
+            "$ref": "#/$defs/AcqPoint"
+          },
+          "title": "Acquisitions",
+          "type": "array"
+        },
+        "mode": {
+          "enum": [
+            "gauge",
+            "proxy"
+          ],
+          "title": "Mode",
+          "type": "string"
+        }
+      },
+      "required": [
+        "station",
+        "series",
+        "acquisitions",
+        "mode"
+      ],
+      "title": "Stage",
+      "type": "object"
+    },
+    "Station": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "river": {
+          "title": "River",
+          "type": "string"
+        },
+        "danger_level_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Danger Level M"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "river",
+        "source"
+      ],
+      "title": "Station",
+      "type": "object"
+    },
+    "Track": {
+      "properties": {
+        "relative_orbit": {
+          "title": "Relative Orbit",
+          "type": "integer"
+        },
+        "direction": {
+          "enum": [
+            "A",
+            "D"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "frame": {
+          "title": "Frame",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "relative_orbit",
+        "direction",
+        "frame"
+      ],
+      "title": "Track",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "reaches": {
+      "items": {
+        "$ref": "#/$defs/ReachListItem"
+      },
+      "title": "Reaches",
+      "type": "array"
+    },
+    "reach": {
+      "$ref": "#/$defs/ReachDetail"
+    },
+    "manifest": {
+      "$ref": "#/$defs/Manifest"
+    },
+    "stage": {
+      "$ref": "#/$defs/Stage"
+    },
+    "qc": {
+      "$ref": "#/$defs/QC"
+    },
+    "bounds": {
+      "$ref": "#/$defs/Bounds"
+    },
+    "erosion_props": {
+      "$ref": "#/$defs/ErosionProperties"
+    }
+  },
+  "required": [
+    "reaches",
+    "reach",
+    "manifest",
+    "stage",
+    "qc",
+    "bounds",
+    "erosion_props"
+  ],
+  "title": "AllModels",
+  "type": "object"
+}

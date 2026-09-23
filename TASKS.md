@@ -188,7 +188,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: `pytest tests/test_manifest.py` — every metric has ≥1 input with a granule/source; matches the JSON schema from P5.1.
   - Depends: P5.1, P4.5
 
-- [ ] **P5.4** `pipeline/check_bundle.py` — consistency checks from §13.5.
+- [x] **P5.4** `pipeline/check_bundle.py` — consistency checks from §13.5.
   - Test: `pytest tests/test_check_bundle.py` — deliberately-broken fixture (mismatched pixel_count, missing PNG) is caught; real bundle passes clean.
   - Depends: P5.2, P5.3
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 37 / 63 tasks · Phase in progress: Phase 5 · Next task: P5.4`
+`Completed: 38 / 63 tasks · Phase in progress: Phase 5 · Next task: P5.5`

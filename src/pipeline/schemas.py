@@ -131,6 +131,15 @@ class ErosionProperties(BaseModel):
     nearest_place: Optional[str] = None
     in_cegis_reach: Optional[str] = None
 
+class AllModels(BaseModel):
+    reaches: List[ReachListItem]
+    reach: ReachDetail
+    manifest: Manifest
+    stage: Stage
+    qc: QC
+    bounds: Bounds
+    erosion_props: ErosionProperties
+
 def export_schemas(out_dir="schemas"):
     import os
     import json
@@ -151,6 +160,13 @@ def export_schemas(out_dir="schemas"):
                 json.dump(model.model_json_schema(), f, indent=2)
             else:
                 json.dump(model.schema(), f, indent=2)
+                
+    with open(os.path.join(out_dir, "all.json"), "w") as f:
+        if hasattr(AllModels, 'model_json_schema'):
+            json.dump(AllModels.model_json_schema(), f, indent=2)
+        else:
+            json.dump(AllModels.schema(), f, indent=2)
+
 
 if __name__ == "__main__":
     export_schemas()

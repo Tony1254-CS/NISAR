@@ -1,0 +1,16 @@
+{
+  "name": "nasa-app-web",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "json-schema-to-typescript": "^13.0.0"
+  }
+}
