@@ -44,7 +44,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: `docs/VERIFIED.md` has one dated entry per VERIFY item, each citing the actual value found (not the plan's placeholder).
   - Depends: P0.6
 
-- [ ] **P0.8** Timing test — measure discover + single-granule fetch wall-clock time; extrapolate full-series P1 duration.
+- [x] **P0.8** Timing test — measure discover + single-granule fetch wall-clock time; extrapolate full-series P1 duration.
   - Test: `docs/DECISIONS.md` has a timing estimate entry; if projected P1 time > available hours, fallback in §17 "Processing too slow" is pre-selected.
   - Depends: P0.7
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 8 / 63 tasks · Phase in progress: Phase 0 · Next task: P0.8`
+`Completed: 9 / 63 tasks · Phase in progress: Phase 0 · Next task: P0.9`
