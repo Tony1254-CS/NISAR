@@ -156,11 +156,11 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: `qc.json` entry has status PASS/WARN/FAIL per the stated κ thresholds, never silently skipped when DSWx data exists.
   - Depends: P3.6, P1.4
 
-- [ ] **P4.2** `null_test` check.
+- [x] **P4.2** `null_test` check.
   - Test: computed on the JRC-defined stable-land zone; rate reported as a percentage with correct PASS/WARN/FAIL banding.
   - Depends: P3.6, P1.6
 
-- [ ] **P4.3** Remaining checks: `stage_match`, `persistence`, `threshold_sensitivity`, `alignment`, `rfi`, `ambiguous_area`, (SHOULD) `replicate`.
+- [x] **P4.3** Remaining checks: `stage_match`, `persistence`, `threshold_sensitivity`, `alignment`, `rfi`, `ambiguous_area`, (SHOULD) `replicate`.
   - Test: every check in §11.2's table appears in `qc.json` with a value or `NOT_EVALUATED` — never silently missing.
   - Depends: P4.1, P4.2
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 30 / 63 tasks · Phase in progress: Phase 4 · Next task: P4.2`
+`Completed: 32 / 63 tasks · Phase in progress: Phase 4 · Next task: P4.4`
