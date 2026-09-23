@@ -29,10 +29,13 @@ export function MapStage() {
         // Add sources
         map.addSource('gibs', sources.gibs);
         
-        // Add dummy sources for missing dynamic ones just to satisfy layers
-        ['change-source', 'accretion-source', 'erosion-source', 'cegis-source', 'aoi-source'].forEach(id => {
+        const reachId = useStore.getState().reachId || 'dummy';
+        const baseUrl = `/data/v1/${reachId}`;
+        
+        ['change-source', 'accretion-source', 'cegis-source', 'aoi-source'].forEach(id => {
            map.addSource(id, { type: 'geojson', data: { type: 'FeatureCollection', features: [] }});
         });
+        map.addSource('erosion-source', { type: 'geojson', data: `${baseUrl}/erosion.geojson` });
         ['radar-source', 'water-source'].forEach(id => {
            map.addSource(id, { type: 'raster', tiles: [''], tileSize: 256 });
         });
@@ -40,6 +43,18 @@ export function MapStage() {
         // Add layers in order, before labels if they exist
         layers.forEach(layer => {
           map.addLayer(layer as maplibregl.LayerSpecification);
+        });
+
+        map.on('click', 'layer-8-erosion', (e) => {
+           if (e.features && e.features[0]) {
+               useStore.getState().setSelectedFeatureId(e.features[0].properties.id);
+           }
+        });
+        map.on('mouseenter', 'layer-8-erosion', () => {
+           map.getCanvas().style.cursor = 'pointer';
+        });
+        map.on('mouseleave', 'layer-8-erosion', () => {
+           map.getCanvas().style.cursor = '';
         });
 
         // Hardcode approx Jamuna bounds for now until we load reach data

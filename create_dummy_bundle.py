@@ -20,9 +20,17 @@ with open(os.path.join(bundle, "manifest.json"), "w") as f:
     json.dump(manifest, f)
     
 erosion = {
+    "type": "FeatureCollection",
     "features": [
-        {"properties": {"pixel_count": 40}},
-        {"properties": {"pixel_count": 60}}
+        {
+            "type": "Feature",
+            "id": "poly-1",
+            "properties": {"id": "poly-1", "pixel_count": 100},
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [[[89.65, 24.45], [89.75, 24.45], [89.75, 24.55], [89.65, 24.55], [89.65, 24.45]]]
+            }
+        }
     ]
 }
 with open(os.path.join(bundle, "erosion.geojson"), "w") as f:

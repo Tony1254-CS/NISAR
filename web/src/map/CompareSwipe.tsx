@@ -27,9 +27,13 @@ export function CompareSwipe({ primaryMap }: { primaryMap: maplibregl.Map | null
       secondaryMapRef.current.on('load', () => {
         const map = secondaryMapRef.current!;
         map.addSource('gibs', sources.gibs);
-        ['change-source', 'accretion-source', 'erosion-source', 'cegis-source', 'aoi-source'].forEach(id => {
+        const reachId = useStore.getState().reachId || 'dummy';
+        const baseUrl = `/data/v1/${reachId}`;
+        
+        ['change-source', 'accretion-source', 'cegis-source', 'aoi-source'].forEach(id => {
            map.addSource(id, { type: 'geojson', data: { type: 'FeatureCollection', features: [] }});
         });
+        map.addSource('erosion-source', { type: 'geojson', data: `${baseUrl}/erosion.geojson` });
         ['radar-source', 'water-source'].forEach(id => {
            map.addSource(id, { type: 'raster', tiles: [''], tileSize: 256 });
         });
