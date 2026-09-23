@@ -37,3 +37,11 @@ ifndef REACH
 	$(error REACH is not set. Usage: make fetch-gsw REACH=jamuna-chilmari)
 endif
 	python src/pipeline/io_gsw.py --reach $(REACH)
+
+.PHONY: validate-raw
+
+validate-raw:
+ifndef REACH
+	$(error REACH is not set. Usage: make validate-raw REACH=jamuna-chilmari)
+endif
+	python src/pipeline/validate_raw.py --reach $(REACH)

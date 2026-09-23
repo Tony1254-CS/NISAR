@@ -72,7 +72,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: `make fetch REACH=<chosen>` populates `data/raw/<reach>/nisar/<granule_id>/` for every catalogued granule; no more than 4 concurrent connections (check via a print/log count).
   - Depends: P1.1
 
-- [ ] **P1.3** `pipeline/validate_raw.py` — implement every check row in §11.1's table.
+- [x] **P1.3** `pipeline/validate_raw.py` — implement every check row in §11.1's table.
   - Test: `pytest tests/test_validate_raw.py` (write against 1–2 real + 1 deliberately-corrupted fixture) passes; running on real data produces `validation_raw.json` with ≥6 dates passing (§28 acceptance).
   - Depends: P1.2
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 16 / 63 tasks · Phase in progress: Phase 1 · Next task: P2.1`
+`Completed: 17 / 63 tasks · Phase in progress: Phase 1 · Next task: P2.1`
