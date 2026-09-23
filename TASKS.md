@@ -32,7 +32,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: file exists, non-empty, explicitly says "self-authored / independent" and references §1.1–1.2.
   - Depends: P0.3
 
-- [ ] **P0.5** Scope-alignment check (§1.5) — confirm every CORE MVP bullet in §1.5 is reflected somewhere in this task list (it is, by construction of Sections 1–35 mapping into Phases 0–9 below); note any gap in `docs/DECISIONS.md`.
+- [x] **P0.5** Scope-alignment check (§1.5) — confirm every CORE MVP bullet in §1.5 is reflected somewhere in this task list (it is, by construction of Sections 1–35 mapping into Phases 0–9 below); note any gap in `docs/DECISIONS.md`.
   - Test: `docs/DECISIONS.md` has a short "scope check" note confirming CORE MVP bullets ↔ TASKS.md phases, or listing any gap found.
   - Depends: P0.4
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 4 / 63 tasks · Phase in progress: Phase 0 · Next task: P0.5`
+`Completed: 5 / 63 tasks · Phase in progress: Phase 0 · Next task: P0.6`
