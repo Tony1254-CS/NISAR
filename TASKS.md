@@ -180,7 +180,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: `pytest tests/test_manifest.py` schema-validation subset passes on a hand-built fixture.
   - Depends: P4.5
 
-- [ ] **P5.2** `pipeline/render.py` — EPSG:3857 PNGs + `bounds.json`, fixed global radar stretch (§22.2, §9 row 13).
+- [x] **P5.2** `pipeline/render.py` — EPSG:3857 PNGs + `bounds.json`, fixed global radar stretch (§22.2, §9 row 13).
   - Test: every `ok`-status date has a `radar_<date>.png` and `water_<date>.png`; `bounds.json` present, 4 corners.
   - Depends: P4.5
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 35 / 63 tasks · Phase in progress: Phase 5 · Next task: P5.2`
+`Completed: 36 / 63 tasks · Phase in progress: Phase 5 · Next task: P5.3`
