@@ -1,0 +1,51 @@
+{
+  "properties": {
+    "reach_id": {
+      "title": "Reach Id",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "river": {
+      "title": "River",
+      "type": "string"
+    },
+    "bbox": {
+      "items": {
+        "type": "number"
+      },
+      "title": "Bbox",
+      "type": "array"
+    },
+    "verdict": {
+      "enum": [
+        "SUPPORTED",
+        "LIMITED",
+        "INCONCLUSIVE"
+      ],
+      "title": "Verdict",
+      "type": "string"
+    },
+    "data_frozen_at": {
+      "title": "Data Frozen At",
+      "type": "string"
+    },
+    "bundle_version": {
+      "title": "Bundle Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "reach_id",
+    "name",
+    "river",
+    "bbox",
+    "verdict",
+    "data_frozen_at",
+    "bundle_version"
+  ],
+  "title": "ReachListItem",
+  "type": "object"
+}

@@ -1,0 +1,19 @@
+{
+  "properties": {
+    "coordinates": {
+      "items": {
+        "items": {
+          "type": "number"
+        },
+        "type": "array"
+      },
+      "title": "Coordinates",
+      "type": "array"
+    }
+  },
+  "required": [
+    "coordinates"
+  ],
+  "title": "Bounds",
+  "type": "object"
+}

@@ -176,7 +176,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Phase 5 — Result generation (§27 row P5)
 
-- [ ] **P5.1** `pipeline/schemas.py` — pydantic models for every schema in §13.3–13.4; export JSON Schema to `schemas/`.
+- [x] **P5.1** `pipeline/schemas.py` — pydantic models for every schema in §13.3–13.4; export JSON Schema to `schemas/`.
   - Test: `pytest tests/test_manifest.py` schema-validation subset passes on a hand-built fixture.
   - Depends: P4.5
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 34 / 63 tasks · Phase in progress: Phase 5 · Next task: P5.1`
+`Completed: 35 / 63 tasks · Phase in progress: Phase 5 · Next task: P5.2`

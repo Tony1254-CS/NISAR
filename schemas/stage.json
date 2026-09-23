@@ -1,0 +1,125 @@
+{
+  "$defs": {
+    "AcqPoint": {
+      "properties": {
+        "date": {
+          "title": "Date",
+          "type": "string"
+        },
+        "t": {
+          "title": "T",
+          "type": "string"
+        },
+        "h": {
+          "title": "H",
+          "type": "number"
+        },
+        "status": {
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "date",
+        "t",
+        "h",
+        "status"
+      ],
+      "title": "AcqPoint",
+      "type": "object"
+    },
+    "SeriesPoint": {
+      "properties": {
+        "t": {
+          "title": "T",
+          "type": "string"
+        },
+        "h": {
+          "title": "H",
+          "type": "number"
+        }
+      },
+      "required": [
+        "t",
+        "h"
+      ],
+      "title": "SeriesPoint",
+      "type": "object"
+    },
+    "Station": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "river": {
+          "title": "River",
+          "type": "string"
+        },
+        "danger_level_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Danger Level M"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "river",
+        "source"
+      ],
+      "title": "Station",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "station": {
+      "$ref": "#/$defs/Station"
+    },
+    "series": {
+      "items": {
+        "$ref": "#/$defs/SeriesPoint"
+      },
+      "title": "Series",
+      "type": "array"
+    },
+    "acquisitions": {
+      "items": {
+        "$ref": "#/$defs/AcqPoint"
+      },
+      "title": "Acquisitions",
+      "type": "array"
+    },
+    "mode": {
+      "enum": [
+        "gauge",
+        "proxy"
+      ],
+      "title": "Mode",
+      "type": "string"
+    }
+  },
+  "required": [
+    "station",
+    "series",
+    "acquisitions",
+    "mode"
+  ],
+  "title": "Stage",
+  "type": "object"
+}

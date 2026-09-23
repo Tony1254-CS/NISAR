@@ -1,0 +1,187 @@
+{
+  "$defs": {
+    "AcquisitionStatus": {
+      "properties": {
+        "date": {
+          "title": "Date",
+          "type": "string"
+        },
+        "acq_utc": {
+          "title": "Acq Utc",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "rfi",
+            "rejected",
+            "implausible"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "stage_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Stage M"
+        },
+        "stage_source": {
+          "enum": [
+            "FFWC",
+            "proxy",
+            "null"
+          ],
+          "title": "Stage Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "date",
+        "acq_utc",
+        "status",
+        "stage_m",
+        "stage_source"
+      ],
+      "title": "AcquisitionStatus",
+      "type": "object"
+    },
+    "PrimaryPair": {
+      "properties": {
+        "t0": {
+          "title": "T0",
+          "type": "string"
+        },
+        "t1": {
+          "title": "T1",
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "equal_stage",
+            "later_lower"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "dh_m": {
+          "title": "Dh M",
+          "type": "number"
+        }
+      },
+      "required": [
+        "t0",
+        "t1",
+        "type",
+        "dh_m"
+      ],
+      "title": "PrimaryPair",
+      "type": "object"
+    },
+    "Track": {
+      "properties": {
+        "relative_orbit": {
+          "title": "Relative Orbit",
+          "type": "integer"
+        },
+        "direction": {
+          "enum": [
+            "A",
+            "D"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "frame": {
+          "title": "Frame",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "relative_orbit",
+        "direction",
+        "frame"
+      ],
+      "title": "Track",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "reach_id": {
+      "title": "Reach Id",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "river": {
+      "title": "River",
+      "type": "string"
+    },
+    "bbox": {
+      "items": {
+        "type": "number"
+      },
+      "title": "Bbox",
+      "type": "array"
+    },
+    "crs_analysis": {
+      "title": "Crs Analysis",
+      "type": "string"
+    },
+    "track": {
+      "$ref": "#/$defs/Track"
+    },
+    "dates": {
+      "items": {
+        "$ref": "#/$defs/AcquisitionStatus"
+      },
+      "title": "Dates",
+      "type": "array"
+    },
+    "primary_pair": {
+      "$ref": "#/$defs/PrimaryPair"
+    },
+    "verdict": {
+      "enum": [
+        "SUPPORTED",
+        "LIMITED",
+        "INCONCLUSIVE"
+      ],
+      "title": "Verdict",
+      "type": "string"
+    },
+    "verdict_reasons": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Verdict Reasons",
+      "type": "array"
+    },
+    "headline_metric_id": {
+      "title": "Headline Metric Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "reach_id",
+    "name",
+    "river",
+    "bbox",
+    "crs_analysis",
+    "track",
+    "dates",
+    "primary_pair",
+    "verdict",
+    "verdict_reasons",
+    "headline_metric_id"
+  ],
+  "title": "ReachDetail",
+  "type": "object"
+}

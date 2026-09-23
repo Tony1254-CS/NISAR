@@ -1,0 +1,86 @@
+{
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "class": {
+      "enum": [
+        "erosion",
+        "accretion"
+      ],
+      "title": "Class",
+      "type": "string"
+    },
+    "area_ha": {
+      "title": "Area Ha",
+      "type": "number"
+    },
+    "pixel_count": {
+      "title": "Pixel Count",
+      "type": "integer"
+    },
+    "t0": {
+      "title": "T0",
+      "type": "string"
+    },
+    "t1": {
+      "title": "T1",
+      "type": "string"
+    },
+    "confirmed_by_dswx": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Confirmed By Dswx"
+    },
+    "centroid": {
+      "items": {
+        "type": "number"
+      },
+      "title": "Centroid",
+      "type": "array"
+    },
+    "nearest_place": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Nearest Place"
+    },
+    "in_cegis_reach": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "In Cegis Reach"
+    }
+  },
+  "required": [
+    "id",
+    "class",
+    "area_ha",
+    "pixel_count",
+    "t0",
+    "t1",
+    "centroid"
+  ],
+  "title": "ErosionProperties",
+  "type": "object"
+}
