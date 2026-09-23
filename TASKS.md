@@ -120,7 +120,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Phase 3 — Science (§27 row P3)
 
-- [ ] **P3.1** `pipeline/water.py` — tile-based Otsu classification (§10.1 algorithm exactly).
+- [x] **P3.1** `pipeline/water.py` — tile-based Otsu classification (§10.1 algorithm exactly).
   - Test: `pytest tests/test_threshold.py` — synthetic bimodal histogram → Otsu within 0.5 dB of the generating split; synthetic unimodal → `global_fallback` flag triggers.
   - Depends: P2.5
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 22 / 63 tasks · Phase in progress: Phase 3 · Next task: P3.1`
+`Completed: 23 / 63 tasks · Phase in progress: Phase 3 · Next task: P3.2`
