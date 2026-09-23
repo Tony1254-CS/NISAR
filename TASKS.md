@@ -204,7 +204,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Phase 6 — Frontend foundation (§27 row P6 — may start in parallel once fixtures exist)
 
-- [ ] **P6.1** Vite + React + TS scaffold (`web/`), `package.json`, `tsconfig.json`, `playwright.config.ts`, exact deps from §4.2 (no substitutions).
+- [x] **P6.1** Vite + React + TS scaffold (`web/`), `package.json`, `tsconfig.json`, `playwright.config.ts`, exact deps from §4.2 (no substitutions).
   - Test: `npm run dev` serves a blank app at `localhost:5173`.
   - Depends: P0.1 (can start immediately, doesn't need real data)
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 40 / 63 tasks · Phase in progress: Phase 6 · Next task: P6.1`
+`Completed: 41 / 63 tasks · Phase in progress: Phase 6 · Next task: P6.2`

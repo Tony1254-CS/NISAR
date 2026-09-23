@@ -1,0 +1,9 @@
+:root{
+  --bg:#0E1113; --map-bg:#15191C; --panel:#12161A; --line:#2A3036; --line-strong:#3A424A;
+  --text:#E6E8EA; --text-2:#A7AEB5; --text-3:#6F7880;
+  --water:#39C4D9; --erosion:#E4572E; --accretion:#D9B26A; --ambiguous:#8A9299; --forecast:#E6E8EA;
+  --pass:#7FBF8E; --warn:#E0B34A; --fail:#E4572E; --na:#6F7880;
+  --font-text:"IBM Plex Sans", system-ui, sans-serif;
+  --font-num:"IBM Plex Mono", ui-monospace, monospace;
+  --r:2px; --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px;
+}
