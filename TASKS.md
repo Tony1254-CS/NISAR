@@ -152,7 +152,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Phase 4 — Validation (§27 row P4)
 
-- [ ] **P4.1** `pipeline/validate_science.py` — `dswx_agreement` check (§11.2 table).
+- [x] **P4.1** `pipeline/validate_science.py` — `dswx_agreement` check (§11.2 table).
   - Test: `qc.json` entry has status PASS/WARN/FAIL per the stated κ thresholds, never silently skipped when DSWx data exists.
   - Depends: P3.6, P1.4
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 29 / 63 tasks · Phase in progress: Phase 4 · Next task: P4.1`
+`Completed: 30 / 63 tasks · Phase in progress: Phase 4 · Next task: P4.2`
