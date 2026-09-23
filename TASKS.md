@@ -136,7 +136,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: `pytest tests/test_pairs.py` covers equal-stage found, later-lower fallback, and no-pair cases exactly as specified.
   - Depends: P3.3
 
-- [ ] **P3.5** `pipeline/change.py` — erosion/accretion/seasonal/ambiguous classification with persistence (§10.6).
+- [x] **P3.5** `pipeline/change.py` — erosion/accretion/seasonal/ambiguous classification with persistence (§10.6).
   - Test: `pytest tests/test_change.py` — hand-built 20×20 water stacks give exact expected class counts; MMU removal (12 px) verified.
   - Depends: P3.2, P3.4
 
