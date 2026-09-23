@@ -36,11 +36,11 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: `docs/DECISIONS.md` has a short "scope check" note confirming CORE MVP bullets ↔ TASKS.md phases, or listing any gap found.
   - Depends: P0.4
 
-- [ ] **P0.6** `pipeline/discover.py` (§6.1 workflow, §3.3) — asf_search query for GCOV PROVISIONAL, run for all 4 candidate reaches in §5.1.
+- [x] **P0.6** `pipeline/discover.py` (§6.1 workflow, §3.3) — asf_search query for GCOV PROVISIONAL, run for all 4 candidate reaches in §5.1.
   - Test: `make discover REACH=<each candidate>` produces `data/raw/<reach>/catalog.json` with ≥1 granule for at least one candidate.
   - Depends: P0.5
 
-- [ ] **P0.7** Open one real GCOV granule; VERIFY every item listed in §6.1's VERIFY paragraph (HDF5 group names, EPSG storage, fill value, time field, polarisations, pixel spacing, orbit direction field); record findings in `docs/VERIFIED.md`.
+- [x] **P0.7** Open one real GCOV granule; VERIFY every item listed in §6.1's VERIFY paragraph (HDF5 group names, EPSG storage, fill value, time field, polarisations, pixel spacing, orbit direction field); record findings in `docs/VERIFIED.md`.
   - Test: `docs/VERIFIED.md` has one dated entry per VERIFY item, each citing the actual value found (not the plan's placeholder).
   - Depends: P0.6
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 5 / 63 tasks · Phase in progress: Phase 0 · Next task: P0.6`
+`Completed: 8 / 63 tasks · Phase in progress: Phase 0 · Next task: P0.8`
