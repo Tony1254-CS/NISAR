@@ -1,5 +1,10 @@
-name: jamuna-chilmari
+reach_id: jamuna-chilmari
+name: Chilmari–Roumari reach
 bbox: [89.60, 25.40, 89.90, 25.75]
-track: "019"
-frame: "076"
-direction: "D"
+start: 2026-06-17
+end: 2026-11-14
+nisar_short_name: NISAR_L2_GCOV_PROVISIONAL_V1
+polarisation: HHHH
+track: {relative_orbit: "019", direction: "D", frame: "076"}
+stage: {mode: manual, station_names: [Chilmari, Noonkhawa]}
+params: {median_filter: 5, tile_px: 256, ashman_min: 2.0, t_window_db: [-26, -12], mmu_px: 12, hand_max_m: 15, dh_max_m: 0.15, dswx_window_days: 6}

@@ -30,3 +30,13 @@ All candidates satisfy the minimum of 3 tiles.
 
 - **Decision**: Fallback A (Manual CSV).
 - **Reasoning**: Automated API registration at https://api3.ffwc.gov.bd is not feasible for an autonomous agent. The project will rely on a manual CSV file (data/raw/<reach_id>/stage/stage_manual.csv) containing the stage data for the required dates.
+
+## Deterministic Reach Selection (Task P0.11)
+
+Based on §5.2 rule:
+1. jamuna-chilmari has 9 granules for Track 019, Frame 076, Dir D (>= 6).
+2. GCOV PROVISIONAL is dual-pol (includes HH) at 10m/20m spacing.
+3. Stage will be fetched via manual CSV (Fallback A).
+4. DSWx-S1 check yielded 4 tiles (>= 3).
+
+Decision: jamuna-chilmari selected as the flagship reach. Configuration saved to config/reaches/jamuna-chilmari.yaml following the template in §14.

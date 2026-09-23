@@ -56,7 +56,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: `docs/DECISIONS.md` states which stage mode was chosen and why.
   - Depends: none (can run parallel to P0.6–P0.9)
 
-- [ ] **P0.11** Apply the deterministic reach-selection rule §5.2 using the data gathered in P0.6–P0.10; write `config/reaches/<reach_id>.yaml` (template in §14 step 1) and log the decision in `docs/DECISIONS.md`.
+- [x] **P0.11** Apply the deterministic reach-selection rule §5.2 using the data gathered in P0.6–P0.10; write `config/reaches/<reach_id>.yaml` (template in §14 step 1) and log the decision in `docs/DECISIONS.md`.
   - Test: exactly one `config/reaches/*.yaml` exists (plus fallback candidates optionally kept for reference); it satisfies all 4 rules in §5.2 or documents why the fallback in §17 "No reach qualifies" applies.
   - Depends: P0.7, P0.8, P0.9, P0.10
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 11 / 63 tasks · Phase in progress: Phase 0 · Next task: P0.11`
+`Completed: 12 / 63 tasks · Phase in progress: Phase 1 · Next task: P1.1`
