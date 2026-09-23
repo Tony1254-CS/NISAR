@@ -5,8 +5,10 @@ import { layers, sources } from './layers';
 import { FlyIn } from './FlyIn';
 import { OutsideCoverage } from '../states/OutsideCoverage';
 import { MapLegend } from './MapLegend';
+import { CompareSwipe } from './CompareSwipe';
 export function MapStage() {
   const mapContainer = useRef<HTMLDivElement>(null);
+  const [mapInstance, setMapInstance] = useState<maplibregl.Map | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [isOutside, setIsOutside] = useState(false);
   const boundsRef = useRef<[number, number, number, number]>([89.60, 24.25, 89.90, 25.75]);
@@ -23,6 +25,7 @@ export function MapStage() {
 
       mapRef.current.on('load', () => {
         const map = mapRef.current!;
+        setMapInstance(map);
         
         // Add sources
         map.addSource('gibs', sources.gibs);
@@ -66,6 +69,7 @@ export function MapStage() {
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
+      <CompareSwipe primaryMap={mapInstance} />
       {isOutside && <OutsideCoverage onFlyBack={() => {
         mapRef.current?.fitBounds(boundsRef.current, { padding: 20 });
       }} />}
