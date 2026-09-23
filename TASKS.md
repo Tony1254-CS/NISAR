@@ -272,7 +272,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: `Headline` value renders `manifest.metrics.find(id).value` verbatim — unit test asserts no literal number is hardcoded in the component (§25 provenance chain).
   - Depends: P8.2, P5.6
 
-- [ ] **P9.2** `panels/EvidencePanel.tsx` — all 7 sections from §21.2, in order.
+- [x] **P9.2** `panels/EvidencePanel.tsx` — all 7 sections from §21.2, in order.
   - Test: clicking a polygon opens a panel containing a real granule ID string sourced from `manifest.json`.
   - Depends: P9.1
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 54 / 63 tasks · Phase in progress: Phase 9 · Next task: P9.2`
+`Completed: 55 / 63 tasks · Phase in progress: Phase 9 · Next task: P9.3`
