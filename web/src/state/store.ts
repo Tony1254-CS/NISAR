@@ -9,9 +9,10 @@ interface CompareState {
 
 interface LayersState {
   water: boolean;
-  change: boolean;
+  accretion: boolean;
+  erosion: boolean;
+  ambiguous: boolean;
   forecast: boolean;
-  optical: boolean;
 }
 
 type PanelType = 'none' | 'evidence' | 'qc';
@@ -35,6 +36,8 @@ interface StoreState {
   setSelectedDate: (date: string | null) => void;
   setCompare: (compare: Partial<CompareState>) => void;
   setPanel: (panel: PanelType) => void;
+  setSelectedFeatureId: (id: string | null) => void;
+  setLayers: (update: Partial<LayersState>) => void;
 }
 
 export const useStore = create<StoreState>((set) => ({
@@ -47,7 +50,7 @@ export const useStore = create<StoreState>((set) => ({
   selectedDate: null,
   compare: { active: false, t0: null, t1: null },
   selectedFeatureId: null,
-  layers: { water: false, change: false, forecast: false, optical: false },
+  layers: { water: false, accretion: true, erosion: true, ambiguous: true, forecast: false },
   panel: 'none',
   flyInDone: false,
   
@@ -55,4 +58,6 @@ export const useStore = create<StoreState>((set) => ({
   setSelectedDate: (date) => set({ selectedDate: date }),
   setCompare: (compare) => set((state) => ({ compare: { ...state.compare, ...compare } })),
   setPanel: (panel) => set({ panel }),
+  setSelectedFeatureId: (id) => set({ selectedFeatureId: id }),
+  setLayers: (update) => set((state) => ({ layers: { ...state.layers, ...update } })),
 }));

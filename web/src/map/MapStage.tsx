@@ -19,8 +19,7 @@ export function MapStage() {
         container: mapContainer.current,
         style: 'https://tiles.openfreemap.org/styles/positron', // Neutral vector basemap (Layer 3)
         center: [89.7, 24.5], // Jamuna approx
-        zoom: 6,
-        attributionControl: true
+        zoom: 6
       });
 
       mapRef.current.on('load', () => {

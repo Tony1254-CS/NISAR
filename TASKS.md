@@ -268,7 +268,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Phase 9 — Evidence & QC (§27 row P9)
 
-- [ ] **P9.1** `panels/{StoryPanel,Headline,VerdictBadge,LayerToggles}.tsx`.
+- [x] **P9.1** `panels/{StoryPanel,Headline,VerdictBadge,LayerToggles}.tsx`.
   - Test: `Headline` value renders `manifest.metrics.find(id).value` verbatim — unit test asserts no literal number is hardcoded in the component (§25 provenance chain).
   - Depends: P8.2, P5.6
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 53 / 63 tasks · Phase in progress: Phase 9 · Next task: P9.1`
+`Completed: 54 / 63 tasks · Phase in progress: Phase 9 · Next task: P9.2`
