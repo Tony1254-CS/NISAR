@@ -208,7 +208,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: `npm run dev` serves a blank app at `localhost:5173`.
   - Depends: P0.1 (can start immediately, doesn't need real data)
 
-- [ ] **P6.2** `styles/tokens.css` + `base.css` exactly per §24.1 (no extra colours/tokens).
+- [x] **P6.2** `styles/tokens.css` + `base.css` exactly per §24.1 (no extra colours/tokens).
   - Test: visual check — no colour outside the token list appears anywhere in dev tools computed styles.
   - Depends: P6.1
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 41 / 63 tasks · Phase in progress: Phase 6 · Next task: P6.2`
+`Completed: 42 / 63 tasks · Phase in progress: Phase 6 · Next task: P6.3`
