@@ -97,3 +97,25 @@ ifndef REACH
 	$(error REACH is not set. Usage: make change REACH=jamuna-chilmari)
 endif
 	python src/pipeline/change.py --reach $(REACH)
+
+.PHONY: render
+render:
+ifndef REACH
+	$(error REACH is not set. Usage: make render REACH=jamuna-chilmari)
+endif
+	python src/pipeline/render.py --reach $(REACH)
+
+.PHONY: manifest
+manifest:
+ifndef REACH
+	$(error REACH is not set. Usage: make manifest REACH=jamuna-chilmari)
+endif
+	python src/pipeline/manifest.py --reach $(REACH)
+
+.PHONY: check-bundle
+check-bundle:
+ifndef REACH
+	$(error REACH is not set. Usage: make check-bundle REACH=jamuna-chilmari)
+endif
+	python src/pipeline/check_bundle.py --reach $(REACH)
+

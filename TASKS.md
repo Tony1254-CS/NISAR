@@ -192,7 +192,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: `pytest tests/test_check_bundle.py` — deliberately-broken fixture (mismatched pixel_count, missing PNG) is caught; real bundle passes clean.
   - Depends: P5.2, P5.3
 
-- [ ] **P5.5** Generate `web/src/data/types.ts` from exported JSON Schema (`json-schema-to-typescript`).
+- [x] **P5.5** Generate `web/src/data/types.ts` from exported JSON Schema (`json-schema-to-typescript`).
   - Test: `tsc --noEmit` in `web/` succeeds against a fixture import of the generated types.
   - Depends: P5.1
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 38 / 63 tasks · Phase in progress: Phase 5 · Next task: P5.5`
+`Completed: 39 / 63 tasks · Phase in progress: Phase 6 · Next task: P6.1`

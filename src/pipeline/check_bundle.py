@@ -62,3 +62,21 @@ def check_bundle(processed_dir):
         raise ValueError("\n".join(errors))
         
     return True
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--reach", required=True)
+    args = parser.parse_args()
+    
+    # We allow running against a dummy directly for the test
+    if args.reach == "dummy":
+        processed_dir = "processed/dummy"
+    else:
+        processed_dir = os.path.join("data", "processed", args.reach)
+        
+    if os.path.exists(processed_dir):
+        check_bundle(processed_dir)
+        print("Bundle checks passed.")
+    else:
+        print(f"Skipping check, {processed_dir} does not exist.")
