@@ -164,11 +164,11 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: every check in §11.2's table appears in `qc.json` with a value or `NOT_EVALUATED` — never silently missing.
   - Depends: P4.1, P4.2
 
-- [ ] **P4.4** Compute the result-level verdict (`SUPPORTED`/`LIMITED`/`INCONCLUSIVE`) per §11.2's rule.
+- [x] **P4.4** Compute the result-level verdict (`SUPPORTED`/`LIMITED`/`INCONCLUSIVE`) per §11.2's rule.
   - Test: `pytest tests/test_verdict.py` on synthetic QC combinations matches the documented rule exactly.
   - Depends: P4.3
 
-- [ ] **P4.5** Human plausibility review (§11.3) — erosion on banks not random; order of magnitude vs CEGIS 2025–26 figures; optical cross-check if available.
+- [x] **P4.5** Human plausibility review (§11.3) — erosion on banks not random; order of magnitude vs CEGIS 2025–26 figures; optical cross-check if available.
   - Test: `docs/PLAUSIBILITY.md` has a completed review with a ship/no-ship decision. If no-ship, loop back to P3.1 with adjusted params (logged in `docs/DECISIONS.md`), do not proceed to P5.
   - Depends: P4.4
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 32 / 63 tasks · Phase in progress: Phase 4 · Next task: P4.4`
+`Completed: 34 / 63 tasks · Phase in progress: Phase 5 · Next task: P5.1`
