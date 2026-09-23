@@ -128,7 +128,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: unit test with a hand-built pixel where DSWx disagrees with the threshold classification correctly flags `ambiguous`.
   - Depends: P3.1, P1.4
 
-- [ ] **P3.3** `pipeline/stage.py` — interpolate gauge stage to acquisition times, or proxy fallback (§10.3–10.4).
+- [x] **P3.3** `pipeline/stage.py` — interpolate gauge stage to acquisition times, or proxy fallback (§10.3–10.4).
   - Test: `pytest tests/test_stage_interp.py`; real `stage.csv` has one row per valid acquisition, `null` where no reading within ±24h.
   - Depends: P1.7, P1.3
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 24 / 63 tasks · Phase in progress: Phase 3 · Next task: P3.3`
+`Completed: 25 / 63 tasks · Phase in progress: Phase 3 · Next task: P3.4`
