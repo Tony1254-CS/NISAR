@@ -104,7 +104,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: `pytest tests/test_db.py` passes; output `hh_db/<date>.tif` is float32, dB range plausible (roughly −35 to +10 dB), NaN only where masked.
   - Depends: P2.1
 
-- [ ] **P2.3** HAND mask warp + apply, `hand_invalid.tif` (§9 row 10).
+- [x] **P2.3** HAND mask warp + apply, `hand_invalid.tif` (§9 row 10).
   - Test: HAND-masked pixel count is small relative to AOI (documented in log); missing-HAND path sets `hand_mask: NOT_EVALUATED` per §17.
   - Depends: P1.5, P2.2
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 19 / 63 tasks · Phase in progress: Phase 2 · Next task: P2.3`
+`Completed: 20 / 63 tasks · Phase in progress: Phase 2 · Next task: P2.4`

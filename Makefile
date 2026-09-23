@@ -53,3 +53,11 @@ ifndef REACH
 	$(error REACH is not set. Usage: make preprocess REACH=jamuna-chilmari)
 endif
 	python src/pipeline/preprocess.py --reach $(REACH)
+
+.PHONY: hand-mask
+
+hand-mask:
+ifndef REACH
+	$(error REACH is not set. Usage: make hand-mask REACH=jamuna-chilmari)
+endif
+	python src/pipeline/hand_mask.py --reach $(REACH)
