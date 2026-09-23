@@ -29,3 +29,11 @@ ifndef REACH
 	$(error REACH is not set. Usage: make fetch-hand REACH=jamuna-chilmari)
 endif
 	python src/pipeline/io_hand.py --reach $(REACH)
+
+.PHONY: fetch-gsw
+
+fetch-gsw:
+ifndef REACH
+	$(error REACH is not set. Usage: make fetch-gsw REACH=jamuna-chilmari)
+endif
+	python src/pipeline/io_gsw.py --reach $(REACH)

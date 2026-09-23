@@ -84,11 +84,11 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: `data/raw/common/hand/*.tif` covers the full AOI bbox with no gaps (mosaic bounds check).
   - Depends: P0.11
 
-- [ ] **P1.6** Fetch JRC GSW `occurrence` tile covering 80–90E, 20–30N (§6.4).
+- [x] **P1.6** Fetch JRC GSW `occurrence` tile covering 80–90E, 20–30N (§6.4).
   - Test: file opens, values in [0,100] or documented nodata.
   - Depends: P0.11
 
-- [ ] **P1.7** Stage data acquisition — FFWC API pull, or manual CSV transcription with `source_url`/`retrieved_at` per row (§6.5 schema).
+- [x] **P1.7** Stage data acquisition — FFWC API pull, or manual CSV transcription with `source_url`/`retrieved_at` per row (§6.5 schema).
   - Test: `pytest tests/test_stage_schema.py` validates the CSV/JSON against the schema in §6.5; covers ≥80% of acquisition dates per §5.2 rule 3, or `docs/DECISIONS.md` documents proxy fallback.
   - Depends: P0.10, P1.2 (need acquisition dates to check coverage)
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 14 / 63 tasks · Phase in progress: Phase 1 · Next task: P2.1`
+`Completed: 16 / 63 tasks · Phase in progress: Phase 1 · Next task: P2.1`
