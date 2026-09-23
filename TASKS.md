@@ -64,11 +64,11 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Phase 1 — Acquisition (§27 row P1)
 
-- [ ] **P1.1** `pipeline/io_nisar.py` — stream (HTTPS/S3), AOI-clip, write GeoTIFF + `meta.json` per granule (§6.1 workflow diagram).
+- [!] **P1.1** `pipeline/io_nisar.py` — stream (HTTPS/S3), AOI-clip, write GeoTIFF + `meta.json` per granule (§6.1 workflow diagram).
   - Test: running on the granule from P0.7 produces `HHHH.tif` openable by `rasterio.open`, correct CRS/shape, plus valid `meta.json`.
   - Depends: P0.11
 
-- [ ] **P1.2** `pipeline/fetch.py` — orchestrate P1.1 across the full chosen-reach catalog, thread pool ≤4 (§18 async note).
+- [!] **P1.2** `pipeline/fetch.py` — orchestrate P1.1 across the full chosen-reach catalog, thread pool ≤4 (§18 async note).
   - Test: `make fetch REACH=<chosen>` populates `data/raw/<reach>/nisar/<granule_id>/` for every catalogued granule; no more than 4 concurrent connections (check via a print/log count).
   - Depends: P1.1
 
@@ -76,11 +76,11 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: `pytest tests/test_validate_raw.py` (write against 1–2 real + 1 deliberately-corrupted fixture) passes; running on real data produces `validation_raw.json` with ≥6 dates passing (§28 acceptance).
   - Depends: P1.2
 
-- [ ] **P1.4** `pipeline/io_dswx.py` + fetch OPERA DSWx-S1 tiles for ±6-day windows around each NISAR date (§6.2).
+- [x] **P1.4** `pipeline/io_dswx.py` + fetch OPERA DSWx-S1 tiles for ±6-day windows around each NISAR date (§6.2).
   - Test: at least one `_B01_WTR.tif` exists per date that has any tile within the window; file opens and its class values are a subset of `{0,1,3,250,251,255}`.
   - Depends: P0.11
 
-- [ ] **P1.5** Fetch ASF GLO-30 HAND tiles covering the AOI via public S3, no auth (§6.3).
+- [x] **P1.5** Fetch ASF GLO-30 HAND tiles covering the AOI via public S3, no auth (§6.3).
   - Test: `data/raw/common/hand/*.tif` covers the full AOI bbox with no gaps (mosaic bounds check).
   - Depends: P0.11
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 12 / 63 tasks · Phase in progress: Phase 1 · Next task: P1.1`
+`Completed: 14 / 63 tasks · Phase in progress: Phase 1 · Next task: P2.1`
