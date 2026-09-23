@@ -216,7 +216,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: fixture files are byte-copies of real pipeline output with a `PROVENANCE.md` noting their source run.
   - Depends: P1.3 (earliest real output) or P5.6 (final)
 
-- [ ] **P6.4** `data/load.ts` + `data/schema.ts` — fetch bundle, validate against generated types.
+- [x] **P6.4** `data/load.ts` + `data/schema.ts` — fetch bundle, validate against generated types.
   - Test: Vitest `load.test.ts` against P6.3 fixtures — valid bundle loads, malformed bundle throws a typed error.
   - Depends: P6.3, P5.5
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 43 / 63 tasks · Phase in progress: Phase 6 · Next task: P6.4`
+`Completed: 44 / 63 tasks · Phase in progress: Phase 6 · Next task: P6.5`
