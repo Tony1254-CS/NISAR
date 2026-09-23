@@ -280,7 +280,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: panel item count and order match `qc.json` exactly.
   - Depends: P4.3 (data), P9.1
 
-- [ ] **P9.4** Deep-link URL state (`/?reach=&t0=&t1=&feature=`, §20.1).
+- [x] **P9.4** Deep-link URL state (`/?reach=&t0=&t1=&feature=`, §20.1).
   - Test: loading the URL with query params reproduces the exact same compare/selection state on fresh page load.
   - Depends: P9.2
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 56 / 63 tasks · Phase in progress: Phase 9 · Next task: P9.4`
+`Completed: 57 / 63 tasks · Phase in progress: Phase 10 · Next task: P10.1`
