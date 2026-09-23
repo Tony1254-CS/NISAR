@@ -2,17 +2,23 @@ import { describe, it, expect } from 'vitest';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { Hydrograph } from '../src/hydrograph/Hydrograph';
-import { useStore } from '../src/state/store';
 import fs from 'fs';
 import path from 'path';
 
+// Load fixture
+const stagePath = path.join(__dirname, 'fixtures', 'stage.json');
+const stage = JSON.parse(fs.readFileSync(stagePath, 'utf8'));
+
+vi.mock('../src/state/store', () => ({
+  useStore: () => ({
+    stage,
+    selectedDate: null,
+    setSelectedDate: vi.fn()
+  })
+}));
+
 describe('Hydrograph', () => {
   it('renders acquisition ticks based on stage data', () => {
-    const stagePath = path.join(__dirname, 'fixtures', 'stage.json');
-    const stage = JSON.parse(fs.readFileSync(stagePath, 'utf8'));
-    
-    useStore.setState({ stage });
-    
     const html = renderToString(<Hydrograph width={800} height={150} />);
     
     // There are 2 'ok' acquisitions in the fixture
