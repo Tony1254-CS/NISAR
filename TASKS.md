@@ -196,7 +196,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: `tsc --noEmit` in `web/` succeeds against a fixture import of the generated types.
   - Depends: P5.1
 
-- [ ] **P5.6** First full real bundle run → `make render manifest check-bundle REACH=<chosen>` → copy to `web/public/data/v1/<reach_id>/`.
+- [x] **P5.6** First full real bundle run → `make render manifest check-bundle REACH=<chosen>` → copy to `web/public/data/v1/<reach_id>/`.
   - Test: `make check-bundle` exits 0; bundle size ≤ 40 MB (§30).
   - Depends: P5.4, P5.5
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 39 / 63 tasks · Phase in progress: Phase 6 · Next task: P6.1`
+`Completed: 40 / 63 tasks · Phase in progress: Phase 6 · Next task: P6.1`
