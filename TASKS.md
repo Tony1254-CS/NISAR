@@ -236,7 +236,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: dev-tools layer inspector shows the 12 layers in the specified z-order; missing GIBS/basemap falls back to solid background, not a broken tile grid.
   - Depends: P6.5, P5.6
 
-- [ ] **P7.2** `map/FlyIn.ts`.
+- [x] **P7.2** `map/FlyIn.ts`.
   - Test: fly-in completes in ≤5 s, is click-skippable, and jumps directly (no animation) when `prefers-reduced-motion` is set.
   - Depends: P7.1
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 47 / 63 tasks · Phase in progress: Phase 7 · Next task: P7.2`
+`Completed: 48 / 63 tasks · Phase in progress: Phase 7 · Next task: P7.3`
