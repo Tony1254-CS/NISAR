@@ -288,7 +288,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Phase 10 — SHOULD features (§27 row P10, only after MVP acceptance criteria in §28 pass)
 
-- [ ] **P10.1** `pipeline/context.py` — IMERG rain strip, HLS optical scene, CEGIS overlap (§6.6–6.7, §6.9).
+- [x] **P10.1** `pipeline/context.py` — IMERG rain strip, HLS optical scene, CEGIS overlap (§6.6–6.7, §6.9).
   - Test: each sub-output either has a real-data file behind it or the corresponding UI toggle stays hidden (§27 P10 rule).
   - Depends: P5.6
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 57 / 63 tasks · Phase in progress: Phase 10 · Next task: P10.1`
+`Completed: 58 / 63 tasks · Phase in progress: Phase 10 · Next task: P10.2`
