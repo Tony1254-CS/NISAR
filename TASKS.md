@@ -124,7 +124,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: `pytest tests/test_threshold.py` — synthetic bimodal histogram → Otsu within 0.5 dB of the generating split; synthetic unimodal → `global_fallback` flag triggers.
   - Depends: P2.5
 
-- [ ] **P3.2** Ambiguity classes `ambiguous_sand` and (SHOULD) `possible_water_under_vegetation` (§10.2).
+- [x] **P3.2** Ambiguity classes `ambiguous_sand` and (SHOULD) `possible_water_under_vegetation` (§10.2).
   - Test: unit test with a hand-built pixel where DSWx disagrees with the threshold classification correctly flags `ambiguous`.
   - Depends: P3.1, P1.4
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 23 / 63 tasks · Phase in progress: Phase 3 · Next task: P3.2`
+`Completed: 24 / 63 tasks · Phase in progress: Phase 3 · Next task: P3.3`
