@@ -244,7 +244,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: legend never exceeds 4 entries in either browse or compare mode.
   - Depends: P7.1
 
-- [ ] **P7.4** Outside-coverage behaviour (§21.5).
+- [x] **P7.4** Outside-coverage behaviour (§21.5).
   - Test: panning >5 km outside AOI shows the inline note; clicking it flies back.
   - Depends: P7.2
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 49 / 63 tasks · Phase in progress: Phase 7 · Next task: P7.4`
+`Completed: 50 / 63 tasks · Phase in progress: Phase 8 · Next task: P8.1`
