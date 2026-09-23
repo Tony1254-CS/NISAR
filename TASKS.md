@@ -2,11 +2,13 @@
 
 > This file is the **only** place that tracks progress. `plan.md` is the spec (never re-explained here — every task links to the section that defines it). Any LLM session starts by reading this file, not by re-reading all of `plan.md` from scratch.
 >
-> **Protocol for every session:** see `plan.md` §0.4 "Execution loop protocol". Summary: read this file top to bottom → find the first task with `[ ]` whose `Depends` are all `[x]` → do only that task → run its `Test` → check it off **only if the test passes** → commit `phase-N.M: <summary>` → move to the next task. If a test fails or something is ambiguous, stop, write to `docs/BLOCKERS.md`, and leave the box unchecked.
+> **Protocol for every session:** see `plan.md` §0.4 "Execution loop protocol". Summary: read this file top to bottom → find the first task with `[ ]` whose `Depends` are all `[x]` → do only that task → run its `Test` → check it off **only if the test passes** → commit `phase-N.M: <summary>` → **immediately continue to the next eligible task in the same session — do not stop.** If a test fails or a task hits a real external blocker, mark it `[!]`, write to `docs/BLOCKERS.md`, and move on to the next eligible task instead of halting.
 
-## Hard gate — read before touching anything below
+## Timeline
 
-Per `plan.md` §0.1: no phase-specific work (P0 onward) may start before the hackathon officially begins — **Sat 14 Nov 2026, 09:00 local time**. The official challenge statement is not released until **28 Oct 2026**. Tasks `P0.4`/`P0.5` are explicitly blocked on that release. Repo scaffolding / tooling setup (`P0.1`–`P0.3`) is meta-work, not challenge work, and may be done ahead of time if the team chooses — but do not fetch real NISAR/challenge data or write challenge-specific code before H0.
+This is an **independent project — no NASA/Space Apps official rules apply.** There is no external start gate and no external challenge statement to wait for; `plan.md` §1.1–1.2 is the problem statement, self-authored by the team.
+
+**Deadline: a working, publicly deployed web app by 28 September 2026.** Work continuously from now until then. Build strictly in the task order below (it already follows MVP-first sequencing) and do not start Phase 10 (SHOULD features) until every Phase 0–9 task needed for the CORE MVP (`plan.md` §1.5, §28) is checked off.
 
 Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (reason in `docs/BLOCKERS.md`)
 
@@ -26,12 +28,12 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: `python -c "import earthaccess; earthaccess.login(strategy='environment'); print('OK')"` prints `OK`, no exception.
   - Depends: P0.2
 
-- [!] **P0.4** Human pastes the official 2026 challenge statement into `docs/challenge_statement.md`. **Not possible before 28 Oct 2026 — leave blocked until then.**
-  - Test: file exists and is non-empty.
-  - Depends: P0.3 (timing only; not a build dependency)
+- [x] **P0.4** Write `docs/challenge_statement.md`: state plainly that this is a self-authored, independent build (not an official NASA Space Apps submission), and quote/point to `plan.md` §1.1–1.2 as the problem statement. No external release to wait for.
+  - Test: file exists, non-empty, explicitly says "self-authored / independent" and references §1.1–1.2.
+  - Depends: P0.3
 
-- [ ] **P0.5** Challenge-fit table (§1.6, P0.0) — map every requirement in `challenge_statement.md` to a feature in this plan; anything uncovered goes to `docs/BLOCKERS.md` for the team to decide (Claude/Gemini does not expand scope itself).
-  - Test: `docs/DECISIONS.md` has a "challenge fit" section with one row per requirement.
+- [ ] **P0.5** Scope-alignment check (§1.5) — confirm every CORE MVP bullet in §1.5 is reflected somewhere in this task list (it is, by construction of Sections 1–35 mapping into Phases 0–9 below); note any gap in `docs/DECISIONS.md`.
+  - Test: `docs/DECISIONS.md` has a short "scope check" note confirming CORE MVP bullets ↔ TASKS.md phases, or listing any gap found.
   - Depends: P0.4
 
 - [ ] **P0.6** `pipeline/discover.py` (§6.1 workflow, §3.3) — asf_search query for GCOV PROVISIONAL, run for all 4 candidate reaches in §5.1.
@@ -362,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 3 / 63 tasks · Phase in progress: Phase 0 · Next task: P0.4 (blocked)`
+`Completed: 4 / 63 tasks · Phase in progress: Phase 0 · Next task: P0.5`

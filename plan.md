@@ -8,10 +8,10 @@
 ## 0. Ground rules
 
 ### 0.1 When this plan may be executed
-The NASA Space Apps FAQ states that teams may not begin working on challenges before the hackathon. The 2026 hackathon runs **14–15 November 2026**; submission closes **15 Nov, 23:59 local time**.
-- **Do not execute any phase of this plan before the hackathon officially starts** (Sat 14 Nov 2026, 09:00 local time at the team's Local Event).
-- The full challenge statement is released on **28 Oct 2026**. Before H0, a human team member must paste the official statement into `docs/challenge_statement.md`. Phase 0 includes a relevance check against it.
-- Sources: [Participant FAQ](https://www.spaceappschallenge.org/resources/participant-faqs/) · [2026 home](https://www.spaceappschallenge.org/2026/)
+This is an **independent project**, not an official NASA Space Apps Challenge submission. No external organiser's rules apply. The team chose the SAR/river-erosion problem itself; Sections 1.1–1.2 of this document **are** the problem statement — there is no external statement to wait for.
+- **Execution starts immediately and runs continuously until the deadline.** No phase, and no task in `TASKS.md`, may be blocked on "waiting for an official start time" or "waiting for an external statement to be released." Those NASA-specific gates from earlier drafts of this plan are removed.
+- **Deadline: a working, deployed, publicly reachable web app by 28 September 2026.** All hour budgets in Section 27 are relative sequencing, not a countdown from a fixed external H0 — compress phases as needed to hit this date. Given the short runway, build strictly in MVP order (Section 1.5 CORE MVP first); do not start SHOULD/OPTIONAL tier work until every CORE MVP acceptance criterion in Section 28 passes.
+- `docs/challenge_statement.md` should simply record that this is a self-authored, independent build and point to Section 1.1–1.2 — it is not a blocking prerequisite for any other task.
 
 ### 0.2 Claude Code execution rules (mandatory)
 1. Follow this plan **sequentially by phase**. Do not start a phase until the previous phase's acceptance criteria pass.
@@ -25,7 +25,7 @@ The NASA Space Apps FAQ states that teams may not begin working on challenges be
 9. Preserve provenance: every derived file records its inputs (granule IDs, parameters, code commit).
 10. Run the tests listed for a phase before moving on. Fix failures before dependent work.
 11. Keep the pipeline reproducible: `make reproduce` must regenerate every output from raw inputs.
-12. Commit after each phase with message `phase-N: <summary>`. The git history is evidence that work happened during the hackathon.
+12. Commit after each phase with message `phase-N: <summary>`. The git history is evidence of when work happened.
 13. If something cannot be implemented exactly as specified, use the predefined fallback. Do not substitute a different architecture, different dataset or different method.
 14. Track progress in `TASKS.md`, not in memory or in this file. See Section 0.4 for the exact loop every session must follow.
 
@@ -50,15 +50,14 @@ The NASA Space Apps FAQ states that teams may not begin working on challenges be
 
 **At the start of every session, in order:**
 1. Read `TASKS.md` top to bottom.
-2. Check the hard gate at the top of `TASKS.md` (hackathon start time, challenge-statement release). If it is not satisfied for the task you'd otherwise pick, skip to the next eligible task.
-3. Find the **first** task whose checkbox is `[ ]` and whose `Depends` are all `[x]`. That is the only task you work on this turn.
-4. Read the `plan.md` section(s) the task links to. Re-read them even if you recall them — do not work from memory of an earlier session.
-5. Implement only that task. Do not start a second task "while you're in there." Do not refactor unrelated code. Do not expand scope beyond what the task and its linked spec section describe.
-6. Run exactly the `Test` written for that task. Do not invent a looser test and do not skip it because the change "looks obviously correct."
-7. **If the test passes:** check the box (`[ ]` → `[x]`), update the progress summary line at the bottom of `TASKS.md`, commit with message `phase-N.M: <summary>` (Section 0.2 rule 12).
-8. **If the test fails or the task is ambiguous / blocked by something outside your control** (missing credentials, an external API not yet available, a `VERIFY` item that contradicts this plan in a way Section 33 doesn't resolve): do **not** check the box. Mark it `[!]` in `TASKS.md`, write the specific blocker to `docs/BLOCKERS.md` (what you tried, what failed, what you need), and stop — do not guess past it and do not move to the next task as a workaround.
-9. Never mark a task `[x]` without having actually run its test in this session. A task that "should obviously work" is not done until its test has been run and passed.
-10. One task per turn is the default. Only chain multiple tasks in one sitting if each one's test passes before starting the next — never batch several tasks and test them all at the end.
+2. Find the **first** task whose checkbox is `[ ]` and whose `Depends` are all `[x]`. That is the only task you work on this turn. There is no external timing gate to check (Section 0.1) — do not pause waiting for a date, a released statement, or anyone's permission. The only reasons to pause on a task are the real, technical blockers described in step 7 below.
+3. Read the `plan.md` section(s) the task links to. Re-read them even if you recall them — do not work from memory of an earlier session.
+4. Implement only that task. Do not start a second task "while you're in there." Do not refactor unrelated code. Do not expand scope beyond what the task and its linked spec section describe.
+5. Run exactly the `Test` written for that task. Do not invent a looser test and do not skip it because the change "looks obviously correct."
+6. **If the test passes:** check the box (`[ ]` → `[x]`), update the progress summary line at the bottom of `TASKS.md`, commit with message `phase-N.M: <summary>` (Section 0.2 rule 12), **then immediately go back to step 2 and start the next task in the same session.** Do not stop and wait to be told to continue — keep working through `TASKS.md` until you hit a real blocker (step 7) or run out of eligible tasks.
+7. **If the test fails or the task is blocked by something outside your control** (missing credentials, an external API genuinely down, a `VERIFY` item that contradicts this plan in a way Section 33 doesn't resolve): do **not** check the box. Mark it `[!]` in `TASKS.md`, write the specific blocker to `docs/BLOCKERS.md` (what you tried, what failed, what you need), then **skip to the next eligible task instead of stopping the session** — a blocked task must never halt the rest of the project. Only stop the whole session if every remaining unblocked task has been exhausted.
+8. Never mark a task `[x]` without having actually run its test in this session. A task that "should obviously work" is not done until its test has been run and passed.
+9. Work through as many tasks as possible in one sitting — there is no "one task per session" limit. The only pacing rule is: never check off task N+1 before task N's test has actually passed.
 
 This protocol exists because an LLM session has no memory of prior sessions — the repo state (`TASKS.md` checkboxes, committed code, `docs/BLOCKERS.md`) is the only thing that persists. Treat it as such: read it before acting, write to it before stopping.
 
@@ -1079,7 +1078,7 @@ same-river-twice/
 
 ---
 
-## 27. Implementation order (hackathon hours, H0 = Sat 09:00)
+## 27. Implementation order (relative sequencing — see §0.1 for how these hour-labels map to the actual 28 Sep 2026 deadline)
 
 | Phase | Hours | Tasks | Files | Output | Acceptance |
 |---|---|---|---|---|---|
