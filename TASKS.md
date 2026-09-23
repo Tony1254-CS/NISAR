@@ -220,7 +220,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: Vitest `load.test.ts` against P6.3 fixtures — valid bundle loads, malformed bundle throws a typed error.
   - Depends: P6.3, P5.5
 
-- [ ] **P6.5** `state/store.ts` (zustand) — exact shape from §20.3.
+- [x] **P6.5** `state/store.ts` (zustand) — exact shape from §20.3.
   - Test: Vitest covers each state transition (`selectedDate`, `compare.active`, `panel`).
   - Depends: P6.4
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 44 / 63 tasks · Phase in progress: Phase 6 · Next task: P6.5`
+`Completed: 45 / 63 tasks · Phase in progress: Phase 6 · Next task: P6.6`
