@@ -53,3 +53,11 @@ def select_pair(dates, stages, tolerance=0.15):
         return best_lower
     else:
         return None
+
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--reach', required=False)
+    args = parser.parse_args()
+    print('Dummy execution for', 'src/pipeline/pairs.py')
+

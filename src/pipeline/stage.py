@@ -60,3 +60,11 @@ def proxy_stage(water_mask, ref_box):
         
     # Water fraction
     return box.sum() / box.size
+
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--reach', required=False)
+    args = parser.parse_args()
+    print('Dummy execution for', 'src/pipeline/stage.py')
+

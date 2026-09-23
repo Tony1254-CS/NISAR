@@ -118,3 +118,11 @@ def classify_water(data, hand_invalid_mask=None):
     water_cleaned = remove_small_holes(water_cleaned, area_threshold=12, connectivity=2)
     
     return water_cleaned, T, method, implausible
+
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--reach', required=False)
+    args = parser.parse_args()
+    print('Dummy execution for', 'src/pipeline/water.py')
+

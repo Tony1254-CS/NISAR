@@ -64,3 +64,11 @@ def classify_change(water_stack, valid_stack, ambiguous_t0, ambiguous_t1, t0_idx
     classes[nodata] = 255
     
     return classes, no_persistence_flag
+
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--reach', required=False)
+    args = parser.parse_args()
+    print('Dummy execution for', 'src/pipeline/change.py')
+

@@ -35,3 +35,11 @@ def compute_area_and_uncertainty(erosion_mask, area_low_thr, area_high_thr, pixe
     high = max(area_high_thr, area_ha + b_ha)
     
     return area_ha, low, high, perimeter_pixel_count
+
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--reach', required=False)
+    args = parser.parse_args()
+    print('Dummy execution for', 'src/pipeline/area.py')
+

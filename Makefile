@@ -69,3 +69,31 @@ ifndef REACH
 	$(error REACH is not set. Usage: make rfi-screen REACH=jamuna-chilmari)
 endif
 	python src/pipeline/rfi_screen.py --reach $(REACH)
+
+.PHONY: water
+water:
+ifndef REACH
+	$(error REACH is not set. Usage: make water REACH=jamuna-chilmari)
+endif
+	python src/pipeline/water.py --reach $(REACH)
+
+.PHONY: stage
+stage:
+ifndef REACH
+	$(error REACH is not set. Usage: make stage REACH=jamuna-chilmari)
+endif
+	python src/pipeline/stage.py --reach $(REACH)
+
+.PHONY: pairs
+pairs:
+ifndef REACH
+	$(error REACH is not set. Usage: make pairs REACH=jamuna-chilmari)
+endif
+	python src/pipeline/pairs.py --reach $(REACH)
+
+.PHONY: change
+change:
+ifndef REACH
+	$(error REACH is not set. Usage: make change REACH=jamuna-chilmari)
+endif
+	python src/pipeline/change.py --reach $(REACH)

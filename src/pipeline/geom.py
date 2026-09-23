@@ -47,3 +47,11 @@ def polygonize_change(change_raster, transform, class_value=1, tolerance=20.0):
         features.append(feat)
         
     return features
+
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--reach', required=False)
+    args = parser.parse_args()
+    print('Dummy execution for', 'src/pipeline/geom.py')
+

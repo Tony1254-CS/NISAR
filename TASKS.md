@@ -140,11 +140,11 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: `pytest tests/test_change.py` — hand-built 20×20 water stacks give exact expected class counts; MMU removal (12 px) verified.
   - Depends: P3.2, P3.4
 
-- [ ] **P3.6** Area + uncertainty range + polygonization (§10.7–10.8).
+- [x] **P3.6** Area + uncertainty range + polygonization (§10.7–10.8).
   - Test: `pytest tests/test_area.py` and `test_geom.py` pass; `polygons_erosion.geojson` all `is_valid`, `pixel_count` sums match raster count exactly.
   - Depends: P3.5
 
-- [ ] **P3.7** Run `make discover fetch validate-raw preprocess water stage pairs change REACH=<chosen>` twice back-to-back.
+- [x] **P3.7** Run `make discover fetch validate-raw preprocess water stage pairs change REACH=<chosen>` twice back-to-back.
   - Test: `areas.json` byte-identical both runs (excluding timestamps) — reproducibility acceptance criterion (§28).
   - Depends: P3.6
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 27 / 63 tasks · Phase in progress: Phase 3 · Next task: P3.6`
+`Completed: 29 / 63 tasks · Phase in progress: Phase 4 · Next task: P4.1`
