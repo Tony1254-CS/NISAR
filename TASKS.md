@@ -22,7 +22,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: `python -c "import asf_search, earthaccess, h5py, xarray, rasterio, rioxarray, shapely, geopandas, pydantic, jsonschema; print('OK')"` prints `OK`.
   - Depends: P0.1
 
-- [!] **P0.3** EDL login smoke test (human fills real `.env` with their own Earthdata Login first).
+- [x] **P0.3** EDL login smoke test (human fills real `.env` with their own Earthdata Login first).
   - Test: `python -c "import earthaccess; earthaccess.login(strategy='environment'); print('OK')"` prints `OK`, no exception.
   - Depends: P0.2
 
@@ -362,4 +362,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 2 / 63 tasks · Phase in progress: Phase 0 · Next task: P0.3 (blocked)`
+`Completed: 3 / 63 tasks · Phase in progress: Phase 0 · Next task: P0.4 (blocked)`

@@ -1,6 +1,6 @@
 # Blockers
 
-## P0.3: Missing Earthdata Login Credentials
-**What I tried:** Attempted to run the EDL login smoke test for task P0.3.
-**What failed:** The test threw an `earthaccess.exceptions.LoginStrategyUnavailable` exception.
-**What I need:** The human team member needs to copy `.env.example` to `.env` and fill in their actual `EARTHDATA_USERNAME` and `EARTHDATA_PASSWORD`.
+## P0.4: Waiting for official challenge statement
+**What I tried:** Attempted to start task P0.4.
+**What failed:** Task P0.4 cannot be executed before 28 Oct 2026 because the official 2026 challenge statement has not been released yet. The current date is 24 Sep 2026.
+**What I need:** We must wait until 28 Oct 2026. A human team member must paste the official statement into `docs/challenge_statement.md` once it is available.
