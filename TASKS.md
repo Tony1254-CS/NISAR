@@ -276,7 +276,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: clicking a polygon opens a panel containing a real granule ID string sourced from `manifest.json`.
   - Depends: P9.1
 
-- [ ] **P9.3** `panels/QCPanel.tsx` — ordered FAIL, WARN, NOT_EVALUATED, PASS, INFO (§21.3).
+- [x] **P9.3** `panels/QCPanel.tsx` — ordered FAIL, WARN, NOT_EVALUATED, PASS, INFO (§21.3).
   - Test: panel item count and order match `qc.json` exactly.
   - Depends: P4.3 (data), P9.1
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 55 / 63 tasks · Phase in progress: Phase 9 · Next task: P9.3`
+`Completed: 56 / 63 tasks · Phase in progress: Phase 9 · Next task: P9.4`
