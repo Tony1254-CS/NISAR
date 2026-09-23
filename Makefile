@@ -45,3 +45,11 @@ ifndef REACH
 	$(error REACH is not set. Usage: make validate-raw REACH=jamuna-chilmari)
 endif
 	python src/pipeline/validate_raw.py --reach $(REACH)
+
+.PHONY: preprocess
+
+preprocess:
+ifndef REACH
+	$(error REACH is not set. Usage: make preprocess REACH=jamuna-chilmari)
+endif
+	python src/pipeline/preprocess.py --reach $(REACH)
