@@ -18,11 +18,11 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: `git status` shows a clean repo; tree matches §26 top two levels.
   - Depends: none
 
-- [!] **P0.2** `environment.yml` + install pipeline deps (§4.1) via mamba; `.env.example` per §32.
+- [x] **P0.2** `environment.yml` + install pipeline deps (§4.1) via mamba; `.env.example` per §32.
   - Test: `python -c "import asf_search, earthaccess, h5py, xarray, rasterio, rioxarray, shapely, geopandas, pydantic, jsonschema; print('OK')"` prints `OK`.
   - Depends: P0.1
 
-- [ ] **P0.3** EDL login smoke test (human fills real `.env` with their own Earthdata Login first).
+- [!] **P0.3** EDL login smoke test (human fills real `.env` with their own Earthdata Login first).
   - Test: `python -c "import earthaccess; earthaccess.login(strategy='environment'); print('OK')"` prints `OK`, no exception.
   - Depends: P0.2
 
@@ -362,4 +362,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 1 / 63 tasks · Phase in progress: Phase 0 · Next task: P0.2 (blocked)`
+`Completed: 2 / 63 tasks · Phase in progress: Phase 0 · Next task: P0.3 (blocked)`

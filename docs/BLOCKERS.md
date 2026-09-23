@@ -1,6 +1,6 @@
 # Blockers
 
-## P0.2: Missing Mamba / Conda
-**What I tried:** Attempted to install pipeline dependencies per `plan.md` §4.1 via `mamba` or `conda` after creating `environment.yml` and `.env.example`.
-**What failed:** Both `mamba` and `conda` commands are missing from the system path (CommandNotFoundException).
-**What I need:** The user needs to install Miniforge/Mamba or Anaconda/Miniconda on the system and ensure it is available in the system PATH.
+## P0.3: Missing Earthdata Login Credentials
+**What I tried:** Attempted to run the EDL login smoke test for task P0.3.
+**What failed:** The test threw an `earthaccess.exceptions.LoginStrategyUnavailable` exception.
+**What I need:** The human team member needs to copy `.env.example` to `.env` and fill in their actual `EARTHDATA_USERNAME` and `EARTHDATA_PASSWORD`.
