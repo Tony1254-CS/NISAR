@@ -25,3 +25,8 @@ OPERA DSWx-S1 tiles found per candidate reach:
 - teesta-dalia: 15 tiles
 
 All candidates satisfy the minimum of 3 tiles.
+
+## FFWC Access Decision (Task P0.10)
+
+- **Decision**: Fallback A (Manual CSV).
+- **Reasoning**: Automated API registration at https://api3.ffwc.gov.bd is not feasible for an autonomous agent. The project will rely on a manual CSV file (data/raw/<reach_id>/stage/stage_manual.csv) containing the stage data for the required dates.

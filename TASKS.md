@@ -52,7 +52,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: `docs/DECISIONS.md` lists DSWx-S1 tile count found per candidate reach.
   - Depends: P0.6
 
-- [ ] **P0.10** FFWC access decision — attempt API registration; else pick Fallback A (manual CSV) or B (proxy) per §6.5.
+- [x] **P0.10** FFWC access decision — attempt API registration; else pick Fallback A (manual CSV) or B (proxy) per §6.5.
   - Test: `docs/DECISIONS.md` states which stage mode was chosen and why.
   - Depends: none (can run parallel to P0.6–P0.9)
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 10 / 63 tasks · Phase in progress: Phase 0 · Next task: P0.10`
+`Completed: 11 / 63 tasks · Phase in progress: Phase 0 · Next task: P0.11`
