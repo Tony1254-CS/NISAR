@@ -184,7 +184,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: every `ok`-status date has a `radar_<date>.png` and `water_<date>.png`; `bounds.json` present, 4 corners.
   - Depends: P4.5
 
-- [ ] **P5.3** `pipeline/manifest.py` — build `manifest.json` per §13.3, every metric with `inputs[]`.
+- [x] **P5.3** `pipeline/manifest.py` — build `manifest.json` per §13.3, every metric with `inputs[]`.
   - Test: `pytest tests/test_manifest.py` — every metric has ≥1 input with a granule/source; matches the JSON schema from P5.1.
   - Depends: P5.1, P4.5
 
@@ -364,4 +364,4 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 36 / 63 tasks · Phase in progress: Phase 5 · Next task: P5.3`
+`Completed: 37 / 63 tasks · Phase in progress: Phase 5 · Next task: P5.4`
