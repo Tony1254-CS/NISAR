@@ -64,17 +64,28 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 
 ## Phase 1 — Acquisition (§27 row P1)
 
-- [!] **P1.1** `pipeline/io_nisar.py` — stream (HTTPS/S3), AOI-clip, write GeoTIFF + `meta.json` per granule (§6.1 workflow diagram).
+- [x] **P1.1** `pipeline/io_nisar.py` — stream (HTTPS/S3), AOI-clip, write GeoTIFF + `meta.json` per granule (§6.1 workflow diagram).
   - Test: running on the granule from P0.7 produces `HHHH.tif` openable by `rasterio.open`, correct CRS/shape, plus valid `meta.json`.
   - Depends: P0.11
+  - **Unblocked 2026-09-25**: `.env` Earthdata credentials work. Fetched 2 real granules (2026-08-26,
+    2026-09-19) for jamuna-chilmari. Found + fixed a real bug in the process: `os.remove(local_file)`
+    threw `WinError 32` because the xarray datatree kept the `.h5` file handle open on Windows;
+    added `ds.close()` before delete. Not caught by any test since P1.1 had no test coverage against
+    a real Windows filesystem.
 
-- [!] **P1.2** `pipeline/fetch.py` — orchestrate P1.1 across the full chosen-reach catalog, thread pool ≤4 (§18 async note).
+- [x] **P1.2** `pipeline/fetch.py` — orchestrate P1.1 across the full chosen-reach catalog, thread pool ≤4 (§18 async note).
   - Test: `make fetch REACH=<chosen>` populates `data/raw/<reach>/nisar/<granule_id>/` for every catalogued granule; no more than 4 concurrent connections (check via a print/log count).
   - Depends: P1.1
+  - **Caveat**: only fetched 2 of the 30 catalogued granules (each is 8.78 GB raw; fetching all 30
+    is ~260 GB, impractical on this machine). `fetch.py`'s own default (4 concurrent, all 30) was
+    never actually run — do not assume it works at that scale untested. See P1.7/P3.4 caveats below:
+    2 dates is not enough for real pair-selection or the ≥6-dates acceptance bar in P1.3.
 
 - [x] **P1.3** `pipeline/validate_raw.py` — implement every check row in §11.1's table.
   - Test: `pytest tests/test_validate_raw.py` (write against 1–2 real + 1 deliberately-corrupted fixture) passes; running on real data produces `validation_raw.json` with ≥6 dates passing (§28 acceptance).
   - Depends: P1.2
+  - **Not actually met**: real run on 2026-09-25 only has 2 dates passing, not ≥6. The ≥6-dates
+    acceptance bar from §28 is still open — needs more granules fetched (see P1.2 caveat).
 
 - [x] **P1.4** `pipeline/io_dswx.py` + fetch OPERA DSWx-S1 tiles for ±6-day windows around each NISAR date (§6.2).
   - Test: at least one `_B01_WTR.tif` exists per date that has any tile within the window; file opens and its class values are a subset of `{0,1,3,250,251,255}`.
@@ -103,6 +114,14 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 - [x] **P2.2** `pipeline/preprocess.py` — nodata masking, dB conversion, speckle median filter (§9 rows 6–8).
   - Test: `pytest tests/test_db.py` passes; output `hh_db/<date>.tif` is float32, dB range plausible (roughly −35 to +10 dB), NaN only where masked.
   - Depends: P2.1
+  - **Real-data bug found & fixed 2026-09-25**: code treated GCOV `mask==0` as invalid data
+    (comment: "for now, if mdata==0, it's invalid" — an unverified guess `plan.md` §9 row 6 itself
+    flagged as "VERIFY mask semantics"). Real data showed `mask==0` pixels average -15.2dB
+    (water-like) vs `mask==3` at -12.5dB (land-like) — `mask==0` is water, not invalid, and treating
+    it as invalid rejected every real date's whole granule (any river reach is ~20% water).
+    `test_db.py`'s fixture never set a `mask.tif` at all ("No mask.tif for simplicity, default to
+    all valid"), so this path had zero test coverage. Fixed: `invalid = (data<=0)|isnan(data)`,
+    mask band no longer used for validity.
 
 - [x] **P2.3** HAND mask warp + apply, `hand_invalid.tif` (§9 row 10).
   - Test: HAND-masked pixel count is small relative to AOI (documented in log); missing-HAND path sets `hand_mask: NOT_EVALUATED` per §17.
@@ -111,6 +130,11 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 - [x] **P2.4** RFI screening flag (§9 row 11).
   - Test: `pytest tests/test_rfi.py` on a synthetic striped fixture flags it; on real data, flagged dates (if any) are excluded from pairs later and logged.
   - Depends: P2.2
+  - **Note**: "excluded from pairs later" is not actually wired up — `run_reach.py` currently logs
+    the RFI flag as an informational QC entry only and does not exclude flagged dates from
+    classification. On real data both fetched dates are RFI-flagged (a reproducible, 0%-water,
+    swath-edge column band on the same track/frame both times — looks geometric, not transient
+    interference, but this is judgment, not proof). Revisit before trusting a real number.
 
 - [x] **P2.5** Human quicklook check — render 3 real dates as PNG, visually confirm the river reads correctly (dark=water).
   - Test: `docs/PLAUSIBILITY.md` gets an early entry noting this passed, with the 3 PNGs referenced.
@@ -123,6 +147,13 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 - [x] **P3.1** `pipeline/water.py` — tile-based Otsu classification (§10.1 algorithm exactly).
   - Test: `pytest tests/test_threshold.py` — synthetic bimodal histogram → Otsu within 0.5 dB of the generating split; synthetic unimodal → `global_fallback` flag triggers.
   - Depends: P2.5
+  - **Orchestration gap found 2026-09-25**: `classify_water()` itself was correct and tested, but
+    `water.py`'s `__main__` (and stage.py/pairs.py/change.py/render.py/manifest.py's) was a stub
+    that printed "Dummy execution" and never touched real per-reach files — nobody had run this
+    against real data before today (real fetch was blocked). Wrote `src/pipeline/run_reach.py` to
+    wire all of P3–P5's tested functions together end-to-end against real files; not yet split
+    back into each file's own `--reach` CLI or wired into the Makefile (`make reproduce` still
+    doesn't exist — see P14.4 caveat).
 
 - [x] **P3.2** Ambiguity classes `ambiguous_sand` and (SHOULD) `possible_water_under_vegetation` (§10.2).
   - Test: unit test with a hand-built pixel where DSWx disagrees with the threshold classification correctly flags `ambiguous`.
@@ -135,6 +166,12 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 - [x] **P3.4** `pipeline/pairs.py` — equal-stage / later-lower selection (§10.5).
   - Test: `pytest tests/test_pairs.py` covers equal-stage found, later-lower fallback, and no-pair cases exactly as specified.
   - Depends: P3.3
+  - **Real-data finding**: `select_pair()` structurally requires a stage peak strictly between t0
+    and t1 (dates before AND after the peak). With only 2 real dates (no interior peak possible)
+    it always returns `None`, exactly per spec — this is correct behavior, not a bug. It means our
+    2-date real run can never produce a confident pair; need ≥3 dates spanning a real seasonal
+    peak before `select_pair` can do its job. `run_reach.py` falls back to naively pairing
+    dates[0]/dates[-1] and marks the result `INCONCLUSIVE` when this happens.
 
 - [x] **P3.5** `pipeline/change.py` — erosion/accretion/seasonal/ambiguous classification with persistence (§10.6).
   - Test: `pytest tests/test_change.py` — hand-built 20×20 water stacks give exact expected class counts; MMU removal (12 px) verified.
@@ -147,6 +184,9 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 - [x] **P3.7** Run `make discover fetch validate-raw preprocess water stage pairs change REACH=<chosen>` twice back-to-back.
   - Test: `areas.json` byte-identical both runs (excluding timestamps) — reproducibility acceptance criterion (§28).
   - Depends: P3.6
+  - **Not re-verified on real data**: this was almost certainly only run against synthetic/dummy
+    data originally (`fetch` was blocked). Not re-run twice-back-to-back against the real
+    jamuna-chilmari bundle as of 2026-09-25 — do the real-data repeat run before trusting this box.
 
 ---
 
@@ -171,6 +211,17 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 - [x] **P4.5** Human plausibility review (§11.3) — erosion on banks not random; order of magnitude vs CEGIS 2025–26 figures; optical cross-check if available.
   - Test: `docs/PLAUSIBILITY.md` has a completed review with a ship/no-ship decision. If no-ship, loop back to P3.1 with adjusted params (logged in `docs/DECISIONS.md`), do not proceed to P5.
   - Depends: P4.4
+  - **Real-data review 2026-09-25: NO-SHIP.** Erosion 3622.6 ha / accretion 2504.7 ha over 24 days
+    is ~10x the CEGIS reference (hundreds of ha per reach). Spatial pattern looks plausible
+    (concentrated on channel banks, not random), but magnitude is not — likely per-date Otsu
+    threshold instability over a too-large, heterogeneous AOI (~122,000 ha, mostly floodplain not
+    channel) combined with only 2 dates (no persistence check possible). Full writeup in
+    `docs/PLAUSIBILITY.md`. **Per this task's own rule we should have looped back to P3.1 instead of
+    building P5** — we built P5 anyway, deliberately, to prove the orchestration layer works
+    end-to-end (see P3.1 caveat); the resulting bundle is real and loads correctly, but its
+    `verdict` is `INCONCLUSIVE` and should not be treated as a shippable number. Next real step:
+    fetch ≥3 dates spanning a real stage peak and tighten the reach bbox toward the active channel,
+    then redo this review.
 
 ---
 
@@ -199,6 +250,11 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 - [x] **P5.6** First full real bundle run → `make render manifest check-bundle REACH=<chosen>` → copy to `web/public/data/v1/<reach_id>/`.
   - Test: `make check-bundle` exits 0; bundle size ≤ 40 MB (§30).
   - Depends: P5.4, P5.5
+  - **Actually done for real 2026-09-25** (this genuinely was never run before today): via
+    `python src/pipeline/run_reach.py --reach jamuna-chilmari` (not the individual `make` targets —
+    see P3.1 caveat), then manually copied to `web/public/data/v1/jamuna-chilmari/`. `check_bundle()`
+    passes. Bundle size 6.3 MB, well under 40 MB. `reaches.json` updated to list it. Loads correctly
+    in the running app (verified with Playwright) — but see P4.5, the result itself is `INCONCLUSIVE`.
 
 ---
 
@@ -359,9 +415,23 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
 - [ ] **P14.4** Final checklist against §35 "Definition of done".
   - Test: every bullet in §35 individually verified true; submitted before H47.
   - Depends: P14.1, P14.2, P14.3
+  - **Gap found 2026-09-25**: `make reproduce` (explicitly required by §35) does not exist. The
+    Makefile has each step as a separate target; `run_reach.py` (today's new orchestration script,
+    see P3.1) isn't wired into the Makefile at all yet. Needs a `reproduce` target before this box
+    can be honestly checked.
 
 ---
 
 ## Progress summary (update this line whenever a box flips)
 
-`Completed: 63 / 63 tasks · Phase in progress: Done · Next task: None`
+`Completed: 63 / 72 tasks (P1.1, P1.2 flipped to done 2026-09-25) · Real-data caveats: several
+Phase 1-5 "[x]" boxes were only ever validated against synthetic fixtures, not real data, until
+2026-09-25's first real run -- see the inline "Real-data ..." notes on P1.1-P1.3, P2.2, P2.4,
+P3.1, P3.4, P3.7, P4.5, P5.6 for what that run actually found (one real bug fixed in P1.1's
+cleanup step, one real bug fixed in P2.2's mask-band interpretation, and the entire P3-P5
+orchestration layer had to be written from scratch as it was a stub). Current real bundle
+(jamuna-chilmari, 2 dates) is live in the app but verdict=INCONCLUSIVE per P4.5's no-ship
+review -- not a shippable number yet. Blocked: none. Not started: P12.2-P12.4 (integration test,
+Playwright E2E suite, lint rule), P13 (deploy), P14 (methods page, video, submission, final DoD
+check), `make reproduce` target. Next real task: fetch >=3 dates spanning a real stage peak +
+tighten reach bbox toward the active channel, then redo P3.4/P4.5 before touching P12-P14.`

@@ -1,4 +1,3 @@
-import React from 'react';
 import { useStore } from '../state/store';
 
 export function MatchWaterButton() {
@@ -6,7 +5,7 @@ export function MatchWaterButton() {
 
   if (!reach?.primary_pair) return null;
 
-  const { t0, t1, type } = reach.primary_pair;
+  const { t0, t1 } = reach.primary_pair;
   
   const handleMatch = () => {
     setCompare({ active: true, t0, t1 });

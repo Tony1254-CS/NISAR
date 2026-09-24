@@ -15,12 +15,21 @@ describe('EvidencePanel', () => {
       manifest: {
         metrics: [
           {
+            id: 'erosion_area',
+            label: 'Land lost to the river',
+            value: 42,
+            unit: 'ha',
             inputs: [
-              { granule: 'NISAR_L2_GCOV_ABC123' }
+              { kind: 'NISAR_GCOV', granule: 'NISAR_L2_GCOV_ABC123' }
             ]
           }
         ]
       },
+      reach: { headline_metric_id: 'erosion_area' },
+      stage: null,
+      qc: null,
+      erosion: null,
+      accretion: null,
       setSelectedFeatureId: vi.fn()
     });
 

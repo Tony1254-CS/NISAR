@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { scaleTime, scaleLinear } from 'd3-scale';
 import { line } from 'd3-shape';
 import { extent, min, max } from 'd3-array';
@@ -6,7 +6,7 @@ import { useStore } from '../state/store';
 import { MatchWaterButton } from './MatchWaterButton';
 
 export function Hydrograph({ width = 800, height = 150 }) {
-  const { stage, reach, selectedDate, setSelectedDate, compare } = useStore();
+  const { stage, selectedDate, setSelectedDate, compare } = useStore();
   
   if (!stage) return <div className="hydrograph-skeleton" style={{ width, height }} />;
 
@@ -53,15 +53,57 @@ export function Hydrograph({ width = 800, height = 150 }) {
     return acq ? acq.h : null;
   }, [compare, stage]);
 
+  const formatDate = (d: string) => {
+    if (d.length !== 8) return d;
+    const dt = new Date(`${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}T00:00:00Z`);
+    return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+  };
+
   return (
     <div style={{ position: 'relative', width, height, background: 'var(--panel)', borderTop: '1px solid var(--line)' }}>
       {/* Rain strip slot */}
       <div style={{ position: 'absolute', top: 0, left: margin.left, width: innerWidth, height: 16, borderBottom: '1px solid var(--line)' }} />
-      
+
       <div style={{ position: 'absolute', top: 20, right: 20, zIndex: 10 }}>
         <MatchWaterButton />
       </div>
-      
+
+      {/* Big, unambiguous date-switch buttons -- the graph's tiny dots below
+          are hard to notice/click reliably, so this is the primary control
+          for browsing single-date imagery; the graph stays for context.
+          Reuses the rain-strip's reserved top strip (currently unused). */}
+      {!compare.active && (
+        <div style={{
+          position: 'absolute', top: 0, left: margin.left, height: 16, zIndex: 10,
+          display: 'flex', gap: 6, alignItems: 'center', background: 'var(--panel)',
+        }}>
+          <span style={{ color: 'var(--text-3)', fontSize: '0.7rem' }}>Showing:</span>
+          {acqs.filter(a => a.status === 'ok').map((a) => {
+            const isSelected = a.date === selectedDate;
+            return (
+              <button
+                key={a.date}
+                onClick={() => setSelectedDate(a.date)}
+                aria-pressed={isSelected}
+                style={{
+                  background: isSelected ? 'var(--water)' : 'transparent',
+                  color: isSelected ? '#04222b' : 'var(--text)',
+                  border: isSelected ? '1px solid var(--water)' : '1px solid var(--line-strong)',
+                  fontWeight: isSelected ? 700 : 400,
+                  padding: '0px 8px',
+                  lineHeight: '14px',
+                  borderRadius: 'var(--r)',
+                  cursor: 'pointer',
+                  fontSize: '0.7rem',
+                }}
+              >
+                {isSelected ? '✓ ' : ''}{formatDate(a.date)}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       <svg width={width} height={height}>
         <g transform={`translate(${margin.left},${margin.top})`}>
           {/* Y Axis Grid lines (2-3 max per spec) */}

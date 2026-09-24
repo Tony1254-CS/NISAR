@@ -1,0 +1,20 @@
+[
+  {
+    "reach_id": "jamuna-chilmari",
+    "name": "Chilmari–Roumari Reach",
+    "river": "Jamuna",
+    "bbox": [89.60, 25.40, 89.90, 25.75],
+    "verdict": "INCONCLUSIVE",
+    "data_frozen_at": "2026-09-19T12:42:40Z",
+    "bundle_version": "v1"
+  },
+  {
+    "reach_id": "dummy",
+    "name": "Kazipur Reach (fixture)",
+    "river": "Jamuna",
+    "bbox": [89.55, 24.25, 89.85, 24.65],
+    "verdict": "LIMITED",
+    "data_frozen_at": "2026-06-14T00:00:00Z",
+    "bundle_version": "v1"
+  }
+]

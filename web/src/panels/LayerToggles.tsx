@@ -1,4 +1,3 @@
-import React from 'react';
 import { useStore } from '../state/store';
 
 export function LayerToggles() {
@@ -10,23 +9,30 @@ export function LayerToggles() {
 
   return (
     <div style={{ display: 'flex', gap: 'var(--s2)', marginBottom: 'var(--s4)', flexWrap: 'wrap' }}>
-      {(['water', 'accretion', 'erosion', 'ambiguous', 'forecast'] as const).map(layer => (
-        <button
-          key={layer}
-          onClick={() => toggleLayer(layer)}
-          style={{
-            background: layers[layer] ? 'var(--line)' : 'transparent',
-            border: '1px solid var(--line-strong)',
-            color: 'var(--text)',
-            padding: '4px 12px',
-            borderRadius: 'var(--r)',
-            cursor: 'pointer',
-            textTransform: 'capitalize'
-          }}
-        >
-          {layer}
-        </button>
-      ))}
+      {/* 'forecast' (CEGIS outlines) is SHOULD-tier and stays hidden until
+          real forecast data ships (Section 1.5, P10.2). */}
+      {(['water', 'accretion', 'erosion', 'ambiguous'] as const).map(layer => {
+        const active = layers[layer];
+        return (
+          <button
+            key={layer}
+            onClick={() => toggleLayer(layer)}
+            aria-pressed={active}
+            style={{
+              background: active ? 'var(--water)' : 'transparent',
+              border: active ? '1px solid var(--water)' : '1px solid var(--line-strong)',
+              color: active ? '#04222b' : 'var(--text)',
+              fontWeight: active ? 700 : 400,
+              padding: '4px 12px',
+              borderRadius: 'var(--r)',
+              cursor: 'pointer',
+              textTransform: 'capitalize'
+            }}
+          >
+            {active ? '✓ ' : ''}{layer}
+          </button>
+        );
+      })}
     </div>
   );
 }

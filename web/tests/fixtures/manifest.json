@@ -1,1 +1,43 @@
-{"reach_id": "dummy", "metrics": [{"id": "erosion_area", "pixel_count": 100, "inputs": [{"kind": "NISAR_GCOV"}]}]}
+{
+  "reach_id": "dummy",
+  "generated_at": "2026-06-14T00:00:00Z",
+  "code_commit": "0000000",
+  "metrics": [
+    {
+      "id": "erosion_area",
+      "label": "Land lost to the river",
+      "value": 120.5,
+      "low": 95.0,
+      "high": 150.0,
+      "unit": "ha",
+      "definition": "Land at t0, water at t1 and all later valid passes; river stage at t1 within 0.15 m of t0.",
+      "method_ref": "methods#erosion",
+      "inputs": [
+        {
+          "kind": "NISAR_GCOV",
+          "granule": "NISAR_L2_PR_GCOV_dummy_20260601",
+          "acq_utc": "2026-06-01T04:12:00Z",
+          "layer": "HHHH",
+          "doi": "10.5067/NIL2GCOV-P1"
+        },
+        {
+          "kind": "FFWC_STAGE",
+          "station": "Kazipur",
+          "value_m": 14.0,
+          "time_local": "2026-06-01T10:12:00+06:00",
+          "source_url": "https://api3.ffwc.gov.bd"
+        }
+      ],
+      "params": {
+        "threshold_db_t0": -19.2,
+        "threshold_db_t1": -18.7,
+        "median_filter": 5,
+        "mmu_px": 12,
+        "hand_max_m": 15
+      },
+      "pixel_area_m2": 400,
+      "pixel_count": 100,
+      "qc_refs": ["dswx_agreement", "null_test", "threshold_sensitivity"]
+    }
+  ]
+}

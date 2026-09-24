@@ -249,3 +249,15 @@ export interface ErosionProperties {
   in_cegis_reach?: InCegisReach;
   [k: string]: unknown;
 }
+
+export interface ChangeFeature {
+  type: "Feature";
+  id?: string | number;
+  geometry: { type: string; coordinates: unknown };
+  properties: ErosionProperties;
+}
+
+export interface ChangeFeatureCollection {
+  type: "FeatureCollection";
+  features: ChangeFeature[];
+}

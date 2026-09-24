@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface InconclusiveProps {
   failingChecks?: string[];
   noPairReason?: string;

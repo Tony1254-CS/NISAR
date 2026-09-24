@@ -85,9 +85,17 @@ def stream_and_clip_granule(granule_name, bbox, out_dir):
             except Exception as e:
                 print(f"Error clipping {var}: {e}")
                 
+    # Close the datatree so Windows releases its file handle on the .h5
+    # before we try to delete it (h5py/h5netcdf keep it open otherwise,
+    # which turns the os.remove below into a silent no-op retry loop).
+    ds.close()
+
     # Cleanup local file if fallback was used
     if os.path.exists(local_file):
-        os.remove(local_file)
+        try:
+            os.remove(local_file)
+        except OSError as e:
+            print(f"Warning: could not delete raw file {local_file}: {e}")
         
 if __name__ == "__main__":
     import sys

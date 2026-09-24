@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { ReachDetail, Manifest, Stage, QC } from '../data/types';
+import { ReachDetail, Manifest, Stage, QC, Bounds, ChangeFeatureCollection } from '../data/types';
+import type { ReachBundle } from '../data/load';
 
 interface CompareState {
   active: boolean;
@@ -23,7 +24,10 @@ interface StoreState {
   manifest: Manifest | null;
   stage: Stage | null;
   qc: QC | null;
-  
+  bounds: Bounds | null;
+  erosion: ChangeFeatureCollection | null;
+  accretion: ChangeFeatureCollection | null;
+
   selectedDate: string | null;
   compare: CompareState;
   selectedFeatureId: string | null;
@@ -38,6 +42,8 @@ interface StoreState {
   setPanel: (panel: PanelType) => void;
   setSelectedFeatureId: (id: string | null) => void;
   setLayers: (update: Partial<LayersState>) => void;
+  loadBundle: (reachId: string, bundle: ReachBundle) => void;
+  clearBundle: () => void;
 }
 
 export const useStore = create<StoreState>((set) => ({
@@ -46,7 +52,10 @@ export const useStore = create<StoreState>((set) => ({
   manifest: null,
   stage: null,
   qc: null,
-  
+  bounds: null,
+  erosion: null,
+  accretion: null,
+
   selectedDate: null,
   compare: { active: false, t0: null, t1: null },
   selectedFeatureId: null,
@@ -60,4 +69,31 @@ export const useStore = create<StoreState>((set) => ({
   setPanel: (panel) => set({ panel }),
   setSelectedFeatureId: (id) => set({ selectedFeatureId: id }),
   setLayers: (update) => set((state) => ({ layers: { ...state.layers, ...update } })),
+  loadBundle: (reachId, bundle) =>
+    set((state) => {
+      const okDates = bundle.reach.dates.filter((d) => d.status === 'ok');
+      const latest = okDates.length > 0 ? okDates[okDates.length - 1].date : null;
+      return {
+        reachId,
+        reach: bundle.reach,
+        manifest: bundle.manifest,
+        stage: bundle.stage,
+        qc: bundle.qc,
+        bounds: bundle.bounds,
+        erosion: bundle.erosion,
+        accretion: bundle.accretion,
+        selectedDate: state.selectedDate ?? latest,
+      };
+    }),
+  clearBundle: () =>
+    set({
+      reach: null,
+      manifest: null,
+      stage: null,
+      qc: null,
+      bounds: null,
+      erosion: null,
+      accretion: null,
+      selectedDate: null,
+    }),
 }));

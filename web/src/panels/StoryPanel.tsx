@@ -1,4 +1,3 @@
-import React from 'react';
 import { Headline } from './Headline';
 import { VerdictBadge } from './VerdictBadge';
 import { LayerToggles } from './LayerToggles';

@@ -1,1 +1,16 @@
-{"dates": [{"date": "20260601", "status": "ok"}, {"date": "20260613", "status": "ok"}], "primary_pair": {"t0": "20260601", "t1": "20260613", "type": "equal_stage", "dh_m": 0.1}, "river": "Jamuna", "name": "Kazipur Reach", "headline_metric_id": "erosion_area"}
+{
+  "reach_id": "dummy",
+  "name": "Kazipur Reach (fixture)",
+  "river": "Jamuna",
+  "bbox": [89.55, 24.25, 89.85, 24.65],
+  "crs_analysis": "EPSG:32645",
+  "track": { "relative_orbit": 31, "direction": "D", "frame": 76 },
+  "dates": [
+    { "date": "20260601", "acq_utc": "2026-06-01T04:12:00Z", "status": "ok", "stage_m": 14.0, "stage_source": "FFWC" },
+    { "date": "20260613", "acq_utc": "2026-06-13T04:12:00Z", "status": "ok", "stage_m": 14.1, "stage_source": "FFWC" }
+  ],
+  "primary_pair": { "t0": "20260601", "t1": "20260613", "type": "equal_stage", "dh_m": 0.1 },
+  "verdict": "LIMITED",
+  "verdict_reasons": ["fixture data — not a real pipeline run"],
+  "headline_metric_id": "erosion_area"
+}

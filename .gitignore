@@ -3,5 +3,7 @@ data/*
 __pycache__/
 node_modules/
 web/dist/
+.venv313/
+.pytest_cache/
 
 .env

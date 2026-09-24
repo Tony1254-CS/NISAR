@@ -1,1 +1,45 @@
-{"type": "FeatureCollection", "features": [{"type": "Feature", "id": "poly-1", "properties": {"id": "poly-1", "pixel_count": 100}, "geometry": {"type": "Polygon", "coordinates": [[[89.65, 24.45], [89.75, 24.45], [89.75, 24.55], [89.65, 24.55], [89.65, 24.45]]]}}]}
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "ero-0001",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[89.65, 24.45], [89.66, 24.45], [89.66, 24.46], [89.65, 24.46], [89.65, 24.45]]]
+      },
+      "properties": {
+        "id": "ero-0001",
+        "class": "erosion",
+        "area_ha": 40.0,
+        "pixel_count": 40,
+        "t0": "20260601",
+        "t1": "20260613",
+        "confirmed_by_dswx": true,
+        "centroid": [89.655, 24.455],
+        "nearest_place": "Kazipur",
+        "in_cegis_reach": null
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "ero-0002",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[89.7, 24.5], [89.71, 24.5], [89.71, 24.51], [89.7, 24.51], [89.7, 24.5]]]
+      },
+      "properties": {
+        "id": "ero-0002",
+        "class": "erosion",
+        "area_ha": 60.0,
+        "pixel_count": 60,
+        "t0": "20260601",
+        "t1": "20260613",
+        "confirmed_by_dswx": false,
+        "centroid": [89.705, 24.505],
+        "nearest_place": "Sirajganj",
+        "in_cegis_reach": null
+      }
+    }
+  ]
+}

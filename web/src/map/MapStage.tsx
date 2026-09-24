@@ -1,95 +1,148 @@
-import React, { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { layers, sources } from './layers';
+import { useStore } from '../state/store';
+import {
+  addStaticSources,
+  ensureReachLayers,
+  updateRadarWaterImage,
+  setWaterVisible,
+  setChangeLayersVisible,
+  ensureAmbiguousLayer,
+} from './bundleLayers';
 import { FlyIn } from './FlyIn';
 import { OutsideCoverage } from '../states/OutsideCoverage';
 import { MapLegend } from './MapLegend';
 import { CompareSwipe } from './CompareSwipe';
+
 export function MapStage() {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const [mapInstance, setMapInstance] = useState<maplibregl.Map | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  const [mapInstance, setMapInstance] = useState<maplibregl.Map | null>(null);
+  const [mapLoaded, setMapLoaded] = useState(false);
   const [isOutside, setIsOutside] = useState(false);
-  const boundsRef = useRef<[number, number, number, number]>([89.60, 24.25, 89.90, 25.75]);
+  const flownRef = useRef(false);
+  const reachLayersReadyRef = useRef(false);
+  const displayedDateRef = useRef<string | null>(null);
 
+  const { reachId, reach, bounds, selectedDate, compare, layers } = useStore();
+
+  // Mount the map once.
   useEffect(() => {
     if (mapContainer.current && !mapRef.current) {
-      mapRef.current = new maplibregl.Map({
+      const map = new maplibregl.Map({
         container: mapContainer.current,
-        style: 'https://tiles.openfreemap.org/styles/positron', // Neutral vector basemap (Layer 3)
-        center: [89.7, 24.5], // Jamuna approx
-        zoom: 6
+        style: 'https://tiles.openfreemap.org/styles/positron',
+        center: [89.7, 24.5],
+        zoom: 6,
+      });
+      mapRef.current = map;
+
+      map.on('load', () => {
+        addStaticSources(map);
+        setMapInstance(map);
+        setMapLoaded(true);
       });
 
-      mapRef.current.on('load', () => {
-        const map = mapRef.current!;
-        setMapInstance(map);
-        
-        // Add sources
-        map.addSource('gibs', sources.gibs);
-        
-        const reachId = useStore.getState().reachId || 'dummy';
-        const baseUrl = `/data/v1/${reachId}`;
-        
-        ['change-source', 'accretion-source', 'cegis-source', 'aoi-source'].forEach(id => {
-           map.addSource(id, { type: 'geojson', data: { type: 'FeatureCollection', features: [] }});
-        });
-        map.addSource('erosion-source', { type: 'geojson', data: `${baseUrl}/erosion.geojson` });
-        ['radar-source', 'water-source'].forEach(id => {
-           map.addSource(id, { type: 'raster', tiles: [''], tileSize: 256 });
-        });
-
-        // Add layers in order, before labels if they exist
-        layers.forEach(layer => {
-          map.addLayer(layer as maplibregl.LayerSpecification);
-        });
-
-        map.on('click', 'layer-8-erosion', (e) => {
-           if (e.features && e.features[0]) {
-               useStore.getState().setSelectedFeatureId(e.features[0].properties.id);
-           }
-        });
-        map.on('mouseenter', 'layer-8-erosion', () => {
-           map.getCanvas().style.cursor = 'pointer';
-        });
-        map.on('mouseleave', 'layer-8-erosion', () => {
-           map.getCanvas().style.cursor = '';
-        });
-
-        // Hardcode approx Jamuna bounds for now until we load reach data
-        const bounds = boundsRef.current;
-        const flyIn = new FlyIn(map, bounds);
-        flyIn.start();
-
-        map.on('move', () => {
-          const center = map.getCenter();
-          const [w, s, e, n] = boundsRef.current;
-          const pad = 0.045; // roughly 5km
-          if (center.lng < w - pad || center.lng > e + pad || center.lat < s - pad || center.lat > n + pad) {
-            setIsOutside(true);
-          } else {
-            setIsOutside(false);
-          }
-        });
+      map.on('move', () => {
+        const bbox = useStore.getState().reach?.bbox;
+        if (!bbox) return;
+        const center = map.getCenter();
+        const [w, s, e, n] = bbox;
+        const pad = 0.045; // ~5km
+        const outside = center.lng < w - pad || center.lng > e + pad || center.lat < s - pad || center.lat > n + pad;
+        setIsOutside(outside);
       });
     }
 
     return () => {
-      if (mapRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
-      }
+      mapRef.current?.remove();
+      mapRef.current = null;
     };
   }, []);
+
+  // Fly in once, as soon as we know the reach's AOI.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded || !reach || flownRef.current) return;
+    flownRef.current = true;
+    new FlyIn(map, reach.bbox as [number, number, number, number]).start();
+  }, [mapLoaded, reach]);
+
+  // Add per-reach sources/layers once bounds + an initial date are known.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded || !reach || !bounds || !selectedDate) return;
+    const baseUrl = `/data/v1/${reachId}`;
+
+    if (!reachLayersReadyRef.current) {
+      ensureReachLayers(map, { baseUrl, bounds, bbox: reach.bbox, initialDate: selectedDate });
+      reachLayersReadyRef.current = true;
+      displayedDateRef.current = selectedDate;
+
+      map.on('click', 'layer-8-erosion', (e) => {
+        const f = e.features?.[0];
+        if (f) useStore.getState().setSelectedFeatureId(String(f.properties?.id));
+      });
+      map.on('mouseenter', 'layer-8-erosion', () => {
+        map.getCanvas().style.cursor = 'pointer';
+      });
+      map.on('mouseleave', 'layer-8-erosion', () => {
+        map.getCanvas().style.cursor = '';
+      });
+    }
+  }, [mapLoaded, reach, bounds, selectedDate, reachId]);
+
+  // Reset per-reach layer state when the reach changes.
+  useEffect(() => {
+    reachLayersReadyRef.current = false;
+    flownRef.current = false;
+    displayedDateRef.current = null;
+  }, [reachId]);
+
+  // Radar/water image swaps: browse mode shows selectedDate; compare mode
+  // shows t0 on the primary (left) map (Section 21.1 interaction table).
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded || !reachId || !reachLayersReadyRef.current) return;
+    const date = compare.active && compare.t0 ? compare.t0 : selectedDate;
+    if (!date || date === displayedDateRef.current) return;
+    displayedDateRef.current = date;
+    updateRadarWaterImage(map, `/data/v1/${reachId}`, date);
+  }, [mapLoaded, reachId, selectedDate, compare.active, compare.t0]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+    setWaterVisible(map, layers.water);
+  }, [mapLoaded, layers.water]);
+
+  // Change layers (erosion/accretion/ambiguous): only meaningful in compare
+  // mode, and each also gated by its own LayerToggles state.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded || !reachLayersReadyRef.current || !bounds || !reachId) return;
+    if (compare.active && compare.t0 && compare.t1) {
+      ensureAmbiguousLayer(map, { baseUrl: `/data/v1/${reachId}`, bounds, t0: compare.t0, t1: compare.t1 });
+    }
+    setChangeLayersVisible(map, {
+      erosion: compare.active && layers.erosion,
+      accretion: compare.active && layers.accretion,
+      ambiguous: compare.active && layers.ambiguous,
+    });
+  }, [mapLoaded, compare.active, compare.t0, compare.t1, bounds, reachId, layers.erosion, layers.accretion, layers.ambiguous]);
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
       <CompareSwipe primaryMap={mapInstance} />
-      {isOutside && <OutsideCoverage onFlyBack={() => {
-        mapRef.current?.fitBounds(boundsRef.current, { padding: 20 });
-      }} />}
+      {isOutside && (
+        <OutsideCoverage
+          onFlyBack={() => {
+            if (reach) mapRef.current?.fitBounds(reach.bbox as [number, number, number, number], { padding: 20 });
+          }}
+        />
+      )}
       <MapLegend />
     </div>
   );

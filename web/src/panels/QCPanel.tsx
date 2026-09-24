@@ -1,6 +1,4 @@
-import React from 'react';
 import { useStore } from '../state/store';
-import { QCCheck } from '../data/types';
 
 export function QCPanel() {
   const { qc } = useStore();

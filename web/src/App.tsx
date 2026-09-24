@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useStore } from './state/store';
 import { useDeepLink } from './state/useDeepLink';
 import { MapStage } from './map/MapStage';
@@ -6,50 +6,114 @@ import { Hydrograph } from './hydrograph/Hydrograph';
 import { StoryPanel } from './panels/StoryPanel';
 import { EvidencePanel } from './panels/EvidencePanel';
 import { QCPanel } from './panels/QCPanel';
+import { TopBar } from './TopBar';
+import { MethodsPage } from './pages/Methods';
+import { Loading } from './states/Loading';
+import { ErrorState } from './states/ErrorState';
+import { fetchReaches, loadReachBundle, DataLoadError } from './data/load';
+import type { ReachListItem } from './data/types';
+
+type LoadStatus = 'loading' | 'ready' | 'empty' | 'error';
 
 export default function App() {
-  const { reachId, selectedFeatureId, panel } = useStore();
-  const [loading, setLoading] = useState(false);
+  const { reachId, selectedFeatureId, panel, setReachId, loadBundle } = useStore();
+  const [reaches, setReaches] = useState<ReachListItem[] | null>(null);
+  const [status, setStatus] = useState<LoadStatus>('loading');
+  const [errorFile, setErrorFile] = useState('reaches.json');
+  const [retryToken, setRetryToken] = useState(0);
 
   useDeepLink();
 
+  const isMethods = typeof window !== 'undefined' && window.location.pathname === '/methods';
+
+  // Bootstrap: load the reach catalog once, then default to the first reach
+  // unless a deep link already selected one (Section 20.1/21.1 Empty state).
+  useEffect(() => {
+    let cancelled = false;
+    setStatus('loading');
+    fetchReaches()
+      .then((list) => {
+        if (cancelled) return;
+        setReaches(list);
+        const deepLinkedReach = useStore.getState().reachId;
+        if (deepLinkedReach) {
+          // A deep link (Section 20.1) may point at a reach not yet in the
+          // picker list; let the per-reach fetch below decide if it exists.
+          return;
+        }
+        if (list.length === 0) {
+          setStatus('empty');
+          return;
+        }
+        setReachId(list[0].reach_id);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error(err);
+        setErrorFile('reaches.json');
+        setStatus('error');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [retryToken, setReachId]);
+
   useEffect(() => {
     if (!reachId) return;
-    setLoading(true);
-    const baseUrl = `/data/v1/${reachId}`;
-    
-    Promise.all([
-      fetch(`${baseUrl}/reach.json`).then(r => r.json()),
-      fetch(`${baseUrl}/manifest.json`).then(r => r.json()),
-      fetch(`${baseUrl}/stage.json`).then(r => r.json()),
-      fetch(`${baseUrl}/qc.json`).then(r => r.json()).catch(() => null) // Optional
-    ]).then(([reach, manifest, stage, qc]) => {
-      useStore.setState({ reach, manifest, stage, qc });
-      setLoading(false);
-    }).catch(err => {
-      console.error(err);
-      setLoading(false);
-    });
-  }, [reachId]);
+    let cancelled = false;
+    setStatus('loading');
+    loadReachBundle(reachId)
+      .then((bundle) => {
+        if (cancelled) return;
+        loadBundle(reachId, bundle);
+        setStatus('ready');
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error(err);
+        setErrorFile(err instanceof DataLoadError ? err.message : 'bundle');
+        setStatus('error');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [reachId, retryToken, loadBundle]);
+
+  if (isMethods) {
+    return <MethodsPage />;
+  }
 
   return (
     <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <TopBar reaches={reaches} />
       <div style={{ flex: 1, position: 'relative' }}>
-        <MapStage />
-        {loading && (
-          <div style={{
-            position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-            zIndex: 1000, color: 'var(--text)', background: 'var(--panel)', padding: 'var(--s4)', borderRadius: 'var(--r)'
-          }}>
-            Loading {reachId}...
+        {status === 'loading' && <Loading />}
+        {status === 'empty' && (
+          <div style={{ padding: 'var(--s6)', color: 'var(--text-2)' }}>
+            No processed reach in this bundle.{' '}
+            <a href="/methods" style={{ color: 'var(--water)' }}>
+              See Methods / how to reproduce
+            </a>
           </div>
         )}
-        {reachId && !loading && <StoryPanel />}
-        {selectedFeatureId && !loading && <EvidencePanel />}
-        {panel === 'qc' && !loading && <QCPanel />}
+        {status === 'error' && (
+          <ErrorState filename={errorFile} onRetry={() => setRetryToken((t) => t + 1)} />
+        )}
+        {status === 'ready' && (
+          <>
+            <MapStage />
+            <StoryPanel />
+            {selectedFeatureId && <EvidencePanel />}
+            {panel === 'qc' && <QCPanel />}
+          </>
+        )}
       </div>
       <div style={{ height: 150 }}>
-        {reachId && !loading ? <Hydrograph width={window.innerWidth} height={150} /> : <div style={{height: '100%', background: 'var(--bg)'}}></div>}
+        {status === 'ready' ? (
+          <Hydrograph width={window.innerWidth} height={150} />
+        ) : (
+          <div className="hydrograph-skeleton" style={{ height: '100%', background: 'var(--bg)' }} />
+        )}
       </div>
     </div>
   );
