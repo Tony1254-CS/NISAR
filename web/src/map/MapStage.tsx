@@ -9,6 +9,7 @@ import {
   setWaterVisible,
   setChangeLayersVisible,
   ensureAmbiguousLayer,
+  setTerrainEnabled,
 } from './bundleLayers';
 import { FlyIn } from './FlyIn';
 import { OutsideCoverage } from '../states/OutsideCoverage';
@@ -21,6 +22,7 @@ export function MapStage() {
   const [mapInstance, setMapInstance] = useState<maplibregl.Map | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [isOutside, setIsOutside] = useState(false);
+  const [terrainOn, setTerrainOn] = useState(false);
   const flownRef = useRef(false);
   const reachLayersReadyRef = useRef(false);
   const displayedDateRef = useRef<string | null>(null);
@@ -142,6 +144,27 @@ export function MapStage() {
             if (reach) mapRef.current?.fitBounds(reach.bbox as [number, number, number, number], { padding: 20 });
           }}
         />
+      )}
+      {mapLoaded && (
+        <button
+          onClick={() => {
+            const map = mapRef.current;
+            if (!map) return;
+            const next = !terrainOn;
+            setTerrainOn(next);
+            setTerrainEnabled(map, next);
+          }}
+          title="Terrain relief is a presentation layer (public elevation tiles) -- not a scientific measurement"
+          style={{
+            position: 'absolute', top: 12, right: 12, zIndex: 50,
+            background: terrainOn ? 'var(--water)' : 'var(--panel)',
+            color: terrainOn ? '#04222b' : 'var(--text)',
+            border: '1px solid var(--line-strong)', borderRadius: 'var(--r)',
+            padding: '5px 12px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: terrainOn ? 700 : 400,
+          }}
+        >
+          {terrainOn ? '✓ 3D relief' : '3D relief'}
+        </button>
       )}
       <MapLegend />
     </div>

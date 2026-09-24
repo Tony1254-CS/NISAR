@@ -44,6 +44,31 @@ export function addStaticSources(map: MlMap) {
   }
 }
 
+// Public elevation tiles (AWS Open Data "Terrarium" encoding, no key/auth
+// needed) -- presentation-only terrain relief, not a scientific layer. Kept
+// separate from addStaticSources so it can be toggled on demand instead of
+// always paying the tile cost.
+const TERRAIN_TILES = 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png';
+
+export function setTerrainEnabled(map: MlMap, enabled: boolean) {
+  if (enabled) {
+    if (!map.getSource('terrain-dem')) {
+      map.addSource('terrain-dem', {
+        type: 'raster-dem',
+        tiles: [TERRAIN_TILES],
+        tileSize: 256,
+        maxzoom: 15,
+        encoding: 'terrarium',
+      });
+    }
+    map.setTerrain({ source: 'terrain-dem', exaggeration: 1.6 });
+    map.easeTo({ pitch: 55, duration: 800 });
+  } else {
+    map.setTerrain(null);
+    map.easeTo({ pitch: 0, duration: 500 });
+  }
+}
+
 export function radarUrl(baseUrl: string, date: string) {
   return `${baseUrl}/img/radar_${date}.png`;
 }

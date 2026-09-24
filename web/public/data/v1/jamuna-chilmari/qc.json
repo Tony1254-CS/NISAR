@@ -8,6 +8,21 @@
       "inputs": []
     },
     {
+      "id": "rainfall_anomaly",
+      "label": "Rainfall in the week before t1 (GPM IMERG)",
+      "value": 1.72,
+      "unit": "x seasonal norm",
+      "status": "INFO",
+      "rule": "informational -- higher rainfall before t1 is consistent with more open water, not proof of erosion",
+      "explanation": "64.48mm in the 7 days before t1 vs a 37.44mm 7-day baseline over the 50-day fetched window (real GPM_3IMERGDL data).",
+      "inputs": [
+        {
+          "kind": "GPM_IMERG",
+          "doi": "10.5067/GPM/IMERGDL/DAY/07"
+        }
+      ]
+    },
+    {
       "id": "null_test",
       "label": "False change on stable land",
       "status": "NOT_EVALUATED",

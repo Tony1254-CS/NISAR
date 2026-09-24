@@ -113,6 +113,14 @@ def run(reach_id):
         with open(rfi_path) as f:
             rfi_flags = json.load(f)
 
+    # Real GPM IMERG rainfall (io_imerg.py) if fetched -- otherwise this stays
+    # None and the rainfall check is reported NOT_EVALUATED, never faked.
+    imerg = None
+    imerg_path = f"{proc_dir}/imerg.json"
+    if os.path.exists(imerg_path):
+        with open(imerg_path) as f:
+            imerg = json.load(f)
+
     entries = []  # per-date dicts, sorted by date
     for hh_path in hh_files:
         granule_id = os.path.splitext(os.path.basename(hh_path))[0]
@@ -411,6 +419,23 @@ def run(reach_id):
     qc_checks = [
         {"id": "dswx_agreement", "label": "Agreement with OPERA DSWx-S1", "status": "NOT_EVALUATED",
          "explanation": "DSWx-S1 cross-validation not yet wired into this pipeline run.", "inputs": []},
+        (
+            {
+                "id": "rainfall_anomaly", "label": "Rainfall in the week before t1 (GPM IMERG)",
+                "value": imerg["t1_anomaly"]["ratio_to_baseline"], "unit": "x seasonal norm",
+                "status": "INFO",
+                "rule": "informational -- higher rainfall before t1 is consistent with more open water, not proof of erosion",
+                "explanation": f"{imerg['t1_anomaly']['rain_mm_before']}mm in the 7 days before t1 vs a "
+                               f"{imerg['t1_anomaly']['baseline_mean_mm']}mm 7-day baseline over the "
+                               f"{len(imerg['series'])}-day fetched window (real GPM_3IMERGDL data).",
+                "inputs": [{"kind": "GPM_IMERG", "doi": "10.5067/GPM/IMERGDL/DAY/07"}],
+            }
+            if imerg and imerg.get("t1_anomaly")
+            else {
+                "id": "rainfall_anomaly", "label": "Rainfall anomaly (GPM IMERG)", "status": "NOT_EVALUATED",
+                "explanation": "IMERG not fetched for this run.", "inputs": [],
+            }
+        ),
         {"id": "null_test", "label": "False change on stable land", "status": "NOT_EVALUATED",
          "explanation": "Requires a designated stable-land control area; not yet implemented.", "inputs": []},
         {"id": "stage_match", "label": "Stage difference between t0 and t1 (proxy fraction)",

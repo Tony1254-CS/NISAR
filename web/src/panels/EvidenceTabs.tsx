@@ -123,7 +123,7 @@ function InvestigatePanel() {
       <CheckRow label="OPERA DSWx-S1, independent radar product" check={findCheck(qc?.checks, 'dswx_agreement')} />
       <CheckRow label="River stage consistency" check={findCheck(qc?.checks, 'stage_match')} />
       <CheckRow label="Persistence in a later pass" check={findCheck(qc?.checks, 'persistence')} />
-      <CheckRow label="Rainfall anomaly, IMERG" check={null} fallbackDetail="not wired up yet — the rain-strip pipeline currently emits a placeholder" />
+      <CheckRow label="Rainfall anomaly, GPM IMERG" check={findCheck(qc?.checks, 'rainfall_anomaly')} fallbackDetail="IMERG not fetched for this run" />
       <CheckRow label="Vegetation response, optical NDVI" check={null} fallbackDetail="not wired up yet — no optical fetch implemented" />
     </div>
   );
