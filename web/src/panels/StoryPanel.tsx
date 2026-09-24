@@ -1,6 +1,7 @@
 import { Headline } from './Headline';
 import { VerdictBadge } from './VerdictBadge';
 import { LayerToggles } from './LayerToggles';
+import { EvidenceTabs } from './EvidenceTabs';
 import { useStore } from '../state/store';
 
 export function StoryPanel() {
@@ -27,8 +28,8 @@ export function StoryPanel() {
       
       <h3 style={{ borderBottom: '1px solid var(--line)', paddingBottom: 'var(--s2)' }}>Map Layers</h3>
       <LayerToggles />
-      
-      {/* Evidence and QC panels will be added below */}
+
+      <EvidenceTabs />
     </div>
   );
 }

@@ -21,7 +21,9 @@ export function TopBar({ reaches }: { reaches: ReachListItem[] | null }) {
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s3)' }}>
-        <strong style={{ letterSpacing: '0.02em' }}>SAME RIVER TWICE</strong>
+        <a href="/" style={{ color: 'var(--text)', textDecoration: 'none' }}>
+          <strong style={{ letterSpacing: '0.02em' }}>SAME RIVER TWICE</strong>
+        </a>
         {reaches && reaches.length > 0 && (
           <select
             aria-label="Reach"
