@@ -108,7 +108,7 @@ export function Landing() {
           </p>
           <div style={{ display: 'flex', gap: 'var(--s3)', justifyContent: 'center', marginBottom: 'var(--s6)' }}>
             <a
-              href="/app"
+              href="/cases"
               style={{
                 background: 'var(--water)',
                 color: '#04222b',

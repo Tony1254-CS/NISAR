@@ -24,6 +24,9 @@ export function TopBar({ reaches }: { reaches: ReachListItem[] | null }) {
         <a href="/" style={{ color: 'var(--text)', textDecoration: 'none' }}>
           <strong style={{ letterSpacing: '0.02em' }}>SAME RIVER TWICE</strong>
         </a>
+        <a href="/cases" style={{ color: 'var(--text-2)', textDecoration: 'none', fontSize: '0.8rem' }}>
+          &larr; all investigations
+        </a>
         {reaches && reaches.length > 0 && (
           <select
             aria-label="Reach"

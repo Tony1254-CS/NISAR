@@ -8,7 +8,7 @@ export function AuthPage() {
   const [password, setPassword] = useState('');
 
   const enter = () => {
-    window.location.href = '/app';
+    window.location.href = '/cases';
   };
 
   return (

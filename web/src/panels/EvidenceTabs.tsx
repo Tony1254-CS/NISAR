@@ -194,13 +194,53 @@ interface FieldNote {
   timestamp: string;
 }
 
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+type ScanResult = { inside: boolean; distanceKm: number } | 'denied' | 'unsupported' | null;
+
 function FieldPanel() {
   const { reach, manifest } = useStore();
   const [text, setText] = useState('');
   const [photo, setPhoto] = useState<string | null>(null);
   const [notes, setNotes] = useState<FieldNote[]>([]);
   const [playing, setPlaying] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanResult, setScanResult] = useState<ScanResult>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
+
+  const runScan = () => {
+    if (!reach) return;
+    if (!('geolocation' in navigator)) {
+      setScanResult('unsupported');
+      return;
+    }
+    setScanning(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        const [w, s, e, n] = reach.bbox;
+        const inside = longitude >= w && longitude <= e && latitude >= s && latitude <= n;
+        const centerLat = (s + n) / 2;
+        const centerLon = (w + e) / 2;
+        const distanceKm = haversineKm(latitude, longitude, centerLat, centerLon);
+        setScanResult({ inside, distanceKm });
+        setScanning(false);
+      },
+      () => {
+        setScanResult('denied');
+        setScanning(false);
+      },
+      { timeout: 10000 }
+    );
+  };
 
   const storageKey = reach ? `srt-field-notes-${reach.reach_id}` : null;
 
@@ -263,6 +303,39 @@ function FieldPanel() {
 
   return (
     <div>
+      <h4 style={{ margin: '0 0 var(--s2)' }}>Scan</h4>
+      <p style={{ fontSize: '0.85rem', color: 'var(--text-2)', margin: '0 0 var(--s2)' }}>
+        Check whether you (or your phone) are physically near this investigation's footprint.
+      </p>
+      <button
+        onClick={runScan}
+        disabled={scanning}
+        style={{
+          background: 'transparent', border: '1px solid var(--water)', color: 'var(--water)',
+          borderRadius: 'var(--r)', padding: '6px 14px', cursor: scanning ? 'default' : 'pointer', marginBottom: 'var(--s2)',
+        }}
+      >
+        {scanning ? 'locating…' : '📍 check my location'}
+      </button>
+      {scanResult === 'denied' && (
+        <div style={{ fontSize: '0.82rem', color: 'var(--warn)' }}>Location permission denied or unavailable.</div>
+      )}
+      {scanResult === 'unsupported' && (
+        <div style={{ fontSize: '0.82rem', color: 'var(--text-3)' }}>Geolocation isn't supported in this browser.</div>
+      )}
+      {scanResult && typeof scanResult === 'object' && (
+        <div style={{ fontSize: '0.85rem', color: scanResult.inside ? 'var(--pass)' : 'var(--text-2)' }}>
+          {scanResult.inside
+            ? `Inside the investigation footprint (~${scanResult.distanceKm.toFixed(1)} km from its center).`
+            : `~${scanResult.distanceKm.toFixed(1)} km from this reach's center — outside the mapped footprint.`}
+        </div>
+      )}
+      <p style={{ fontSize: '0.78rem', color: 'var(--text-3)', marginTop: 'var(--s1)', marginBottom: 'var(--s4)' }}>
+        Uses your browser's location once, on demand. Never sent anywhere — compared to the reach
+        bbox entirely on this device.
+      </p>
+
+      <h4 style={{ margin: '0 0 var(--s2)', borderTop: '1px solid var(--line)', paddingTop: 'var(--s3)' }}>Verify</h4>
       <p style={{ fontSize: '0.8rem', color: 'var(--text-3)' }}>
         Notes live in this browser's local storage, on this device. Nothing here is uploaded or mixed
         with the satellite record.
@@ -305,7 +378,8 @@ function FieldPanel() {
         </div>
       )}
 
-      <p style={{ fontSize: '0.85rem', color: 'var(--text-2)', borderTop: '1px solid var(--line)', paddingTop: 'var(--s3)' }}>
+      <h4 style={{ margin: '0 0 var(--s2)', borderTop: '1px solid var(--line)', paddingTop: 'var(--s3)' }}>Feel</h4>
+      <p style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>
         The t0 threshold, {dbValue.toFixed(1)} dB, mapped to five pulses. Same value, same pattern, every
         time — for anyone who'd rather listen to the measurement than read it.
       </p>
@@ -348,7 +422,10 @@ export function EvidenceTabs() {
   if (!ready) return null;
 
   const Panel = open ? PANELS[open] : null;
-  const activeTab = open ? TABS.find((t) => t.id === open) : null;
+  const activeIdx = open ? TABS.findIndex((t) => t.id === open) : -1;
+  const activeTab = activeIdx >= 0 ? TABS[activeIdx] : null;
+  const prevTab = activeIdx > 0 ? TABS[activeIdx - 1] : null;
+  const nextTab = activeIdx >= 0 && activeIdx < TABS.length - 1 ? TABS[activeIdx + 1] : null;
 
   return (
     <div style={{ marginTop: 'var(--s4)' }}>
@@ -372,29 +449,42 @@ export function EvidenceTabs() {
           </button>
         ))}
       </div>
+      {activeIdx === -1 && (
+        <button
+          onClick={() => setOpen('detect')}
+          style={{
+            marginTop: 'var(--s3)', width: '100%', background: 'var(--water)', color: '#04222b',
+            border: 'none', borderRadius: 'var(--r)', padding: '8px 0', fontWeight: 700, cursor: 'pointer',
+          }}
+        >
+          Start the investigation →
+        </button>
+      )}
 
+      {/* A drawer, not a centered modal -- it slides in from the map's edge
+          so the evidence trail feels attached to the map you're reading it
+          against, and Previous/Next walks the same five-stop order a judge
+          would be walked through by hand. */}
       {Panel && activeTab && (
         <div
           role="dialog"
           aria-modal="true"
           onClick={() => setOpen(null)}
-          style={{
-            position: 'fixed', inset: 0, background: 'rgba(6,8,10,0.7)', zIndex: 500,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'var(--s5)',
-          }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(6,8,10,0.55)', zIndex: 500 }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              width: 'min(640px, 100%)', maxHeight: '85vh', overflowY: 'auto',
-              background: 'var(--panel)', border: '1px solid var(--line-strong)', borderRadius: 'var(--r)',
-              padding: 'var(--s5)',
+              position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(460px, 92vw)',
+              background: 'var(--panel)', borderLeft: '1px solid var(--line-strong)',
+              display: 'flex', flexDirection: 'column',
+              boxShadow: '-8px 0 24px rgba(0,0,0,0.4)',
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--s4)' }}>
+            <div style={{ padding: 'var(--s4) var(--s5)', borderBottom: '1px solid var(--line)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-3)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                  {activeTab.hint}
+                  {activeIdx + 1} / {TABS.length} · {activeTab.hint}
                 </div>
                 <h2 style={{ margin: '2px 0 0' }}>{activeTab.label}</h2>
               </div>
@@ -406,21 +496,45 @@ export function EvidenceTabs() {
                 ×
               </button>
             </div>
-            <Panel />
-            <div style={{ display: 'flex', gap: 'var(--s2)', marginTop: 'var(--s5)', paddingTop: 'var(--s3)', borderTop: '1px solid var(--line)' }}>
-              {TABS.map((t) => (
+
+            <div style={{ flex: 1, overflowY: 'auto', padding: 'var(--s5)' }}>
+              <Panel />
+            </div>
+
+            <div style={{ padding: 'var(--s3) var(--s5)', borderTop: '1px solid var(--line)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--s2)' }}>
                 <button
-                  key={t.id}
-                  onClick={() => setOpen(t.id)}
+                  onClick={() => prevTab && setOpen(prevTab.id)}
+                  disabled={!prevTab}
                   style={{
-                    background: 'transparent', border: 'none', cursor: 'pointer', padding: '2px 0',
-                    color: t.id === open ? 'var(--water)' : 'var(--text-3)',
-                    fontWeight: t.id === open ? 700 : 400, fontSize: '0.8rem',
+                    background: 'transparent', border: '1px solid var(--line-strong)', color: prevTab ? 'var(--text)' : 'var(--text-3)',
+                    borderRadius: 'var(--r)', padding: '6px 12px', cursor: prevTab ? 'pointer' : 'default', fontSize: '0.82rem',
+                    visibility: prevTab ? 'visible' : 'hidden',
                   }}
                 >
-                  {t.label}
+                  ← {prevTab?.label}
                 </button>
-              ))}
+                <button
+                  onClick={() => (nextTab ? setOpen(nextTab.id) : setOpen(null))}
+                  style={{
+                    background: 'var(--water)', color: '#04222b', border: 'none',
+                    borderRadius: 'var(--r)', padding: '6px 14px', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600,
+                  }}
+                >
+                  {nextTab ? `${nextTab.label} →` : 'Done'}
+                </button>
+              </div>
+              <div style={{ display: 'flex', gap: 'var(--s2)', justifyContent: 'center' }}>
+                {TABS.map((t, i) => (
+                  <span
+                    key={t.id}
+                    style={{
+                      width: 6, height: 6, borderRadius: '50%',
+                      background: i === activeIdx ? 'var(--water)' : 'var(--line-strong)',
+                    }}
+                  />
+                ))}
+              </div>
             </div>
           </div>
         </div>
