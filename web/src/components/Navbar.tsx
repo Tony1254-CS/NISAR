@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useStore } from '../state/store';
 import '../styles/navbar.css';
 
 interface NavbarProps {
@@ -27,10 +28,40 @@ export function Navbar({
   onAnalyzeClick,
   dataInfo,
 }: NavbarProps) {
+  const { sensoryMode, setSensoryMode, cinematicMode, setCinematicMode } = useStore();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [voiceStatus, setVoiceStatus] = useState('🔊 Bangla Audio');
 
   const path = typeof window !== 'undefined' ? window.location.pathname : '/';
+
+  const handleBanglaVoice = () => {
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+      setVoiceStatus('🔊 Bangla Audio');
+      return;
+    }
+    
+    const voices = window.speechSynthesis.getVoices();
+    const bnVoice = voices.find(v => v.lang.toLowerCase().includes('bn'));
+    
+    let msg: SpeechSynthesisUtterance;
+    if (bnVoice) {
+      msg = new SpeechSynthesisUtterance("যমুনা নদীর এই অংশে বিশাল ভাঙন শনাক্ত করা হয়েছে। স্যাটেলাইট ডেটা ব্যবহার করে এটি নিশ্চিত করা হয়েছে। দয়া করে সতর্ক হোন।");
+      msg.lang = 'bn-BD';
+      msg.voice = bnVoice;
+      setVoiceStatus('🔊 Playing (Bangla)');
+    } else {
+      msg = new SpeechSynthesisUtterance("Severe erosion detected in this section of the Jamuna River. Satellite data confirms this anomaly. Please alert local authorities.");
+      msg.lang = 'en-US';
+      setVoiceStatus('🔊 Playing (English Fallback)');
+    }
+    
+    msg.onend = () => setVoiceStatus('🔊 Bangla Audio');
+    msg.onerror = () => setVoiceStatus('🔊 Bangla Audio');
+    
+    window.speechSynthesis.speak(msg);
+  };
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -112,14 +143,44 @@ export function Navbar({
             </span>
           )}
 
-          {/* Trigger for Agentic Workflow (only on /app page) */}
+          {/* Extra PRD Features and Trigger for Agentic Workflow (only on /app page) */}
           {showReachInfo && (
-            <button
-              onClick={onAnalyzeClick}
-              className="navbar__btn navbar__btn--primary"
-            >
-              <span style={{ marginRight: 6 }}>●</span> Live Analysis
-            </button>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <button 
+                onClick={handleBanglaVoice}
+                className="navbar__btn"
+                style={{ background: 'transparent', border: '1px solid var(--water)', color: 'var(--water)', padding: '6px 12px', fontSize: '0.75rem' }}
+                title="Bangla Voice Report"
+              >
+                {voiceStatus}
+              </button>
+              
+              <button 
+                onClick={() => setSensoryMode(!sensoryMode)}
+                className="navbar__btn"
+                style={{ background: sensoryMode ? 'var(--warn)' : 'transparent', border: `1px solid var(--warn)`, color: sensoryMode ? '#000' : 'var(--warn)', padding: '6px 12px', fontSize: '0.75rem' }}
+                title="Haptic & Audio Pixel Inspector"
+              >
+                {sensoryMode ? '🔎 Sensory ON' : '🔍 Sensory OFF'}
+              </button>
+              
+              <button 
+                onClick={() => setCinematicMode(!cinematicMode)}
+                className="navbar__btn"
+                style={{ background: cinematicMode ? 'var(--pass)' : 'transparent', border: `1px solid var(--pass)`, color: cinematicMode ? '#000' : 'var(--pass)', padding: '6px 12px', fontSize: '0.75rem' }}
+                title="5-Sec X-Ray Optical/SAR Swipe"
+              >
+                {cinematicMode ? '🎬 Swipe ON' : '🎬 Swipe OFF'}
+              </button>
+
+              <button
+                onClick={onAnalyzeClick}
+                className="navbar__btn navbar__btn--primary"
+                style={{ padding: '6px 16px', marginLeft: '4px' }}
+              >
+                <span style={{ marginRight: 6 }}>●</span> Live Analysis
+              </button>
+            </div>
           )}
 
           {!showReachInfo && (

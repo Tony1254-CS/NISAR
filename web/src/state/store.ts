@@ -42,6 +42,9 @@ interface StoreState {
   flyInDone: boolean;
   
   
+  sensoryMode: boolean;
+  cinematicMode: boolean;
+  
   // Actions
   setAnalysisMode: (mode: boolean) => void;
   setAnalysisSplit: (split: boolean) => void;
@@ -57,6 +60,8 @@ interface StoreState {
   setLayers: (update: Partial<LayersState>) => void;
   loadBundle: (reachId: string, bundle: ReachBundle) => void;
   clearBundle: () => void;
+  setSensoryMode: (active: boolean) => void;
+  setCinematicMode: (active: boolean) => void;
 }
 
 export const useStore = create<StoreState>((set) => ({
@@ -81,6 +86,8 @@ export const useStore = create<StoreState>((set) => ({
   layers: { water: false, accretion: true, erosion: true, ambiguous: true, forecast: false },
   panel: 'none',
   flyInDone: false,
+  sensoryMode: false,
+  cinematicMode: false,
   
   setAnalysisMode: (mode) => set({ analysisMode: mode }),
   setAnalysisSplit: (split) => set({ analysisSplit: split }),
@@ -121,4 +128,6 @@ export const useStore = create<StoreState>((set) => ({
       accretion: null,
       selectedDate: null,
     }),
+  setSensoryMode: (active) => set({ sensoryMode: active }),
+  setCinematicMode: (active) => set({ cinematicMode: active }),
 }));

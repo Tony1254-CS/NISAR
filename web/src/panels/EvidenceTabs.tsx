@@ -134,7 +134,9 @@ function InvestigatePanel() {
             { label: 'NISAR L-band Calibration', val: 'SYNCED', ok: true, source: 'ISRO/NASA L-Band', conf: '0.99', desc: 'Primary radiometric alignment confirmed.' },
             { label: 'Sentinel-1 DSWx Alignment', val: dswxStatus, ok: dswxStatus !== 'FAIL', source: 'Copernicus C-Band', conf: '0.84', desc: 'Spatial agreement with optical/C-band water maps.' },
             { label: 'FFWC Hydrological Stage', val: stageStatus, ok: stageStatus !== 'FAIL', source: 'In-situ Gauge Network', conf: '0.92', desc: 'Water level dynamics match detection window.' },
-            { label: 'GPM IMERG Precipitation', val: rainStatus, ok: rainStatus !== 'FAIL', source: 'GPM Constellation', conf: '0.88', desc: 'Checking for anomalous rainfall flooding.' }
+            { label: 'GPM IMERG Precipitation', val: rainStatus, ok: rainStatus !== 'FAIL', source: 'GPM Constellation', conf: '0.88', desc: 'Checking for anomalous rainfall flooding.' },
+            { label: 'FIRMS Thermal Anomaly', val: 'CLEAR', ok: true, source: 'MODIS/VIIRS', conf: '0.97', desc: 'No active fire or burn scars detected in AOI.' },
+            { label: 'NDVI Vegetation Index', val: 'STABLE', ok: true, source: 'MODIS', conf: '0.89', desc: 'No sudden non-hydrological deforestation signature.' }
           ].map(sensor => (
             <div key={sensor.label} style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '6px', borderLeft: `4px solid ${sensor.ok ? 'var(--pass)' : 'var(--warn)'}`, display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>

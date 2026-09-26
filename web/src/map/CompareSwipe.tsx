@@ -13,12 +13,34 @@ import {
 } from './bundleLayers';
 
 export function CompareSwipe({ primaryMap }: { primaryMap: maplibregl.Map | null }) {
-  const { compare, reachId, reach, bounds, layers } = useStore();
+  const { compare, reachId, reach, bounds, layers, cinematicMode, setCompare } = useStore();
   const containerRef = useRef<HTMLDivElement>(null);
   const secondaryMapRef = useRef<maplibregl.Map | null>(null);
   const [secondaryLoaded, setSecondaryLoaded] = useState(false);
   const [position, setPosition] = useState(50);
   const isDragging = useRef(false);
+
+  useEffect(() => {
+    if (cinematicMode) {
+      if (!compare.active) {
+        const dates = useStore.getState().reach?.dates;
+        if (dates && dates.length > 1) {
+          setCompare({ active: true, t0: dates[0].date, t1: dates[dates.length - 1].date });
+        }
+      }
+      let start: number | null = null;
+      let reqId: number;
+      const animate = (time: number) => {
+        if (!start) start = time;
+        const elapsed = time - start;
+        const p = (Math.sin(elapsed / 1500) + 1) / 2 * 100; // smooth sine wave bounce
+        setPosition(p);
+        reqId = requestAnimationFrame(animate);
+      };
+      reqId = requestAnimationFrame(animate);
+      return () => cancelAnimationFrame(reqId);
+    }
+  }, [cinematicMode, compare.active, setCompare]);
 
   useEffect(() => {
     if (!compare.active || !containerRef.current || !primaryMap) return;

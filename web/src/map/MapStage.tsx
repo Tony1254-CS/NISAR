@@ -27,7 +27,7 @@ export function MapStage() {
   const reachLayersReadyRef = useRef(false);
   const displayedDateRef = useRef<string | null>(null);
 
-  const { reachId, reach, bounds, selectedDate, compare, layers } = useStore();
+  const { reachId, reach, bounds, selectedDate, compare, layers, sensoryMode } = useStore();
 
   // Mount the map once.
   useEffect(() => {
@@ -137,6 +137,74 @@ export function MapStage() {
       ambiguous: compare.active && layers.ambiguous,
     });
   }, [mapLoaded, compare.active, compare.t0, compare.t1, bounds, reachId, layers.erosion, layers.accretion, layers.ambiguous]);
+
+  // Sensory Mode (Audio/Haptic Feedback)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+
+    if (!sensoryMode) {
+      map.getCanvas().style.cursor = '';
+      return;
+    }
+
+    map.getCanvas().style.cursor = 'crosshair';
+    let audioCtx: AudioContext | null = null;
+    let lastFire = 0;
+
+    const playTone = (freq: number) => {
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.1);
+      } catch (e) {
+        console.warn("AudioContext failed", e);
+      }
+    };
+
+    const onMouseMove = (e: maplibregl.MapMouseEvent) => {
+      const now = Date.now();
+      if (now - lastFire < 80) return; // throttle
+
+      const style = map.getStyle();
+      if (!style) return;
+      const validLayers = ['layer-8-erosion', 'layer-7-accretion', 'layer-6-water'].filter(l => map.getLayer(l));
+
+      const features = validLayers.length > 0 ? map.queryRenderedFeatures(e.point, { layers: validLayers }) : [];
+      lastFire = now;
+
+      if (features.length > 0) {
+        const type = features[0].layer.id;
+        if (type === 'layer-8-erosion') {
+          playTone(200); // Low warning tone
+          if (navigator.vibrate) navigator.vibrate([30, 30, 30]);
+        } else if (type === 'layer-7-accretion') {
+          playTone(600); // High positive tone
+          if (navigator.vibrate) navigator.vibrate(20);
+        } else if (type === 'layer-6-water') {
+          playTone(400); // Water tone
+        }
+      } else {
+        // Default faint click for land (like a geiger counter)
+        playTone(100);
+      }
+    };
+
+    map.on('mousemove', onMouseMove);
+    return () => {
+      map.off('mousemove', onMouseMove);
+      if (audioCtx) audioCtx.close().catch(() => {});
+    };
+  }, [mapLoaded, sensoryMode]);
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
