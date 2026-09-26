@@ -136,7 +136,7 @@ export function AboutPage() {
               { name: 'B', role: 'Data Scientist', desc: 'SAR & Remote Sensing' },
               { name: 'C', role: 'Frontend Engineer', desc: 'UI/UX & Visualization' },
               { name: 'D', role: 'Hydro Analyst', desc: 'River Dynamics & QA' }
-            ].map((member, i) => (
+            ].map((member) => (
               <div key={member.name} style={{
                 background: 'rgba(255, 255, 255, 0.02)',
                 border: '1px solid rgba(255, 255, 255, 0.05)',
