@@ -82,7 +82,7 @@ export function Navbar({
               Methods
             </a>
             <a href="/about" className={linkClass('/about')}>
-              Data &amp; Sources
+              About Us
             </a>
           </div>
 

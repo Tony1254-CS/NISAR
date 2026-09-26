@@ -19,7 +19,12 @@ interface LayersState {
 type PanelType = 'none' | 'evidence' | 'qc';
 
 interface StoreState {
-  agenticWorkflowOpen: boolean;
+  analysisMode: boolean;
+  analysisSplit: boolean;
+  analysisModeType: 'FULL' | 'SINGLE' | null;
+  analysisActiveTab: string | null;
+  analysisStepIndex: number;
+  analysisState: 'IDLE' | 'PROCESSING' | 'DONE';
   reachId: string | null;
   reach: ReachDetail | null;
   manifest: Manifest | null;
@@ -38,7 +43,12 @@ interface StoreState {
   
   
   // Actions
-  setAgenticWorkflowOpen: (open: boolean) => void;
+  setAnalysisMode: (mode: boolean) => void;
+  setAnalysisSplit: (split: boolean) => void;
+  setAnalysisModeType: (type: 'FULL' | 'SINGLE' | null) => void;
+  setAnalysisActiveTab: (tab: string | null) => void;
+  setAnalysisStepIndex: (index: number) => void;
+  setAnalysisState: (state: 'IDLE' | 'PROCESSING' | 'DONE') => void;
   setReachId: (id: string | null) => void;
   setSelectedDate: (date: string | null) => void;
   setCompare: (compare: Partial<CompareState>) => void;
@@ -50,7 +60,12 @@ interface StoreState {
 }
 
 export const useStore = create<StoreState>((set) => ({
-  agenticWorkflowOpen: false,
+  analysisMode: false,
+  analysisSplit: false,
+  analysisModeType: null,
+  analysisActiveTab: null,
+  analysisStepIndex: 0,
+  analysisState: 'IDLE',
   reachId: null,
   reach: null,
   manifest: null,
@@ -67,7 +82,12 @@ export const useStore = create<StoreState>((set) => ({
   panel: 'none',
   flyInDone: false,
   
-  setAgenticWorkflowOpen: (open) => set({ agenticWorkflowOpen: open }),
+  setAnalysisMode: (mode) => set({ analysisMode: mode }),
+  setAnalysisSplit: (split) => set({ analysisSplit: split }),
+  setAnalysisModeType: (type) => set({ analysisModeType: type }),
+  setAnalysisActiveTab: (tab) => set({ analysisActiveTab: tab }),
+  setAnalysisStepIndex: (index) => set({ analysisStepIndex: index }),
+  setAnalysisState: (state) => set({ analysisState: state }),
   setReachId: (id) => set({ reachId: id }),
   setSelectedDate: (date) => set({ selectedDate: date }),
   setCompare: (compare) => set((state) => ({ compare: { ...state.compare, ...compare } })),

@@ -91,8 +91,101 @@ export function AboutPage() {
       <Navbar />
       <div className="navbar-spacer" />
 
+      {/* ── Stunning About Section ── */}
+      <div className="page-content" style={{ paddingBottom: 'var(--s6)' }}>
+        
+        {/* Header */}
+        <div style={{ textAlign: 'center', margin: 'var(--s6) 0' }}>
+          <h1 style={{ fontSize: '3rem', letterSpacing: '0.1em', textTransform: 'uppercase', background: 'linear-gradient(90deg, var(--water), var(--pass))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: 'var(--s2)' }}>
+            The Mission
+          </h1>
+          <p style={{ fontSize: '1.2rem', color: 'var(--text-2)', maxWidth: '600px', margin: '0 auto', lineHeight: 1.6 }}>
+            Redefining how we monitor morphodynamic river change using cloud-penetrating radar.
+          </p>
+        </div>
+
+        {/* Problem & Solution Cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 'var(--s4)', marginBottom: 'var(--s8)' }}>
+          <div style={{ background: 'rgba(255, 60, 60, 0.05)', border: '1px solid rgba(255, 60, 60, 0.2)', padding: 'var(--s5)', borderRadius: 'var(--r-lg)', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: -50, right: -50, width: 150, height: 150, background: 'var(--fail)', filter: 'blur(80px)', opacity: 0.3 }} />
+            <h3 style={{ color: 'var(--fail)', fontSize: '1.5rem', marginBottom: 'var(--s3)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '1.8rem' }}>⚠️</span> The Problem
+            </h3>
+            <p style={{ color: 'var(--text)', lineHeight: 1.7, fontSize: '1.05rem', position: 'relative', zIndex: 1 }}>
+              Rivers shift, erode, and destroy communities overnight. Traditional optical satellites (like Landsat or Sentinel) are blinded by heavy monsoon clouds <strong>exactly when the worst erosion happens</strong>. Manual field surveys are too slow, leaving millions vulnerable to unseen morphological shifts beneath the clouds.
+            </p>
+          </div>
+
+          <div style={{ background: 'rgba(57, 196, 217, 0.05)', border: '1px solid rgba(57, 196, 217, 0.2)', padding: 'var(--s5)', borderRadius: 'var(--r-lg)', position: 'relative', overflow: 'hidden', boxShadow: '0 0 40px rgba(57, 196, 217, 0.05)' }}>
+            <div style={{ position: 'absolute', top: -50, right: -50, width: 150, height: 150, background: 'var(--water)', filter: 'blur(80px)', opacity: 0.3 }} />
+            <h3 style={{ color: 'var(--water)', fontSize: '1.5rem', marginBottom: 'var(--s3)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '1.8rem' }}>🚀</span> The Solution
+            </h3>
+            <p style={{ color: 'var(--text)', lineHeight: 1.7, fontSize: '1.05rem', position: 'relative', zIndex: 1 }}>
+              We utilize <strong>NISAR's L-band Synthetic Aperture Radar (SAR)</strong> to penetrate clouds and measure bank erosion in real-time. By algorithmically aligning radar backscatter with in-situ river gauges, our AI pipeline eliminates false positives from seasonal flooding, delivering high-confidence, actionable data instantly.
+            </p>
+          </div>
+        </div>
+
+        {/* The Team */}
+        <div style={{ textAlign: 'center', marginBottom: 'var(--s8)' }}>
+          <h2 style={{ fontSize: '2rem', marginBottom: 'var(--s5)', color: 'var(--text)' }}>Meet the Crew</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 'var(--s4)' }}>
+            {[
+              { name: 'A', role: 'Mission Commander', desc: 'System Architecture & AI' },
+              { name: 'B', role: 'Data Scientist', desc: 'SAR & Remote Sensing' },
+              { name: 'C', role: 'Frontend Engineer', desc: 'UI/UX & Visualization' },
+              { name: 'D', role: 'Hydro Analyst', desc: 'River Dynamics & QA' }
+            ].map((member, i) => (
+              <div key={member.name} style={{
+                background: 'rgba(255, 255, 255, 0.02)',
+                border: '1px solid rgba(255, 255, 255, 0.05)',
+                padding: 'var(--s4)',
+                borderRadius: 'var(--r-md)',
+                transition: 'all 0.3s ease',
+                cursor: 'default',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                boxShadow: 'inset 0 0 20px rgba(0,0,0,0.5)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-5px)';
+                e.currentTarget.style.borderColor = 'var(--water)';
+                e.currentTarget.style.background = 'rgba(57, 196, 217, 0.05)';
+                e.currentTarget.style.boxShadow = '0 10px 30px rgba(57, 196, 217, 0.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.05)';
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
+                e.currentTarget.style.boxShadow = 'inset 0 0 20px rgba(0,0,0,0.5)';
+              }}
+              >
+                <div style={{ 
+                  width: '80px', height: '80px', borderRadius: '50%', 
+                  background: 'linear-gradient(135deg, rgba(57, 196, 217, 0.2), rgba(57, 196, 217, 0.05))',
+                  border: '2px solid rgba(57, 196, 217, 0.5)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '2rem', fontWeight: 900, color: 'var(--water)',
+                  marginBottom: 'var(--s3)', textShadow: '0 0 10px var(--water)'
+                }}>
+                  {member.name}
+                </div>
+                <h3 style={{ fontSize: '1.2rem', marginBottom: '4px', letterSpacing: '0.05em' }}>Member {member.name}</h3>
+                <div style={{ color: 'var(--water)', fontSize: '0.8rem', textTransform: 'uppercase', fontWeight: 700, marginBottom: '8px' }}>{member.role}</div>
+                <div style={{ color: 'var(--text-3)', fontSize: '0.85rem' }}>{member.desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Existing Data Sources Section ── */}
       <div className="page-content page-content--narrow" style={{ paddingBottom: 'var(--s8)' }}>
-        <div className="section-label" style={{ marginTop: 'var(--s5)' }}>
+        <div className="divider" style={{ marginBottom: 'var(--s6)' }} />
+        
+        <div className="section-label">
           Data & Sources
         </div>
         <h1 style={{ marginBottom: 'var(--s3)' }}>Where the Data Comes From</h1>

@@ -49,19 +49,25 @@ export class FlyIn {
 
       setTimeout(() => {
         if (this.skipped) return;
-        // Fit to Reach bounds
-        this.map.fitBounds(this.bounds, { padding: 20, duration: 2000 });
+        // Fit to Reach bounds without padding
+        this.map.fitBounds(this.bounds, { padding: 0, duration: 2000 });
         
         setTimeout(() => {
-          this.map.off('mousedown', abortFly);
-          this.map.off('touchstart', abortFly);
-          this.map.off('wheel', abortFly);
-        }, 2000);
+          if (this.skipped) return;
+          // Zoom in a bit more to hide the sides and make it full screen
+          this.map.zoomTo(this.map.getZoom() + 0.7, { duration: 1500 });
+          setTimeout(() => {
+            this.map.off('mousedown', abortFly);
+            this.map.off('touchstart', abortFly);
+            this.map.off('wheel', abortFly);
+          }, 1500);
+        }, 2200);
       }, 2000);
     }, 1000);
   }
 
   private jumpToTarget() {
-    this.map.fitBounds(this.bounds, { padding: 20, animate: false });
+    this.map.fitBounds(this.bounds, { padding: 0, animate: false });
+    this.map.setZoom(this.map.getZoom() + 0.7);
   }
 }
