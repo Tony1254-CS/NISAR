@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Navbar } from '../components/Navbar';
 
 // Demo sign-in only -- there is no backend, no accounts, and nothing here is
 // gated by real auth. This exists so the app has the entry flow of a real
@@ -16,6 +17,7 @@ export function AuthPage() {
       style={{
         minHeight: '100vh',
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
         background: 'var(--bg)',
@@ -23,6 +25,7 @@ export function AuthPage() {
         fontFamily: 'var(--font-text)',
       }}
     >
+      <Navbar />
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -32,15 +35,17 @@ export function AuthPage() {
           width: 360,
           background: 'var(--panel)',
           border: '1px solid var(--line)',
-          borderRadius: 'var(--r)',
+          borderRadius: 'var(--r-md)',
           padding: 'var(--s5)',
         }}
       >
         <div style={{ marginBottom: 'var(--s4)' }}>
-          <strong style={{ letterSpacing: '0.04em' }}>SAME RIVER TWICE</strong>
+          <span className="mono" style={{ letterSpacing: '0.08em', color: 'var(--water)', fontWeight: 600, fontSize: 'var(--text-sm)' }}>
+            SAME RIVER TWICE
+          </span>
         </div>
-        <h2 style={{ margin: '0 0 var(--s1)', fontSize: '1.4rem' }}>Welcome back</h2>
-        <p style={{ margin: '0 0 var(--s4)', color: 'var(--text-2)', fontSize: '0.9rem' }}>
+        <h2 style={{ margin: '0 0 var(--s1)', fontSize: 'var(--text-xl)' }}>Welcome back</h2>
+        <p style={{ margin: '0 0 var(--s4)', color: 'var(--text-2)', fontSize: 'var(--text-base)' }}>
           Sign in to open the reach dashboard.
         </p>
 
@@ -53,7 +58,7 @@ export function AuthPage() {
             marginBottom: 'var(--s4)',
             background: 'transparent',
             border: '1px solid var(--line-strong)',
-            borderRadius: 'var(--r)',
+            borderRadius: 'var(--r-md)',
             color: 'var(--text)',
             cursor: 'pointer',
           }}
@@ -67,7 +72,7 @@ export function AuthPage() {
             alignItems: 'center',
             gap: 'var(--s2)',
             color: 'var(--text-3)',
-            fontSize: '0.75rem',
+            fontSize: 'var(--text-xs)',
             margin: '0 0 var(--s4)',
           }}
         >
@@ -88,7 +93,7 @@ export function AuthPage() {
             marginBottom: 'var(--s3)',
             background: 'var(--bg)',
             border: '1px solid var(--line-strong)',
-            borderRadius: 'var(--r)',
+            borderRadius: 'var(--r-md)',
             color: 'var(--text)',
           }}
         />
@@ -104,7 +109,7 @@ export function AuthPage() {
             marginBottom: 'var(--s4)',
             background: 'var(--bg)',
             border: '1px solid var(--line-strong)',
-            borderRadius: 'var(--r)',
+            borderRadius: 'var(--r-md)',
             color: 'var(--text)',
           }}
         />
@@ -117,14 +122,14 @@ export function AuthPage() {
             color: '#04222b',
             fontWeight: 700,
             border: 'none',
-            borderRadius: 'var(--r)',
+            borderRadius: 'var(--r-md)',
             cursor: 'pointer',
           }}
         >
           Sign in
         </button>
 
-        <p style={{ textAlign: 'center', marginTop: 'var(--s4)', fontSize: '0.8rem', color: 'var(--text-3)' }}>
+        <p style={{ textAlign: 'center', marginTop: 'var(--s4)', fontSize: 'var(--text-xs)', color: 'var(--text-3)' }}>
           {'Demo only — no account needed, any details work.'}
         </p>
       </form>

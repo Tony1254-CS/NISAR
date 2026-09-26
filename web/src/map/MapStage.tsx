@@ -82,15 +82,19 @@ export function MapStage() {
       reachLayersReadyRef.current = true;
       displayedDateRef.current = selectedDate;
 
-      map.on('click', 'layer-8-erosion', (e) => {
-        const f = e.features?.[0];
-        if (f) useStore.getState().setSelectedFeatureId(String(f.properties?.id));
-      });
-      map.on('mouseenter', 'layer-8-erosion', () => {
-        map.getCanvas().style.cursor = 'pointer';
-      });
-      map.on('mouseleave', 'layer-8-erosion', () => {
-        map.getCanvas().style.cursor = '';
+      const interactiveLayers = ['layer-8-erosion', 'layer-7-accretion'];
+      
+      interactiveLayers.forEach(layerId => {
+        map.on('click', layerId, (e) => {
+          const f = e.features?.[0];
+          if (f) useStore.getState().setSelectedFeatureId(String(f.properties?.id));
+        });
+        map.on('mouseenter', layerId, () => {
+          map.getCanvas().style.cursor = 'pointer';
+        });
+        map.on('mouseleave', layerId, () => {
+          map.getCanvas().style.cursor = '';
+        });
       });
     }
   }, [mapLoaded, reach, bounds, selectedDate, reachId]);

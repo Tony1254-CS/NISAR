@@ -19,6 +19,7 @@ interface LayersState {
 type PanelType = 'none' | 'evidence' | 'qc';
 
 interface StoreState {
+  agenticWorkflowOpen: boolean;
   reachId: string | null;
   reach: ReachDetail | null;
   manifest: Manifest | null;
@@ -35,7 +36,9 @@ interface StoreState {
   panel: PanelType;
   flyInDone: boolean;
   
+  
   // Actions
+  setAgenticWorkflowOpen: (open: boolean) => void;
   setReachId: (id: string | null) => void;
   setSelectedDate: (date: string | null) => void;
   setCompare: (compare: Partial<CompareState>) => void;
@@ -47,6 +50,7 @@ interface StoreState {
 }
 
 export const useStore = create<StoreState>((set) => ({
+  agenticWorkflowOpen: false,
   reachId: null,
   reach: null,
   manifest: null,
@@ -63,6 +67,7 @@ export const useStore = create<StoreState>((set) => ({
   panel: 'none',
   flyInDone: false,
   
+  setAgenticWorkflowOpen: (open) => set({ agenticWorkflowOpen: open }),
   setReachId: (id) => set({ reachId: id }),
   setSelectedDate: (date) => set({ selectedDate: date }),
   setCompare: (compare) => set((state) => ({ compare: { ...state.compare, ...compare } })),

@@ -11,11 +11,13 @@ import { Loading } from '../states/Loading';
 import { ErrorState } from '../states/ErrorState';
 import { fetchReaches, loadReachBundle, DataLoadError } from '../data/load';
 import type { ReachListItem } from '../data/types';
+import { EvidenceTabs } from '../panels/EvidenceTabs';
+import { TelemetryPanel } from '../panels/TelemetryPanel';
 
 type LoadStatus = 'loading' | 'ready' | 'empty' | 'error';
 
 export default function MainApp() {
-  const { reachId, selectedFeatureId, panel, setReachId, loadBundle } = useStore();
+  const { reachId, selectedFeatureId, panel, setReachId, loadBundle, agenticWorkflowOpen } = useStore();
   const [reaches, setReaches] = useState<ReachListItem[] | null>(null);
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [errorFile, setErrorFile] = useState('reaches.json');
@@ -79,6 +81,7 @@ export default function MainApp() {
   return (
     <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
       <TopBar reaches={reaches} />
+      <div className="navbar-spacer" style={{ flexShrink: 0 }} />
       <div style={{ flex: 1, position: 'relative' }}>
         {status === 'loading' && <Loading />}
         {status === 'empty' && (
@@ -95,9 +98,17 @@ export default function MainApp() {
         {status === 'ready' && (
           <>
             <MapStage />
+            <TelemetryPanel />
             <StoryPanel />
             {selectedFeatureId && <EvidencePanel />}
             {panel === 'qc' && <QCPanel />}
+            
+            {/* Agentic Workflow Panel */}
+            {agenticWorkflowOpen && (
+              <div className="agentic-panel">
+                <EvidenceTabs />
+              </div>
+            )}
           </>
         )}
       </div>

@@ -1,9 +1,66 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap');
+
 :root{
+  /* ── Core palette (preserved) ── */
   --bg:#0E1113; --map-bg:#15191C; --panel:#12161A; --line:#2A3036; --line-strong:#3A424A;
   --text:#E6E8EA; --text-2:#A7AEB5; --text-3:#6F7880;
   --water:#39C4D9; --erosion:#E4572E; --accretion:#D9B26A; --ambiguous:#8A9299; --forecast:#E6E8EA;
   --pass:#7FBF8E; --warn:#E0B34A; --fail:#E4572E; --na:#6F7880;
-  --font-text:"IBM Plex Sans", system-ui, sans-serif;
+
+  /* ── Extended palette ── */
+  --water-dim: rgba(57, 196, 217, 0.15);
+  --water-glow: rgba(57, 196, 217, 0.4);
+  --water-strong: #4DD8EC;
+  --panel-elevated: #181D22;
+  --panel-hover: #1C2228;
+  --surface: #0B0D0F;
+  --surface-2: #161A1E;
+  --border-accent: rgba(57, 196, 217, 0.2);
+  --gradient-hero: linear-gradient(135deg, #0E1113 0%, #121820 50%, #0E1113 100%);
+  --gradient-card: linear-gradient(180deg, rgba(57,196,217,0.04) 0%, transparent 100%);
+
+  /* ── Typography (preserved + extended) ── */
+  --font-text:"IBM Plex Sans", "Inter", system-ui, sans-serif;
   --font-num:"IBM Plex Mono", ui-monospace, monospace;
+  --font-display:"Inter", "IBM Plex Sans", system-ui, sans-serif;
+
+  /* ── Type scale ── */
+  --text-xs: 0.7rem;
+  --text-sm: 0.8rem;
+  --text-base: 0.9rem;
+  --text-md: 1rem;
+  --text-lg: 1.15rem;
+  --text-xl: 1.4rem;
+  --text-2xl: 1.8rem;
+  --text-3xl: 2.4rem;
+  --text-4xl: 3.2rem;
+
+  /* ── Spacing (preserved) ── */
   --r:2px; --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px;
+  --s7:48px; --s8:64px; --s9:96px;
+
+  /* ── Radii ── */
+  --r-sm: 3px;
+  --r-md: 6px;
+  --r-lg: 10px;
+  --r-xl: 16px;
+  --r-full: 9999px;
+
+  /* ── Shadows ── */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.4);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
+  --shadow-glow: 0 0 20px rgba(57,196,217,0.15);
+
+  /* ── Transitions ── */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
+
+  /* ── Navbar ── */
+  --navbar-height: 56px;
+  --navbar-bg: rgba(14, 17, 19, 0.85);
+  --navbar-border: rgba(57, 196, 217, 0.15);
 }
