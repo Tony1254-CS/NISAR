@@ -14,11 +14,12 @@ import type { ReachListItem } from '../data/types';
 import { EvidenceTabs } from '../panels/EvidenceTabs';
 import { TelemetryPanel } from '../panels/TelemetryPanel';
 import { FullscreenHUD } from '../panels/FullscreenHUD';
+import { ChatWidget } from '../chat/ChatWidget';
 
 type LoadStatus = 'loading' | 'ready' | 'empty' | 'error';
 
 export default function MainApp() {
-  const { reachId, selectedFeatureId, panel, setReachId, loadBundle, analysisMode, analysisSplit, setAnalysisMode, setAnalysisSplit, analysisState, analysisActiveTab, analysisModeType } = useStore();
+  const { reachId, selectedFeatureId, panel, setReachId, loadBundle, analysisMode, analysisSplit, setAnalysisMode, setAnalysisSplit, analysisState, analysisActiveTab, analysisModeType, inspectMode, setInspectMode } = useStore();
   const [reaches, setReaches] = useState<ReachListItem[] | null>(null);
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [errorFile, setErrorFile] = useState('reaches.json');
@@ -127,6 +128,12 @@ export default function MainApp() {
                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                    Download PDF
                  </button>
+                 <button 
+                   onClick={() => setInspectMode(!inspectMode)}
+                   style={{ background: inspectMode ? 'var(--water)' : 'transparent', color: inspectMode ? '#000' : 'var(--text-2)', border: '1px solid var(--water)', padding: '6px 12px', borderRadius: 4, fontSize: '0.65rem', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, transition: 'all 0.2s' }}
+                 >
+                   {inspectMode ? '🔍 Exit Inspect Mode' : '🔍 Inspect Mode'}
+                 </button>
                </div>
                <button onClick={() => { setAnalysisMode(false); setAnalysisSplit(false); }} style={{ background: 'transparent', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: '1.2rem' }}>×</button>
              </div>
@@ -147,6 +154,9 @@ export default function MainApp() {
       </div>
 
       {analysisState === 'PROCESSING' && <FullscreenHUD tab={analysisActiveTab} />}
+
+      {/* AI Chat Assistant */}
+      {status === 'ready' && <ChatWidget />}
     </div>
   );
 }

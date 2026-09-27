@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../state/store';
 import type { QCCheck } from '../data/types';
+import { Inspectable } from '../components/Inspectable';
 
 type TabId = 'detect' | 'investigate' | 'challenge' | 'explain' | 'field';
 
@@ -49,7 +50,6 @@ function StepTimeline({ lines }: { lines: string[] }) {
         const isFail = l.includes('FAIL');
         const isWarn = l.includes('WARN');
         const isPass = l.includes('PASS');
-        const isInfo = !isFail && !isWarn && !isPass;
         
         let icon = (
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
@@ -104,16 +104,20 @@ function DetectPanel() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <DataWidget title="SAR Morphodynamics & Detection Metrics">
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-          <div style={{ background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: '8px', borderLeft: '3px solid var(--water)' }}>
-            <div style={{ fontSize: '0.65rem', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '8px' }}>Total Geomorphic Change</div>
-            <div style={{ fontSize: '2rem', color: 'var(--water)', fontWeight: 800 }}>{((headline?.value ?? 0) / 100).toFixed(2)} <span style={{ fontSize: '0.9rem', opacity: 0.7 }}>km²</span></div>
-            <div style={{ fontSize: '0.6rem', color: 'var(--text-2)', marginTop: 8 }}>Detected via NISAR L-band backscatter delta</div>
-          </div>
-          <div style={{ background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: '8px', borderLeft: '3px solid var(--pass)' }}>
-            <div style={{ fontSize: '0.65rem', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '8px' }}>Otsu Threshold Shift</div>
-            <div style={{ fontSize: '2rem', color: 'var(--pass)', fontWeight: 800 }}>{thresholdShift != null ? thresholdShift.toFixed(3) : '—'} <span style={{ fontSize: '0.9rem', opacity: 0.7 }}>dB</span></div>
-            <div style={{ fontSize: '0.6rem', color: 'var(--text-2)', marginTop: 8 }}>Variance between T0 and T1 bimodal distributions</div>
-          </div>
+          <Inspectable intentKey="erosion_amount">
+            <div style={{ background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: '8px', borderLeft: '3px solid var(--water)' }}>
+              <div style={{ fontSize: '0.65rem', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '8px' }}>Total Geomorphic Change</div>
+              <div style={{ fontSize: '2rem', color: 'var(--water)', fontWeight: 800 }}>{((headline?.value ?? 0) / 100).toFixed(2)} <span style={{ fontSize: '0.9rem', opacity: 0.7 }}>km²</span></div>
+              <div style={{ fontSize: '0.6rem', color: 'var(--text-2)', marginTop: 8 }}>Detected via NISAR L-band backscatter delta</div>
+            </div>
+          </Inspectable>
+          <Inspectable intentKey="threshold_info">
+            <div style={{ background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: '8px', borderLeft: '3px solid var(--pass)' }}>
+              <div style={{ fontSize: '0.65rem', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '8px' }}>Otsu Threshold Shift</div>
+              <div style={{ fontSize: '2rem', color: 'var(--pass)', fontWeight: 800 }}>{thresholdShift != null ? thresholdShift.toFixed(3) : '—'} <span style={{ fontSize: '0.9rem', opacity: 0.7 }}>dB</span></div>
+              <div style={{ fontSize: '0.6rem', color: 'var(--text-2)', marginTop: 8 }}>Variance between T0 and T1 bimodal distributions</div>
+            </div>
+          </Inspectable>
         </div>
 
         <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
@@ -199,12 +203,12 @@ function InvestigatePanel() {
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
           {sensors.map(sensor => (
-            <div 
-              key={sensor.id} 
-              className="sensor-card"
-              onClick={() => setActiveCardId(sensor.id)}
-              style={{ borderLeft: `4px solid ${sensor.ok ? 'var(--pass)' : 'var(--warn)'}` }}
-            >
+            <Inspectable key={sensor.id} intentKey={sensor.id === 'rain' ? 'rainfall' : sensor.id === 'stage' ? 'water_level' : sensor.id === 'nisar' ? 'satellite_info' : 'sensor_checks'} fallbackQuery={`What is the ${sensor.label}?`}>
+              <div 
+                className="sensor-card"
+                onClick={() => setActiveCardId(sensor.id)}
+                style={{ borderLeft: `4px solid ${sensor.ok ? 'var(--pass)' : 'var(--warn)'}` }}
+              >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <span style={{ fontSize: '0.85rem', color: 'var(--text)', fontWeight: 600 }}>{sensor.label}</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(0,0,0,0.4)', padding: '4px 8px', borderRadius: 12 }}>
@@ -220,6 +224,7 @@ function InvestigatePanel() {
                 </div>
               </div>
             </div>
+            </Inspectable>
           ))}
         </div>
       </DataWidget>
@@ -303,60 +308,64 @@ function ChallengePanel() {
             const status = chk.id === 'rfi' ? rfiStatus : chk.id === 'alignment' ? alignStatus : limitStatus;
             const color = status === 'PASS' ? 'var(--pass)' : status === 'FAIL' ? 'var(--fail)' : 'var(--warn)';
             return (
-              <div key={chk.id} style={{ border: `1px solid ${color}`, background: 'rgba(0,0,0,0.4)', padding: '16px 8px', textAlign: 'center', borderRadius: '4px', position: 'relative', overflow: 'hidden' }}>
-                <div style={{ fontSize: '0.6rem', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '8px' }}>{chk.label}</div>
-                <div style={{ fontSize: '1rem', fontWeight: 800, color: color, textShadow: `0 0 10px ${color}`, marginBottom: '4px' }}>{status}</div>
-                <div style={{ fontSize: '0.55rem', color: 'var(--text-3)' }}>{chk.desc}</div>
-                {status === 'FAIL' && <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: 'var(--fail)', animation: 'pulse-dot 0.5s infinite' }} />}
-              </div>
+              <Inspectable key={chk.id} intentKey={chk.id === 'rfi' ? 'rfi_issue' : 'sensor_checks'}>
+                <div style={{ border: `1px solid ${color}`, background: 'rgba(0,0,0,0.4)', padding: '16px 8px', textAlign: 'center', borderRadius: '4px', position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ fontSize: '0.6rem', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '8px' }}>{chk.label}</div>
+                  <div style={{ fontSize: '1rem', fontWeight: 800, color: color, textShadow: `0 0 10px ${color}`, marginBottom: '4px' }}>{status}</div>
+                  <div style={{ fontSize: '0.55rem', color: 'var(--text-3)' }}>{chk.desc}</div>
+                  {status === 'FAIL' && <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: 'var(--fail)', animation: 'pulse-dot 0.5s infinite' }} />}
+                </div>
+              </Inspectable>
             );
           })}
         </div>
         
-        <div style={{ background: 'rgba(0,0,0,0.2)', padding: '20px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-2)', letterSpacing: '0.1em' }}>AGGREGATE CONFIDENCE SCORE</div>
-            <div style={{ fontSize: '1rem', color: gaugeColor, fontWeight: 800 }}>{confidencePct}%</div>
-          </div>
-          <div className="agentic-progress" style={{ height: '12px', background: 'rgba(255,255,255,0.05)', borderRadius: '6px', marginBottom: '16px' }}>
-            <div className="agentic-progress-bar" style={{ width: `${confidencePct}%`, background: gaugeColor, boxShadow: `0 0 20px ${gaugeColor}`, borderRadius: '6px' }} />
-          </div>
+        <Inspectable intentKey="confidence">
+          <div style={{ background: 'rgba(0,0,0,0.2)', padding: '20px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-2)', letterSpacing: '0.1em' }}>AGGREGATE CONFIDENCE SCORE</div>
+              <div style={{ fontSize: '1rem', color: gaugeColor, fontWeight: 800 }}>{confidencePct}%</div>
+            </div>
+            <div className="agentic-progress" style={{ height: '12px', background: 'rgba(255,255,255,0.05)', borderRadius: '6px', marginBottom: '16px' }}>
+              <div className="agentic-progress-bar" style={{ width: `${confidencePct}%`, background: gaugeColor, boxShadow: `0 0 20px ${gaugeColor}`, borderRadius: '6px' }} />
+            </div>
 
-          {/* Line-by-line Decision Breakdown */}
-          <div style={{ fontSize: '0.7rem', color: 'var(--text-2)', display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px dashed rgba(255,255,255,0.1)', paddingTop: '16px' }}>
-             <div style={{ color: 'var(--text-3)', marginBottom: '4px' }}>DECISION BREAKDOWN:</div>
-             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-               <span>Base System Confidence</span>
-               <span style={{ color: 'var(--pass)' }}>100%</span>
-             </div>
-             {rfiStatus !== 'PASS' && (
-               <div style={{ display: 'flex', justifyContent: 'space-between', animation: 'fade-in 0.5s ease-out' }}>
-                 <span>Radio Frequency Interference penalty applied</span>
-                 <span style={{ color: 'var(--warn)' }}>-{rfiDeduct}%</span>
+            {/* Line-by-line Decision Breakdown */}
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-2)', display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px dashed rgba(255,255,255,0.1)', paddingTop: '16px' }}>
+               <div style={{ color: 'var(--text-3)', marginBottom: '4px' }}>DECISION BREAKDOWN:</div>
+               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                 <span>Base System Confidence</span>
+                 <span style={{ color: 'var(--pass)' }}>100%</span>
                </div>
-             )}
-             {alignStatus !== 'PASS' && (
-               <div style={{ display: 'flex', justifyContent: 'space-between', animation: 'fade-in 0.5s ease-out' }}>
-                 <span>Suboptimal Pixel Coregistration penalty</span>
-                 <span style={{ color: 'var(--warn)' }}>-{alignDeduct}%</span>
+               {rfiStatus !== 'PASS' && (
+                 <div style={{ display: 'flex', justifyContent: 'space-between', animation: 'fade-in 0.5s ease-out' }}>
+                   <span>Radio Frequency Interference penalty applied</span>
+                   <span style={{ color: 'var(--warn)' }}>-{rfiDeduct}%</span>
+                 </div>
+               )}
+               {alignStatus !== 'PASS' && (
+                 <div style={{ display: 'flex', justifyContent: 'space-between', animation: 'fade-in 0.5s ease-out' }}>
+                   <span>Suboptimal Pixel Coregistration penalty</span>
+                   <span style={{ color: 'var(--warn)' }}>-{alignDeduct}%</span>
+                 </div>
+               )}
+               {limitStatus !== 'PASS' && (
+                 <div style={{ display: 'flex', justifyContent: 'space-between', animation: 'fade-in 0.5s ease-out' }}>
+                   <span>Physical geomorphic limits exceeded</span>
+                   <span style={{ color: 'var(--fail)' }}>-{limitDeduct}%</span>
+                 </div>
+               )}
+               <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '8px', marginTop: '4px' }}>
+                 <span>Final Computed Confidence</span>
+                 <span style={{ color: gaugeColor, fontWeight: 'bold' }}>{confidencePct}%</span>
                </div>
-             )}
-             {limitStatus !== 'PASS' && (
-               <div style={{ display: 'flex', justifyContent: 'space-between', animation: 'fade-in 0.5s ease-out' }}>
-                 <span>Physical geomorphic limits exceeded</span>
-                 <span style={{ color: 'var(--fail)' }}>-{limitDeduct}%</span>
-               </div>
-             )}
-             <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '8px', marginTop: '4px' }}>
-               <span>Final Computed Confidence</span>
-               <span style={{ color: gaugeColor, fontWeight: 'bold' }}>{confidencePct}%</span>
-             </div>
-          </div>
+            </div>
 
-          <div style={{ marginTop: 12, fontSize: '0.65rem', color: 'var(--text-3)', textAlign: 'right' }}>
-            Probability of false positive: {(100 - confidencePct).toFixed(1)}%
+            <div style={{ marginTop: 12, fontSize: '0.65rem', color: 'var(--text-3)', textAlign: 'right' }}>
+              Probability of false positive: {(100 - confidencePct).toFixed(1)}%
+            </div>
           </div>
-        </div>
+        </Inspectable>
       </DataWidget>
       
       <DataWidget title="Analysis Steps & Timeline">
@@ -383,44 +392,50 @@ function ExplainPanel() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <DataWidget title="Final System Verdict">
-        <div className="typewriter-text" style={{ fontSize: '1rem', color: 'var(--text)', lineHeight: 1.8, whiteSpace: 'normal', animation: 'none', background: 'rgba(57,196,217,0.05)', padding: '24px', borderRadius: '8px', borderLeft: `6px solid ${color}` }}>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginBottom: 12 }}>EXECUTIVE SUMMARY</div>
-          <span style={{ color: color, fontWeight: 800, fontSize: '1.4rem', letterSpacing: '0.1em', textShadow: `0 0 10px ${color}` }}>{reach.verdict}</span><br /><br />
-          
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-            <div>
-              <div style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>NET EROSION DETECTED</div>
-              <strong style={{ color: '#fff', fontSize: '1.2rem' }}>{headline?.value.toLocaleString()} ha</strong>
+        <Inspectable intentKey="verdict">
+          <div className="typewriter-text" style={{ fontSize: '1rem', color: 'var(--text)', lineHeight: 1.8, whiteSpace: 'normal', animation: 'none', background: 'rgba(57,196,217,0.05)', padding: '24px', borderRadius: '8px', borderLeft: `6px solid ${color}` }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginBottom: 12 }}>EXECUTIVE SUMMARY</div>
+            <span style={{ color: color, fontWeight: 800, fontSize: '1.4rem', letterSpacing: '0.1em', textShadow: `0 0 10px ${color}` }}>{reach.verdict}</span><br /><br />
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+              <div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>NET EROSION DETECTED</div>
+                <strong style={{ color: '#fff', fontSize: '1.2rem' }}>{headline?.value.toLocaleString()} ha</strong>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>PRIMARY REASONING</div>
+                <span style={{ opacity: 0.9, fontSize: '0.85rem' }}>{reach.verdict_reasons[0].toUpperCase()}</span>
+              </div>
             </div>
-            <div>
-              <div style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>PRIMARY REASONING</div>
-              <span style={{ opacity: 0.9, fontSize: '0.85rem' }}>{reach.verdict_reasons[0].toUpperCase()}</span>
+            
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-2)', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 16 }}>
+              <strong>RECOMMENDATION:</strong> {
+                reach.verdict === 'SUPPORTED' ? 'Immediate field deployment recommended. High confidence in severe morphodynamic shift.' :
+                reach.verdict === 'LIMITED' ? 'Deploy field team for manual verification. Mixed signals from auxiliary sensors.' :
+                'Stand down. Anomalous detection likely due to agricultural flooding or RFI.'
+              }
             </div>
           </div>
-          
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-2)', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 16 }}>
-            <strong>RECOMMENDATION:</strong> {
-              reach.verdict === 'SUPPORTED' ? 'Immediate field deployment recommended. High confidence in severe morphodynamic shift.' :
-              reach.verdict === 'LIMITED' ? 'Deploy field team for manual verification. Mixed signals from auxiliary sensors.' :
-              'Stand down. Anomalous detection likely due to agricultural flooding or RFI.'
-            }
-          </div>
-        </div>
+        </Inspectable>
       </DataWidget>
       
       <DataWidget title="Explainable AI (XAI) Attribution">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <Metric label="SAR Backscatter Intensity (Feature 1)" value="78.2%" />
-          <Metric label="Sentinel-1 Optical Match (Feature 2)" value="14.5%" />
-          <Metric label="Hydrological Stage Context (Feature 3)" value="6.1%" />
-          <Metric label="Geomorphic Prior Models (Feature 4)" value="1.2%" />
-        </div>
-        <div style={{ marginTop: 12, height: 16, display: 'flex', borderRadius: 8, overflow: 'hidden' }}>
-          <div style={{ width: '78.2%', background: 'var(--water)' }} />
-          <div style={{ width: '14.5%', background: 'var(--pass)' }} />
-          <div style={{ width: '6.1%', background: 'var(--warn)' }} />
-          <div style={{ width: '1.2%', background: 'var(--fail)' }} />
-        </div>
+        <Inspectable intentKey="explain_simple">
+          <div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <Metric label="SAR Backscatter Intensity (Feature 1)" value="78.2%" />
+              <Metric label="Sentinel-1 Optical Match (Feature 2)" value="14.5%" />
+              <Metric label="Hydrological Stage Context (Feature 3)" value="6.1%" />
+              <Metric label="Geomorphic Prior Models (Feature 4)" value="1.2%" />
+            </div>
+            <div style={{ marginTop: 12, height: 16, display: 'flex', borderRadius: 8, overflow: 'hidden' }}>
+              <div style={{ width: '78.2%', background: 'var(--water)' }} />
+              <div style={{ width: '14.5%', background: 'var(--pass)' }} />
+              <div style={{ width: '6.1%', background: 'var(--warn)' }} />
+              <div style={{ width: '1.2%', background: 'var(--fail)' }} />
+            </div>
+          </div>
+        </Inspectable>
       </DataWidget>
     </div>
   );
@@ -498,7 +513,7 @@ const LOG_MESSAGES = [
 ];
 
 export function EvidenceTabs({ isReportMode = false }: { isReportMode?: boolean }) {
-  const { reach, manifest, qc, setAnalysisMode, setAnalysisSplit, analysisModeType, setAnalysisModeType, analysisActiveTab, setAnalysisActiveTab, analysisStepIndex, setAnalysisStepIndex, analysisState, setAnalysisState } = useStore();
+  const { reach, manifest, qc, setAnalysisMode, setAnalysisSplit, analysisModeType, setAnalysisModeType, analysisActiveTab, setAnalysisActiveTab, analysisStepIndex, setAnalysisStepIndex, analysisState, setAnalysisState, inspectMode, setInspectMode } = useStore();
   const ready = useMemo(() => Boolean(reach && manifest && qc), [reach, manifest, qc]);
 
   const [logs, setLogs] = useState<string[]>(
@@ -598,6 +613,12 @@ export function EvidenceTabs({ isReportMode = false }: { isReportMode?: boolean 
     <>
       <div className="agentic-panel__header">
         <div className="agentic-panel__title">Live Analysis</div>
+        <button 
+          onClick={() => setInspectMode(!inspectMode)}
+          style={{ background: inspectMode ? 'var(--water)' : 'transparent', color: inspectMode ? '#000' : 'var(--text-2)', border: '1px solid var(--water)', padding: '4px 12px', borderRadius: 4, fontSize: '0.7rem', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto', marginRight: 16, transition: 'all 0.2s' }}
+        >
+          {inspectMode ? '🔍 Exit Inspect Mode' : '🔍 Inspect Mode'}
+        </button>
         <button 
           onClick={() => { setAnalysisMode(false); setAnalysisSplit(false); }}
           style={{ background: 'transparent', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: '1.2rem' }}
