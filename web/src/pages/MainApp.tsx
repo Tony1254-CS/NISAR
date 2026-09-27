@@ -12,7 +12,6 @@ import { ErrorState } from '../states/ErrorState';
 import { fetchReaches, loadReachBundle, DataLoadError } from '../data/load';
 import type { ReachListItem } from '../data/types';
 import { EvidenceTabs } from '../panels/EvidenceTabs';
-import { TelemetryPanel } from '../panels/TelemetryPanel';
 import { FullscreenHUD } from '../panels/FullscreenHUD';
 import { ChatWidget } from '../chat/ChatWidget';
 import { CinematicDescription } from '../components/CinematicDescription';
