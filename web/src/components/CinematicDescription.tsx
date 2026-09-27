@@ -11,11 +11,14 @@ export function CinematicDescription() {
       setTextStage(0);
       
       // Dispatch event for the Map to fly to a cinematic 3D angle
-      if (reach?.viewState) {
+      if (reach?.bbox) {
+        const [minLng, minLat, maxLng, maxLat] = reach.bbox;
+        const longitude = (minLng + maxLng) / 2;
+        const latitude = (minLat + maxLat) / 2;
         window.dispatchEvent(new CustomEvent('cinematic-fly', { 
           detail: { 
-            longitude: reach.viewState.longitude, 
-            latitude: reach.viewState.latitude, 
+            longitude, 
+            latitude, 
             zoom: 11,
             pitch: 65,
             bearing: -20
@@ -34,9 +37,16 @@ export function CinematicDescription() {
       };
     } else {
       // Dispatch event to return to normal map view
-      if (reach?.viewState) {
+      if (reach?.bbox) {
+        const [minLng, minLat, maxLng, maxLat] = reach.bbox;
         window.dispatchEvent(new CustomEvent('cinematic-fly', { 
-          detail: { ...reach.viewState } 
+          detail: { 
+            longitude: (minLng + maxLng) / 2,
+            latitude: (minLat + maxLat) / 2,
+            zoom: 6,
+            pitch: 0,
+            bearing: 0
+          } 
         }));
       }
     }
