@@ -38,14 +38,9 @@ export function CinematicDescription() {
     } else {
       // Dispatch event to return to normal map view
       if (reach?.bbox) {
-        const [minLng, minLat, maxLng, maxLat] = reach.bbox;
         window.dispatchEvent(new CustomEvent('cinematic-fly', { 
           detail: { 
-            longitude: (minLng + maxLng) / 2,
-            latitude: (minLat + maxLat) / 2,
-            zoom: 6,
-            pitch: 0,
-            bearing: 0
+            resetBounds: reach.bbox
           } 
         }));
       }

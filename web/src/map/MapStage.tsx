@@ -59,8 +59,15 @@ export function MapStage() {
 
     const handleCinematicFly = (e: Event) => {
       const customEvent = e as CustomEvent;
-      const { longitude, latitude, zoom, pitch, bearing } = customEvent.detail;
-      mapRef.current?.flyTo({ center: [longitude, latitude], zoom, pitch: pitch || 0, bearing: bearing || 0, speed: 0.5, curve: 1 });
+      const { longitude, latitude, zoom, pitch, bearing, resetBounds } = customEvent.detail;
+      
+      if (resetBounds && mapRef.current) {
+        mapRef.current.fitBounds(resetBounds as [number, number, number, number], { padding: 0 });
+        mapRef.current.zoomTo(mapRef.current.getZoom() + 2.5, { duration: 1500 });
+        mapRef.current.easeTo({ pitch: 0, bearing: 0, duration: 1500 });
+      } else {
+        mapRef.current?.flyTo({ center: [longitude, latitude], zoom, pitch: pitch || 0, bearing: bearing || 0, speed: 0.5, curve: 1 });
+      }
     };
 
     window.addEventListener('cinematic-fly', handleCinematicFly);
