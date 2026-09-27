@@ -102,7 +102,6 @@ export default function MainApp() {
         {status === 'ready' && (
           <>
             <MapStage />
-            {!analysisSplit && <TelemetryPanel />}
             {!analysisSplit && <StoryPanel />}
             {selectedFeatureId && <EvidencePanel />}
             {panel === 'qc' && <QCPanel />}
