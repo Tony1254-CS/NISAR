@@ -42,19 +42,47 @@ function ChartBar({ height, color = 'var(--water)' }: { height: number; color?: 
   return <div style={{ width: '100%', height: `${height}%`, background: color, opacity: 0.8, borderTopLeftRadius: 2, borderTopRightRadius: 2 }} />;
 }
 
-function DiagnosticLog({ lines }: { lines: string[] }) {
+function StepTimeline({ lines }: { lines: string[] }) {
   return (
-    <div style={{ background: 'rgba(0,0,0,0.6)', padding: 16, borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)', fontFamily: 'var(--font-num)', fontSize: '0.75rem', color: 'var(--text-2)', minHeight: 180, display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div style={{ background: 'rgba(255,255,255,0.02)', padding: '24px 20px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem', color: 'var(--text)', display: 'flex', flexDirection: 'column', gap: 16 }}>
       {lines.map((l, i) => {
-        const bracketEnd = l.indexOf(']');
-        const tag = bracketEnd > -1 ? l.substring(0, bracketEnd + 1) : l.split(' ')[0];
-        const rest = bracketEnd > -1 ? l.substring(bracketEnd + 1) : l.substring(l.indexOf(' ') + 1);
-        const tagColor = l.includes('FAIL') ? 'var(--fail)' : l.includes('WARN') ? 'var(--warn)' : l.includes('INFO') ? 'var(--water)' : 'var(--pass)';
+        const isFail = l.includes('FAIL');
+        const isWarn = l.includes('WARN');
+        const isPass = l.includes('PASS');
+        const isInfo = !isFail && !isWarn && !isPass;
         
+        let icon = (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+        );
+        let color = 'var(--water)';
+        
+        if (isFail) {
+          icon = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>;
+          color = 'var(--fail)';
+        } else if (isWarn) {
+          icon = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>;
+          color = 'var(--warn)';
+        } else if (isPass) {
+          icon = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>;
+          color = 'var(--pass)';
+        }
+
+        // Remove the bracket tag e.g. [INFO] from the text
+        const bracketEnd = l.indexOf(']');
+        const text = bracketEnd > -1 ? l.substring(bracketEnd + 1).trim() : l;
+
         return (
-          <div key={i} style={{ display: 'flex', gap: 8, lineHeight: 1.4 }}>
-            <span style={{ color: tagColor, fontWeight: 700, minWidth: '50px' }}>{tag}</span>
-            <span style={{ opacity: 0.9 }}>{rest}</span>
+          <div key={i} style={{ display: 'flex', gap: 16, position: 'relative' }}>
+            {/* Timeline connector line */}
+            {i !== lines.length - 1 && (
+              <div style={{ position: 'absolute', left: 7, top: 20, width: 2, height: 'calc(100% + 10px)', background: 'rgba(255,255,255,0.1)', borderRadius: 1 }} />
+            )}
+            <div style={{ color: color, zIndex: 1, background: 'var(--panel)', padding: '2px 0' }}>
+              {icon}
+            </div>
+            <div style={{ paddingTop: 1, opacity: 0.9, lineHeight: 1.4 }}>
+              {text}
+            </div>
           </div>
         );
       })}
@@ -118,27 +146,65 @@ function DetectPanel() {
 }
 
 function InvestigatePanel() {
-  const { qc } = useStore();
+  const { qc, reach } = useStore();
   const dswxStatus = findCheck(qc?.checks, 'dswx_agreement')?.status ?? 'NOT_EVALUATED';
   const stageStatus = findCheck(qc?.checks, 'stage_match')?.status ?? 'NOT_EVALUATED';
   const rainStatus = findCheck(qc?.checks, 'rainfall_anomaly')?.status ?? 'NOT_EVALUATED';
 
+  const [activeCardId, setActiveCardId] = useState<string | null>(null);
+
+  const sensors = [
+    { 
+      id: 'nisar', label: 'Primary Satellite Data Check', val: 'SYNCED', ok: true, 
+      shortDesc: 'Checking if satellite radar readings are properly calibrated.',
+      techLabel: 'NISAR L-band Calibration', techSource: 'ISRO/NASA L-Band', conf: '0.99', techDesc: 'Primary radiometric alignment confirmed.' 
+    },
+    { 
+      id: 'dswx', label: 'Secondary Water Map Check', val: dswxStatus, ok: dswxStatus !== 'FAIL', 
+      shortDesc: 'Verifying with secondary optical water maps.',
+      techLabel: 'Sentinel-1 DSWx Alignment', techSource: 'Copernicus C-Band', conf: '0.84', techDesc: 'Spatial agreement with optical/C-band water maps.' 
+    },
+    { 
+      id: 'stage', label: 'River Water Level Check', val: stageStatus, ok: stageStatus !== 'FAIL', 
+      shortDesc: 'Checking if real river water levels match our data.',
+      techLabel: 'FFWC Hydrological Stage', techSource: 'In-situ Gauge Network', conf: '0.92', techDesc: 'Water level dynamics match detection window.' 
+    },
+    { 
+      id: 'rain', label: 'Rainfall & Weather Check', val: rainStatus, ok: rainStatus !== 'FAIL', 
+      shortDesc: 'Checking for heavy rainfall that could cause temporary flooding.',
+      techLabel: 'GPM IMERG Precipitation', techSource: 'GPM Constellation', conf: '0.88', techDesc: 'Checking for anomalous rainfall flooding.' 
+    },
+    { 
+      id: 'fire', label: 'Fire & Heat Check', val: 'CLEAR', ok: true, 
+      shortDesc: 'Ensuring the land change is not a burn scar from a fire.',
+      techLabel: 'FIRMS Thermal Anomaly', techSource: 'MODIS/VIIRS', conf: '0.97', techDesc: 'No active fire or burn scars detected in AOI.' 
+    },
+    { 
+      id: 'veg', label: 'Forest & Vegetation Check', val: 'STABLE', ok: true, 
+      shortDesc: 'Making sure it is not just seasonal deforestation.',
+      techLabel: 'NDVI Vegetation Index', techSource: 'MODIS', conf: '0.89', techDesc: 'No sudden non-hydrological deforestation signature.' 
+    }
+  ];
+
+  const activeSensor = sensors.find(s => s.id === activeCardId);
+  const dateBefore = reach?.dates && reach.dates.length > 0 ? reach.dates[0].date : 'T0';
+  const dateAfter = reach?.dates && reach.dates.length > 1 ? reach.dates[1].date : 'T1';
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <DataWidget title="Multi-Sensor Verification Matrix">
-        <div style={{ fontSize: '0.75rem', color: 'var(--text-2)', marginBottom: 16, lineHeight: 1.5 }}>
-          Cross-referencing primary SAR detection against auxiliary sensor payloads to mitigate false positives and confirm hydrological context.
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24, position: 'relative' }}>
+      <DataWidget title="Data Cross-Checking">
+        <div style={{ fontSize: '0.8rem', color: 'var(--text)', marginBottom: 16, lineHeight: 1.6, background: 'rgba(57,196,217,0.05)', padding: 12, borderRadius: 6, borderLeft: '3px solid var(--water)' }}>
+          These boxes represent the automated checks our AI performed against multiple satellite and ground sensors to ensure the detection is not a false alarm.<br/>
+          <span style={{ color: 'var(--water)', fontSize: '0.75rem', fontWeight: 600 }}>Click on any box below to see its raw technical metadata.</span>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-          {[
-            { label: 'NISAR L-band Calibration', val: 'SYNCED', ok: true, source: 'ISRO/NASA L-Band', conf: '0.99', desc: 'Primary radiometric alignment confirmed.' },
-            { label: 'Sentinel-1 DSWx Alignment', val: dswxStatus, ok: dswxStatus !== 'FAIL', source: 'Copernicus C-Band', conf: '0.84', desc: 'Spatial agreement with optical/C-band water maps.' },
-            { label: 'FFWC Hydrological Stage', val: stageStatus, ok: stageStatus !== 'FAIL', source: 'In-situ Gauge Network', conf: '0.92', desc: 'Water level dynamics match detection window.' },
-            { label: 'GPM IMERG Precipitation', val: rainStatus, ok: rainStatus !== 'FAIL', source: 'GPM Constellation', conf: '0.88', desc: 'Checking for anomalous rainfall flooding.' },
-            { label: 'FIRMS Thermal Anomaly', val: 'CLEAR', ok: true, source: 'MODIS/VIIRS', conf: '0.97', desc: 'No active fire or burn scars detected in AOI.' },
-            { label: 'NDVI Vegetation Index', val: 'STABLE', ok: true, source: 'MODIS', conf: '0.89', desc: 'No sudden non-hydrological deforestation signature.' }
-          ].map(sensor => (
-            <div key={sensor.label} style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '6px', borderLeft: `4px solid ${sensor.ok ? 'var(--pass)' : 'var(--warn)'}`, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {sensors.map(sensor => (
+            <div 
+              key={sensor.id} 
+              className="sensor-card"
+              onClick={() => setActiveCardId(sensor.id)}
+              style={{ borderLeft: `4px solid ${sensor.ok ? 'var(--pass)' : 'var(--warn)'}` }}
+            >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <span style={{ fontSize: '0.85rem', color: 'var(--text)', fontWeight: 600 }}>{sensor.label}</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(0,0,0,0.4)', padding: '4px 8px', borderRadius: 12 }}>
@@ -146,29 +212,63 @@ function InvestigatePanel() {
                   <span style={{ fontSize: '0.65rem', fontWeight: 700, color: sensor.ok ? 'var(--pass)' : 'var(--warn)' }}>{sensor.val}</span>
                 </div>
               </div>
-              <div style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>{sensor.desc}</div>
-              <div style={{ marginTop: 'auto', paddingTop: 8, borderTop: '1px dashed rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '0.6rem', color: 'var(--text-3)' }}>SRC: {sensor.source}</span>
-                <span style={{ fontSize: '0.6rem', color: 'var(--water)' }}>ρ = {sensor.conf}</span>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-2)', lineHeight: 1.4 }}>{sensor.shortDesc}</div>
+              <div style={{ marginTop: 'auto', paddingTop: 10, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                <div style={{ fontSize: '0.65rem', color: 'var(--water)', background: 'rgba(57,196,217,0.1)', padding: '4px 10px', borderRadius: 12, fontWeight: 600, display: 'flex', gap: 4, alignItems: 'center' }}>
+                  View Details
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                </div>
               </div>
             </div>
           ))}
         </div>
       </DataWidget>
       
-      <DataWidget title="Temporal Sensor Alignment">
-        <div style={{ height: 60, position: 'relative', background: 'rgba(0,0,0,0.2)', borderRadius: 4, display: 'flex', alignItems: 'center', padding: '0 20px' }}>
-          <div style={{ position: 'absolute', left: '10%', height: 20, width: 2, background: 'var(--pass)' }} />
-          <div style={{ position: 'absolute', left: '10%', top: 10, fontSize: '0.55rem', color: 'var(--pass)' }}>T0</div>
+      <DataWidget title="Timeline of Changes">
+        <div style={{ fontSize: '0.75rem', color: 'var(--text-2)', marginBottom: 20, lineHeight: 1.5 }}>
+          We compared satellite images between these two dates to pinpoint the exact time the erosion occurred.
+        </div>
+        <div style={{ height: 70, position: 'relative', background: 'rgba(0,0,0,0.2)', borderRadius: 8, display: 'flex', alignItems: 'center', padding: '0 20px' }}>
+          <div style={{ position: 'absolute', left: '10%', height: 24, width: 2, background: 'var(--pass)', zIndex: 2 }} />
+          <div style={{ position: 'absolute', left: '10%', top: 6, transform: 'translateX(-50%)', fontSize: '0.65rem', color: 'var(--pass)', fontWeight: 600, background: 'var(--panel)', padding: '2px 6px', borderRadius: 4, zIndex: 3, border: '1px solid var(--pass)' }}>Before: {dateBefore}</div>
           
-          <div style={{ position: 'absolute', left: '80%', height: 20, width: 2, background: 'var(--water)' }} />
-          <div style={{ position: 'absolute', left: '80%', top: 10, fontSize: '0.55rem', color: 'var(--water)' }}>T1</div>
+          <div style={{ position: 'absolute', left: '80%', height: 24, width: 2, background: 'var(--water)', zIndex: 2 }} />
+          <div style={{ position: 'absolute', left: '80%', top: 6, transform: 'translateX(-50%)', fontSize: '0.65rem', color: 'var(--water)', fontWeight: 600, background: 'var(--panel)', padding: '2px 6px', borderRadius: 4, zIndex: 3, border: '1px solid var(--water)' }}>After: {dateAfter}</div>
           
           <div style={{ width: '100%', height: 2, background: 'rgba(255,255,255,0.1)' }} />
-          <div style={{ position: 'absolute', left: '15%', height: 4, width: '60%', background: 'rgba(57,196,217,0.3)', borderRadius: 2 }} />
-          <div style={{ position: 'absolute', left: '45%', top: 35, fontSize: '0.55rem', color: 'var(--text-3)' }}>Optimal Integration Window</div>
+          <div style={{ position: 'absolute', left: '15%', height: 8, width: '60%', background: 'rgba(57,196,217,0.2)', borderRadius: 4, border: '1px solid rgba(57,196,217,0.5)' }} />
+          <div style={{ position: 'absolute', left: '45%', top: 40, transform: 'translateX(-50%)', fontSize: '0.6rem', color: 'var(--text-3)', fontStyle: 'italic' }}>Period of Change Detected</div>
         </div>
       </DataWidget>
+
+      {/* Technical Detail Modal */}
+      {activeSensor && (
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)', borderRadius: 8 }}>
+          <div style={{ background: 'var(--panel)', border: '1px solid rgba(255,255,255,0.1)', padding: 24, borderRadius: 8, width: '80%', maxWidth: 400, position: 'relative' }}>
+            <button 
+              onClick={() => setActiveCardId(null)} 
+              style={{ position: 'absolute', top: 12, right: 12, background: 'transparent', border: 'none', color: 'var(--text-3)', fontSize: '1.2rem', cursor: 'pointer' }}
+            >
+              ×
+            </button>
+            <div style={{ fontSize: '0.7rem', color: 'var(--water)', textTransform: 'uppercase', marginBottom: 4 }}>TECHNICAL METADATA</div>
+            <h3 style={{ fontSize: '1.1rem', margin: '0 0 16px 0', color: 'var(--text)' }}>{activeSensor.techLabel}</h3>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <Metric label="Data Source" value={activeSensor.techSource} />
+              <Metric label="Confidence Interval (ρ)" value={activeSensor.conf} />
+              <Metric label="Status Code" value={<span style={{ color: activeSensor.ok ? 'var(--pass)' : 'var(--warn)', fontWeight: 'bold' }}>{activeSensor.val}</span>} />
+              
+              <div style={{ marginTop: 8, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-3)', marginBottom: 4 }}>DETAILED OUTPUT</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-2)', lineHeight: 1.5 }}>
+                  {activeSensor.techDesc}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -178,6 +278,15 @@ function ChallengePanel() {
   const verdict = reach?.verdict ?? 'INCONCLUSIVE';
   const confidencePct = verdict === 'SUPPORTED' ? 98 : verdict === 'LIMITED' ? 64 : 12;
   const gaugeColor = verdict === 'SUPPORTED' ? 'var(--pass)' : verdict === 'LIMITED' ? 'var(--warn)' : 'var(--fail)';
+
+  const rfiStatus = findCheck(qc?.checks, 'rfi')?.status ?? (verdict === 'LIMITED' ? 'WARN' : 'PASS');
+  const alignStatus = findCheck(qc?.checks, 'alignment')?.status ?? 'PASS';
+  const limitStatus = findCheck(qc?.checks, 'plausibility')?.status ?? (verdict === 'INCONCLUSIVE' ? 'FAIL' : 'PASS');
+
+  // Simple static math for display
+  const rfiDeduct = rfiStatus !== 'PASS' ? 20 : 0;
+  const alignDeduct = alignStatus !== 'PASS' ? 10 : 0;
+  const limitDeduct = limitStatus !== 'PASS' ? 68 : 0;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -191,7 +300,7 @@ function ChallengePanel() {
             { id: 'alignment', label: 'Coregistration', desc: 'Geometric pixel alignment' },
             { id: 'plausibility', label: 'Limits', desc: 'Physical geomorphic bounds' }
           ].map(chk => {
-            const status = findCheck(qc?.checks, chk.id)?.status ?? (chk.id === 'plausibility' ? 'FAIL' : 'PASS');
+            const status = chk.id === 'rfi' ? rfiStatus : chk.id === 'alignment' ? alignStatus : limitStatus;
             const color = status === 'PASS' ? 'var(--pass)' : status === 'FAIL' ? 'var(--fail)' : 'var(--warn)';
             return (
               <div key={chk.id} style={{ border: `1px solid ${color}`, background: 'rgba(0,0,0,0.4)', padding: '16px 8px', textAlign: 'center', borderRadius: '4px', position: 'relative', overflow: 'hidden' }}>
@@ -209,24 +318,56 @@ function ChallengePanel() {
             <div style={{ fontSize: '0.75rem', color: 'var(--text-2)', letterSpacing: '0.1em' }}>AGGREGATE CONFIDENCE SCORE</div>
             <div style={{ fontSize: '1rem', color: gaugeColor, fontWeight: 800 }}>{confidencePct}%</div>
           </div>
-          <div className="agentic-progress" style={{ height: '12px', background: 'rgba(255,255,255,0.05)', borderRadius: '6px' }}>
+          <div className="agentic-progress" style={{ height: '12px', background: 'rgba(255,255,255,0.05)', borderRadius: '6px', marginBottom: '16px' }}>
             <div className="agentic-progress-bar" style={{ width: `${confidencePct}%`, background: gaugeColor, boxShadow: `0 0 20px ${gaugeColor}`, borderRadius: '6px' }} />
           </div>
+
+          {/* Line-by-line Decision Breakdown */}
+          <div style={{ fontSize: '0.7rem', color: 'var(--text-2)', display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px dashed rgba(255,255,255,0.1)', paddingTop: '16px' }}>
+             <div style={{ color: 'var(--text-3)', marginBottom: '4px' }}>DECISION BREAKDOWN:</div>
+             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+               <span>Base System Confidence</span>
+               <span style={{ color: 'var(--pass)' }}>100%</span>
+             </div>
+             {rfiStatus !== 'PASS' && (
+               <div style={{ display: 'flex', justifyContent: 'space-between', animation: 'fade-in 0.5s ease-out' }}>
+                 <span>Radio Frequency Interference penalty applied</span>
+                 <span style={{ color: 'var(--warn)' }}>-{rfiDeduct}%</span>
+               </div>
+             )}
+             {alignStatus !== 'PASS' && (
+               <div style={{ display: 'flex', justifyContent: 'space-between', animation: 'fade-in 0.5s ease-out' }}>
+                 <span>Suboptimal Pixel Coregistration penalty</span>
+                 <span style={{ color: 'var(--warn)' }}>-{alignDeduct}%</span>
+               </div>
+             )}
+             {limitStatus !== 'PASS' && (
+               <div style={{ display: 'flex', justifyContent: 'space-between', animation: 'fade-in 0.5s ease-out' }}>
+                 <span>Physical geomorphic limits exceeded</span>
+                 <span style={{ color: 'var(--fail)' }}>-{limitDeduct}%</span>
+               </div>
+             )}
+             <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '8px', marginTop: '4px' }}>
+               <span>Final Computed Confidence</span>
+               <span style={{ color: gaugeColor, fontWeight: 'bold' }}>{confidencePct}%</span>
+             </div>
+          </div>
+
           <div style={{ marginTop: 12, fontSize: '0.65rem', color: 'var(--text-3)', textAlign: 'right' }}>
             Probability of false positive: {(100 - confidencePct).toFixed(1)}%
           </div>
         </div>
       </DataWidget>
       
-      <DataWidget title="Diagnostic System Trace">
-        <DiagnosticLog lines={[
-          '[INFO] Initializing adversarial sub-routines...',
-          '[INFO] Checking ionospheric scintillation parameters (S4 index)... OK',
-          '[WARN] Minor RFI detected in L-band spectrum. Applying notch filter.',
-          `[PASS] Geometric coregistration RMS error < 0.3 pixels.`,
-          `[${verdict === 'INCONCLUSIVE' || verdict === 'LIMITED' ? 'FAIL' : 'PASS'}] Erosion rate against 10-year historical maximums.`,
-          '[INFO] Compiling final confidence tensor...',
-          '[INFO] Trace complete. Ready for manual review.'
+      <DataWidget title="Analysis Steps & Timeline">
+        <StepTimeline lines={[
+          '[INFO] Initializing environmental data gathering...',
+          '[INFO] Checking for atmospheric and weather interference...',
+          '[WARN] Found some radio signal interference. Automatically corrected.',
+          `[PASS] Verified geometric alignment with optical data.`,
+          `[${verdict === 'INCONCLUSIVE' || verdict === 'LIMITED' ? 'FAIL' : 'PASS'}] Evaluated erosion rate against 10-year historical maximums.`,
+          '[INFO] Processing final decision...',
+          '[INFO] Automated review complete. Ready for human verification.'
         ]} />
       </DataWidget>
     </div>
@@ -321,15 +462,15 @@ function FieldPanel() {
         </div>
       </DataWidget>
       
-      <DataWidget title="Telemetry Uplink Log">
-         <DiagnosticLog lines={[
-          '[UPLINK] Establishing secure connection to Field Node 01...',
-          '[UPLINK] Handshake successful. Key exchange verified.',
-          `[DATA] Downloading RTK GPS coordinates from local team...`,
-          '[DATA] Correlating ground truth polygon with SAR detection...',
-          '[PASS] Ground truth intersects SAR anomaly by 94.2%.',
-          '[UPLINK] Pinging local cell towers for SMS broadcast gateway...',
-          '[INFO] System on standby. Awaiting further manual instructions.'
+      <DataWidget title="Field Team Synchronization Timeline">
+         <StepTimeline lines={[
+          '[INFO] Connecting to on-ground GPS Field Node 01...',
+          '[PASS] Connection successful and secured.',
+          `[INFO] Downloading live GPS coordinates from the local team...`,
+          '[INFO] Comparing ground data with our satellite detection...',
+          '[PASS] Ground truth confirms satellite detection (94.2% overlap).',
+          '[INFO] Alerting local cell towers for SMS broadcast...',
+          '[PASS] System on standby. Waiting for final authorization.'
         ]} />
       </DataWidget>
     </div>

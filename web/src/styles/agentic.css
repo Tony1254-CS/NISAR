@@ -259,6 +259,39 @@
   to { width: 100% }
 }
 
+.sensor-card {
+  background: rgba(255, 255, 255, 0.02);
+  padding: 16px;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.sensor-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+}
+
+.sensor-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  pointer-events: none;
+  transition: border-color 0.2s ease;
+}
+
+.sensor-card:hover::after {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
 /* Big Action Button */
 .agentic-action-btn {
   background: rgba(57, 196, 217, 0.1);
@@ -310,7 +343,7 @@
 .telemetry-panel {
   position: absolute;
   bottom: 16px;
-  left: 416px; /* Offset by StoryPanel (400) + 16px */
+  left: 16px; /* Placed in the left side blank space */
   background: rgba(8, 12, 16, 0.85);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
@@ -318,8 +351,8 @@
   padding: 12px 16px;
   border-radius: var(--r-sm);
   font-family: var(--font-num);
-  z-index: 100;
-  width: 320px;
+  z-index: 105;
+  width: 368px; /* Fits nicely inside the 400px StoryPanel (16px padding on each side) */
 }
 
 .telemetry-header {

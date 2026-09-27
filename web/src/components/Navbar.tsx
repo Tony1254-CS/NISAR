@@ -31,14 +31,14 @@ export function Navbar({
   const { sensoryMode, setSensoryMode, cinematicMode, setCinematicMode } = useStore();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [voiceStatus, setVoiceStatus] = useState('🔊 Bangla Audio');
+  const [voiceStatus, setVoiceStatus] = useState('🔊 Audio');
 
   const path = typeof window !== 'undefined' ? window.location.pathname : '/';
 
   const handleBanglaVoice = () => {
     if (window.speechSynthesis.speaking) {
       window.speechSynthesis.cancel();
-      setVoiceStatus('🔊 Bangla Audio');
+      setVoiceStatus('🔊 Audio');
       return;
     }
     
@@ -50,15 +50,15 @@ export function Navbar({
       msg = new SpeechSynthesisUtterance("যমুনা নদীর এই অংশে বিশাল ভাঙন শনাক্ত করা হয়েছে। স্যাটেলাইট ডেটা ব্যবহার করে এটি নিশ্চিত করা হয়েছে। দয়া করে সতর্ক হোন।");
       msg.lang = 'bn-BD';
       msg.voice = bnVoice;
-      setVoiceStatus('🔊 Playing (Bangla)');
+      setVoiceStatus('🔊 Playing...');
     } else {
       msg = new SpeechSynthesisUtterance("Severe erosion detected in this section of the Jamuna River. Satellite data confirms this anomaly. Please alert local authorities.");
       msg.lang = 'en-US';
-      setVoiceStatus('🔊 Playing (English Fallback)');
+      setVoiceStatus('🔊 Playing...');
     }
     
-    msg.onend = () => setVoiceStatus('🔊 Bangla Audio');
-    msg.onerror = () => setVoiceStatus('🔊 Bangla Audio');
+    msg.onend = () => setVoiceStatus('🔊 Audio');
+    msg.onerror = () => setVoiceStatus('🔊 Audio');
     
     window.speechSynthesis.speak(msg);
   };
@@ -104,18 +104,20 @@ export function Navbar({
             <span className="navbar__brand-text">SAME RIVER TWICE</span>
           </a>
 
-          {/* Nav links */}
-          <div className={`navbar__nav${mobileOpen ? ' navbar__nav--open' : ''}`}>
-            <a href="/cases" className={linkClass('/cases')}>
-              Investigations
-            </a>
-            <a href="/methods" className={linkClass('/methods')}>
-              Methods
-            </a>
-            <a href="/about" className={linkClass('/about')}>
-              About Us
-            </a>
-          </div>
+          {/* Nav links (hidden on /app to save space on laptops) */}
+          {!showReachInfo && (
+            <div className={`navbar__nav${mobileOpen ? ' navbar__nav--open' : ''}`}>
+              <a href="/cases" className={linkClass('/cases')}>
+                Investigations
+              </a>
+              <a href="/methods" className={linkClass('/methods')}>
+                Methods
+              </a>
+              <a href="/about" className={linkClass('/about')}>
+                About Us
+              </a>
+            </div>
+          )}
 
           {/* Reach selector (only on /app) */}
           {showReachInfo && reaches && reaches.length > 0 && (
@@ -145,11 +147,11 @@ export function Navbar({
 
           {/* Extra PRD Features and Trigger for Agentic Workflow (only on /app page) */}
           {showReachInfo && (
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
               <button 
                 onClick={handleBanglaVoice}
                 className="navbar__btn"
-                style={{ background: 'transparent', border: '1px solid var(--water)', color: 'var(--water)', padding: '6px 12px', fontSize: '0.75rem' }}
+                style={{ background: 'transparent', border: '1px solid var(--water)', color: 'var(--water)', padding: '6px 10px', fontSize: '0.7rem' }}
                 title="Bangla Voice Report"
               >
                 {voiceStatus}
@@ -158,25 +160,25 @@ export function Navbar({
               <button 
                 onClick={() => setSensoryMode(!sensoryMode)}
                 className="navbar__btn"
-                style={{ background: sensoryMode ? 'var(--warn)' : 'transparent', border: `1px solid var(--warn)`, color: sensoryMode ? '#000' : 'var(--warn)', padding: '6px 12px', fontSize: '0.75rem' }}
+                style={{ background: sensoryMode ? 'var(--warn)' : 'transparent', border: `1px solid var(--warn)`, color: sensoryMode ? '#000' : 'var(--warn)', padding: '6px 10px', fontSize: '0.7rem' }}
                 title="Haptic & Audio Pixel Inspector"
               >
-                {sensoryMode ? '🔎 Sensory ON' : '🔍 Sensory OFF'}
+                {sensoryMode ? '🔎 Sensory' : '🔍 Sensory'}
               </button>
               
               <button 
                 onClick={() => setCinematicMode(!cinematicMode)}
                 className="navbar__btn"
-                style={{ background: cinematicMode ? 'var(--pass)' : 'transparent', border: `1px solid var(--pass)`, color: cinematicMode ? '#000' : 'var(--pass)', padding: '6px 12px', fontSize: '0.75rem' }}
+                style={{ background: cinematicMode ? 'var(--pass)' : 'transparent', border: `1px solid var(--pass)`, color: cinematicMode ? '#000' : 'var(--pass)', padding: '6px 10px', fontSize: '0.7rem' }}
                 title="5-Sec X-Ray Optical/SAR Swipe"
               >
-                {cinematicMode ? '🎬 Swipe ON' : '🎬 Swipe OFF'}
+                🎬 Swipe
               </button>
 
               <button
                 onClick={onAnalyzeClick}
                 className="navbar__btn navbar__btn--primary"
-                style={{ padding: '6px 16px', marginLeft: '4px' }}
+                style={{ padding: '6px 16px', marginLeft: '4px', fontSize: '0.75rem' }}
               >
                 <span style={{ marginRight: 6 }}>●</span> Live Analysis
               </button>

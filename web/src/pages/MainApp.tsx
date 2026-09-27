@@ -18,7 +18,7 @@ import { FullscreenHUD } from '../panels/FullscreenHUD';
 type LoadStatus = 'loading' | 'ready' | 'empty' | 'error';
 
 export default function MainApp() {
-  const { reachId, selectedFeatureId, panel, setReachId, loadBundle, analysisMode, analysisSplit, setAnalysisMode, setAnalysisSplit, analysisState, analysisActiveTab } = useStore();
+  const { reachId, selectedFeatureId, panel, setReachId, loadBundle, analysisMode, analysisSplit, setAnalysisMode, setAnalysisSplit, analysisState, analysisActiveTab, analysisModeType } = useStore();
   const [reaches, setReaches] = useState<ReachListItem[] | null>(null);
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [errorFile, setErrorFile] = useState('reaches.json');
@@ -120,7 +120,9 @@ export default function MainApp() {
           <div id="report-container" style={{ flex: 1, borderLeft: '1px solid var(--water)', background: 'var(--bg)', display: 'flex', flexDirection: 'column', padding: 'var(--s6)', overflowY: 'auto', position: 'relative' }}>
              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--s6)' }} className="print-hide">
                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                 <h2 style={{ color: 'var(--water)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>Analysis Report</h2>
+                 <h2 style={{ color: 'var(--water)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>
+                   {analysisModeType === 'FULL' ? 'Full Analysis Report' : `${analysisActiveTab ? analysisActiveTab.charAt(0).toUpperCase() + analysisActiveTab.slice(1) : 'Analysis'} Report`}
+                 </h2>
                  <button onClick={() => window.print()} className="agentic-action-btn" style={{ padding: '6px 12px', fontSize: '0.65rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                    Download PDF
