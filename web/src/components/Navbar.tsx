@@ -121,18 +121,29 @@ export function Navbar({
 
           {/* Reach selector (only on /app) */}
           {showReachInfo && reaches && reaches.length > 0 && (
-            <select
-              aria-label="Select investigation reach"
-              value={reachId ?? ''}
-              onChange={(e) => onReachChange?.(e.target.value)}
-              className="navbar__reach-select"
-            >
-              {reaches.map((r) => (
-                <option key={r.reach_id} value={r.reach_id}>
-                  {r.name}
-                </option>
-              ))}
-            </select>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <select
+                aria-label="Select investigation reach"
+                value={reachId ?? ''}
+                onChange={(e) => onReachChange?.(e.target.value)}
+                className="navbar__reach-select"
+              >
+                {reaches.map((r) => (
+                  <option key={r.reach_id} value={r.reach_id}>
+                    {r.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={() => useStore.getState().setCinematicDesc(!useStore.getState().showCinematicDesc)}
+                className="navbar__btn"
+                style={{ background: 'rgba(57,196,217,0.1)', border: '1px solid var(--water)', color: 'var(--water)', padding: '6px 10px', fontSize: '0.7rem', display: 'flex', gap: '6px', alignItems: 'center' }}
+                title="Cinematic HUD Description"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                Info
+              </button>
+            </div>
           )}
         </div>
 

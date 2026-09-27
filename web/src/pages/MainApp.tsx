@@ -15,6 +15,7 @@ import { EvidenceTabs } from '../panels/EvidenceTabs';
 import { TelemetryPanel } from '../panels/TelemetryPanel';
 import { FullscreenHUD } from '../panels/FullscreenHUD';
 import { ChatWidget } from '../chat/ChatWidget';
+import { CinematicDescription } from '../components/CinematicDescription';
 
 type LoadStatus = 'loading' | 'ready' | 'empty' | 'error';
 
@@ -157,6 +158,7 @@ export default function MainApp() {
 
       {/* AI Chat Assistant */}
       {status === 'ready' && <ChatWidget />}
+      <CinematicDescription />
     </div>
   );
 }

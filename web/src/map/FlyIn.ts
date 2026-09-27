@@ -55,7 +55,7 @@ export class FlyIn {
         setTimeout(() => {
           if (this.skipped) return;
           // Zoom in a bit more to hide the sides and make it full screen
-          this.map.zoomTo(this.map.getZoom() + 0.7, { duration: 1500 });
+          this.map.zoomTo(this.map.getZoom() + 2.5, { duration: 1500 });
           setTimeout(() => {
             this.map.off('mousedown', abortFly);
             this.map.off('touchstart', abortFly);
@@ -68,6 +68,6 @@ export class FlyIn {
 
   private jumpToTarget() {
     this.map.fitBounds(this.bounds, { padding: 0, animate: false });
-    this.map.setZoom(this.map.getZoom() + 0.7);
+    this.map.setZoom(this.map.getZoom() + 2.5);
   }
 }

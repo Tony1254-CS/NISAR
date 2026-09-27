@@ -57,7 +57,16 @@ export function MapStage() {
       });
     }
 
+    const handleCinematicFly = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const { longitude, latitude, zoom, pitch, bearing } = customEvent.detail;
+      mapRef.current?.flyTo({ center: [longitude, latitude], zoom, pitch: pitch || 0, bearing: bearing || 0, speed: 0.5, curve: 1 });
+    };
+
+    window.addEventListener('cinematic-fly', handleCinematicFly);
+
     return () => {
+      window.removeEventListener('cinematic-fly', handleCinematicFly);
       mapRef.current?.remove();
       mapRef.current = null;
     };
@@ -160,12 +169,12 @@ export function MapStage() {
         const gain = audioCtx.createGain();
         osc.type = 'sine';
         osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-        gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.5, audioCtx.currentTime); // Increased volume from 0.05 to 0.5
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2); // Slower fade out
         osc.connect(gain);
         gain.connect(audioCtx.destination);
         osc.start();
-        osc.stop(audioCtx.currentTime + 0.1);
+        osc.stop(audioCtx.currentTime + 0.2);
       } catch (e) {
         console.warn("AudioContext failed", e);
       }

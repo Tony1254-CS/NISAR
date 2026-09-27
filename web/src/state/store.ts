@@ -45,6 +45,7 @@ interface StoreState {
   sensoryMode: boolean;
   cinematicMode: boolean;
   inspectMode: boolean;
+  showCinematicDesc: boolean;
   
   // Actions
   setAnalysisMode: (mode: boolean) => void;
@@ -64,6 +65,7 @@ interface StoreState {
   setSensoryMode: (active: boolean) => void;
   setCinematicMode: (active: boolean) => void;
   setInspectMode: (active: boolean) => void;
+  setCinematicDesc: (active: boolean) => void;
 }
 
 export const useStore = create<StoreState>((set) => ({
@@ -91,6 +93,7 @@ export const useStore = create<StoreState>((set) => ({
   sensoryMode: false,
   cinematicMode: false,
   inspectMode: false,
+  showCinematicDesc: false,
   
   setAnalysisMode: (mode) => set({ analysisMode: mode }),
   setAnalysisSplit: (split) => set({ analysisSplit: split }),
@@ -134,4 +137,5 @@ export const useStore = create<StoreState>((set) => ({
   setSensoryMode: (active) => set({ sensoryMode: active }),
   setCinematicMode: (active) => set({ cinematicMode: active }),
   setInspectMode: (active) => set({ inspectMode: active }),
+  setCinematicDesc: (active) => set({ showCinematicDesc: active }),
 }));
