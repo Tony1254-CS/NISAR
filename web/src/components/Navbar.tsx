@@ -105,6 +105,9 @@ export function Navbar({
           {/* Nav links (hidden on /app to save space on laptops) */}
           {!showReachInfo && (
             <div className={`navbar__nav${mobileOpen ? ' navbar__nav--open' : ''}`}>
+              <a href="/impact" className={linkClass('/impact')} style={{ color: '#E4572E', textShadow: '0 0 10px rgba(228,87,46,0.3)', fontWeight: 'bold' }}>
+                🚨 Impact Dashboard
+              </a>
               <a href="/cases" className={linkClass('/cases')}>
                 Investigations
               </a>
@@ -119,6 +122,9 @@ export function Navbar({
               </a>
               <a href="/about" className={linkClass('/about')}>
                 About Us
+              </a>
+              <a href="/report" className="navbar__btn" style={{ background: '#fff', color: '#000', padding: '4px 12px', fontSize: '0.8rem', marginLeft: '8px', textDecoration: 'none' }}>
+                📄 Report
               </a>
             </div>
           )}
@@ -180,14 +186,14 @@ export function Navbar({
                     {sensoryMode ? '✓ ' : ''}Sensory Inspector
                   </button>
                   <button onClick={() => setCinematicMode(!cinematicMode)} title="Auto-Narrated Mission Briefing">
-                      {cinematicMode ? '✔️ ' : ''}Mission Briefing
-                    </button>
+                    {cinematicMode ? '✓ ' : ''}Mission Briefing
+                  </button>
                   <button onClick={() => setLayers({ forecast: !layers.forecast })} title="Erosion & Accretion Forecast">
                     {layers.forecast ? '✓ ' : ''}Forecast Model
                   </button>
-                    <button onClick={() => setLayers({ risk: !layers.risk })} title="Predictive Risk Heatmap" style={{ color: 'var(--erosion)' }}>
-                      {layers.risk ? '✔️ ' : ''}Predictive Risk
-                    </button>
+                  <button onClick={() => setLayers({ risk: !layers.risk })} title="Predictive Risk Heatmap" style={{ color: 'var(--erosion)' }}>
+                    {layers.risk ? '✓ ' : ''}Predictive Risk
+                  </button>
                 </div>
               </div>
 
