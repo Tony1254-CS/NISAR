@@ -413,7 +413,7 @@ function ExplainPanel() {
             
             {/* Hover Image Container */}
             <div className="nodivangon-preview" style={{ position: 'absolute', top: 24, right: 24, width: 140, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', zIndex: 10 }}>
-              <div className="nodivangon-image" style={{ width: '100%', height: 80, backgroundImage: 'url(https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=600&auto=format&fit=crop)', backgroundSize: 'cover', backgroundPosition: 'center', borderRadius: 6, border: '1px solid rgba(255,255,255,0.2)', transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)', cursor: 'crosshair', position: 'relative', transformOrigin: 'top right' }}>
+              <div className="nodivangon-image" style={{ width: '100%', height: 80, backgroundImage: 'url(/erosion_preview.jpg)', backgroundSize: 'cover', backgroundPosition: 'center', borderRadius: 6, border: '1px solid rgba(255,255,255,0.2)', transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)', cursor: 'crosshair', position: 'relative', transformOrigin: 'top right' }}>
                 <div className="nodivangon-overlay" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(2px)', transition: 'all 0.3s', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
                 </div>
