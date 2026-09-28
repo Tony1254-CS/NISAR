@@ -15,6 +15,7 @@ interface LayersState {
   ambiguous: boolean;
   forecast: boolean;
   earthquakes: boolean;
+  risk: boolean;
 }
 
 type PanelType = 'none' | 'evidence' | 'qc';
@@ -90,7 +91,7 @@ export const useStore = create<StoreState>((set) => ({
   selectedDate: null,
   compare: { active: false, t0: null, t1: null },
   selectedFeatureId: null,
-  layers: { water: false, accretion: true, erosion: true, ambiguous: true, forecast: false, earthquakes: false },
+  layers: { water: false, accretion: true, erosion: true, ambiguous: true, forecast: false, earthquakes: false, risk: false },
   panel: 'none',
   flyInDone: false,
   sensoryMode: false,

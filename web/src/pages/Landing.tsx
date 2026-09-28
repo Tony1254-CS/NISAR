@@ -1,280 +1,142 @@
+import { useState, useEffect } from 'react';
 import { Navbar } from '../components/Navbar';
 import '../styles/landing.css';
 
-/* ─── Real pipeline steps from our run_reach.py ─── */
-const PIPELINE_STEPS = [
-  { label: 'Discover', desc: 'Find NISAR GCOV granules' },
-  { label: 'Fetch', desc: 'Stream & AOI-clip' },
-  { label: 'Validate', desc: 'Reject broken granules' },
-  { label: 'Preprocess', desc: 'dB conversion & filter' },
-  { label: 'Water', desc: 'Otsu thresholding' },
-  { label: 'Stage', desc: 'Gauge height matching' },
-  { label: 'Pairs', desc: 'Equal-stage pairing' },
-  { label: 'Change', desc: 'Erosion / accretion' },
-  { label: 'Validate', desc: 'Cross-sensor QC' },
-  { label: 'Render', desc: 'Map-ready PNGs' },
-  { label: 'Manifest', desc: 'Provenance chain' },
-  { label: 'Check', desc: 'Bundle integrity' },
-];
-
-/* ─── Evidence trail stages — these are our real tabs ─── */
-const EVIDENCE_STAGES = [
-  {
-    num: '01',
-    title: 'Detect',
-    desc: 'NISAR L-band radar measures the surface. Water reflects the signal away — dark pixels. Land scatters it back — bright pixels. The threshold between them is computed, not guessed.',
-  },
-  {
-    num: '02',
-    title: 'Investigate',
-    desc: 'Cross-check the radar finding against independent sources: OPERA DSWx-S1, river stage data, GPM IMERG rainfall, and temporal persistence. Not all pass — that matters.',
-  },
-  {
-    num: '03',
-    title: 'Challenge',
-    desc: 'Actively try to break the finding. Threshold sensitivity, RFI interference, scene alignment, order-of-magnitude plausibility. If a check fails, the verdict says so.',
-  },
-  {
-    num: '04',
-    title: 'Explain',
-    desc: 'A template-generated summary from the actual data bundle — dates, areas, confidence ranges, verdict reasons. No language model wrote it; every number traces to manifest.json.',
-  },
-  {
-    num: '05',
-    title: 'Field',
-    desc: 'Connect the satellite observation to the ground. Check your GPS proximity to the investigation footprint, log field notes, photograph evidence — all on-device, nothing uploaded.',
-  },
-];
-
-/* ─── SAR concept cards — only concepts our project actually uses ─── */
-const SAR_CONCEPTS = [
-  {
-    icon: '📡',
-    title: 'Active Sensing',
-    body: 'SAR sends its own microwave pulse and measures the return signal. Unlike optical sensors, it works through clouds, at night, and during monsoon — exactly when river change happens.',
-  },
-  {
-    icon: '〰️',
-    title: 'L-Band Radar (~24 cm)',
-    body: 'NISAR transmits at L-band: a ~24 cm wavelength that penetrates vegetation canopy and interacts with the ground surface. This lets us see through trees to the water edge beneath.',
-  },
-  {
-    icon: '⬛',
-    title: 'Backscatter & Water',
-    body: 'Open water acts like a mirror, reflecting the radar pulse away — appearing dark (low σ⁰). Land and vegetation scatter the signal back to the sensor — appearing bright. This contrast is our detection principle.',
-  },
-  {
-    icon: '🔄',
-    title: 'Change Detection',
-    body: 'By comparing two radar passes at the same river height, we isolate real bank migration from temporary flooding. A pixel that was land and became water, at matched stage — that is our signal.',
-  },
-];
-
-/* ─── Data sources used in our project ─── */
-const DATA_SOURCES = [
-  {
-    badge: '🛰️',
-    name: 'NISAR L2 GCOV Provisional V1',
-    role: 'Primary measurement — calibrated γ⁰ backscatter per pass',
-    doi: '10.5067/NIL2GCOV-P1',
-  },
-  {
-    badge: '🌊',
-    name: 'OPERA L3 DSWx-S1 V1',
-    role: 'Independent validation — Sentinel-1 water extent, different wavelength',
-    doi: '10.5067/OPDSWS1-L3V1',
-  },
-  {
-    badge: '🌧️',
-    name: 'GPM IMERG Daily',
-    role: 'Rainfall context — precipitation anomaly check',
-    doi: '10.5067/GPM/IMERGDL/DAY/07',
-  },
-  {
-    badge: '⛰️',
-    name: 'ASF GLO-30 HAND',
-    role: 'Terrain mask — excludes water on high ground',
-    doi: null,
-  },
-  {
-    badge: '🌍',
-    name: 'NASA GIBS Blue Marble',
-    role: 'Satellite basemap tiles via WMTS',
-    doi: null,
-  },
-  {
-    badge: '📊',
-    name: 'FFWC River Stage',
-    role: 'Scientific control — river height at each acquisition',
-    doi: null,
-  },
-];
-
 export function Landing() {
+  const [people, setPeople] = useState(0);
+  const [percent, setPercent] = useState(0);
+  const [homes, setHomes] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setPeople((prev) => (prev < 4.96 ? Math.min(prev + 0.1, 4.96) : prev));
+      setPercent((prev) => (prev < 60 ? Math.min(prev + 2, 60) : prev));
+      setHomes((prev) => (prev < 100 ? Math.min(prev + 4, 100) : prev));
+    }, 50);
+    return () => clearInterval(timer);
+  }, []);
+
   return (
-    <div className="page-container">
+    <div className="page-container" style={{ background: '#0a0a0a', color: '#fff', minHeight: '100vh' }}>
       <Navbar transparent />
 
-      {/* ════ Hero ════ */}
-      <section className="landing-hero">
-        <div
-          className="landing-hero__bg"
-          aria-hidden
-          style={{ backgroundImage: 'url(/data/v1/jamuna-chilmari/img/radar_20260919.png)' }}
-        />
-        <div className="landing-hero__sweep" aria-hidden />
-        <div className="landing-hero__grid" aria-hidden />
-
-        <div className="landing-hero__content">
-          <div className="landing-hero__tag">
-            <span className="landing-hero__tag-dot" />
-            NASA NISAR &middot; L-BAND SAR &middot; JAMUNA RIVER, BANGLADESH
-          </div>
-
-          <h1>
-            Prove the river moved.
-            <br />
-            <span>Don&rsquo;t just claim it.</span>
+      {/* Hero Section */}
+      <section className="landing-hero" style={{ 
+        position: 'relative', 
+        height: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        textAlign: 'center',
+        padding: '0 2rem'
+      }}>
+        <div style={{
+          position: 'absolute',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundImage: 'linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.9)), url(/data/v1/jamuna-chilmari/img/radar_20260919.png)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          zIndex: -1
+        }} />
+        
+        <div style={{ maxWidth: 800, marginTop: '10vh' }}>
+          <h1 style={{ fontSize: '3rem', fontWeight: 700, marginBottom: '1.5rem', lineHeight: 1.2 }}>
+            4.96 million people have been displaced <br />
+            by erosion and flooding in Bangladesh alone.
           </h1>
-
-          <p className="landing-hero__subtitle">
-            Same River Twice compares real NISAR satellite radar of the same stretch of the
-            Jamuna on two dates — and shows exactly where land turned to water and water turned
-            to land, with the evidence chain to back every claim.
+          <p style={{ fontSize: '1.5rem', color: '#a0a0a0', marginBottom: '3rem' }}>
+            What if we could see it coming — from space?
           </p>
-
-          <div className="landing-hero__actions">
-            <a href="/cases" className="landing-hero__cta landing-hero__cta--primary">
-              Begin Investigation →
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+            <a href="#demo" style={{ padding: '1rem 2rem', background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '30px', color: '#fff', textDecoration: 'none', fontWeight: 600 }}>
+              ▶ Watch the Demo
             </a>
-            <a href="/methods" className="landing-hero__cta landing-hero__cta--secondary">
-              How it works
+            <a href="/cases" style={{ padding: '1rem 2rem', background: '#39c4d9', borderRadius: '30px', color: '#000', textDecoration: 'none', fontWeight: 600 }}>
+              → Launch Platform
             </a>
           </div>
         </div>
       </section>
 
-      {/* ════ SAR Concepts ════ */}
-      <section className="sar-intro">
-        <div className="section-label">How SAR Works</div>
-        <h2>Synthetic Aperture Radar for Earth Observation</h2>
-        <p style={{ maxWidth: 640, marginTop: 'var(--s2)' }}>
-          SAR is an active microwave remote sensing technology. Unlike optical cameras, it
-          provides its own illumination — enabling observation regardless of time of day, cloud
-          cover, or weather conditions.{' '}
-          <a
-            href="https://www.earthdata.nasa.gov/learn/earth-observation-data-basics/sar"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ fontSize: 'var(--text-sm)' }}
-          >
-            Learn more on NASA Earthdata →
+      {/* The Problem */}
+      <section style={{ padding: '8rem 2rem', background: '#000' }}>
+        <div style={{ maxWidth: 1000, margin: '0 auto', textAlign: 'center' }}>
+          <h2 style={{ fontSize: '2.5rem', marginBottom: '2rem' }}>
+            Every year, the Jamuna River devours villages, farmland, and futures. <br/>
+            <span style={{ color: '#888' }}>By the time it's visible from the ground, it's already too late.</span>
+          </h2>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginTop: '4rem' }}>
+            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '2rem', borderRadius: '16px', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ fontSize: '3.5rem', fontWeight: 800, color: '#39c4d9' }}>{people.toFixed(2)}M</div>
+              <div style={{ fontSize: '1.2rem', color: '#ccc' }}>People displaced</div>
+              <div style={{ fontSize: '0.9rem', color: '#666', marginTop: '0.5rem' }}>Source: IOM 2025</div>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '2rem', borderRadius: '16px', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ fontSize: '3.5rem', fontWeight: 800, color: '#39c4d9' }}>{Math.floor(percent)}%</div>
+              <div style={{ fontSize: '1.2rem', color: '#ccc' }}>Erosion from Jamuna</div>
+              <div style={{ fontSize: '0.9rem', color: '#666', marginTop: '0.5rem' }}>Of all erosion in Bangladesh</div>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '2rem', borderRadius: '16px', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ fontSize: '3.5rem', fontWeight: 800, color: '#39c4d9' }}>{Math.floor(homes)}k+</div>
+              <div style={{ fontSize: '1.2rem', color: '#ccc' }}>Families lose homes</div>
+              <div style={{ fontSize: '0.9rem', color: '#666', marginTop: '0.5rem' }}>Annually</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* The Solution */}
+      <section style={{ padding: '8rem 2rem', background: '#050505' }}>
+        <div style={{ maxWidth: 1000, margin: '0 auto', textAlign: 'center' }}>
+          <h2 style={{ fontSize: '3rem', marginBottom: '4rem' }}>NISAR sees what eyes can't.</h2>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginBottom: '4rem' }}>
+            <div style={{ textAlign: 'left', padding: '2rem', borderLeft: '2px solid #39c4d9' }}>
+              <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>1. Penetrates Clouds</h3>
+              <p style={{ color: '#aaa', lineHeight: 1.6 }}>L-band radar works through monsoon, day and night.</p>
+            </div>
+            <div style={{ textAlign: 'left', padding: '2rem', borderLeft: '2px solid #39c4d9' }}>
+              <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>2. Detects Change</h3>
+              <p style={{ color: '#aaa', lineHeight: 1.6 }}>Automated comparison of SAR acquisitions at matched river levels.</p>
+            </div>
+            <div style={{ textAlign: 'left', padding: '2rem', borderLeft: '2px solid #39c4d9' }}>
+              <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>3. Predicts Risk</h3>
+              <p style={{ color: '#aaa', lineHeight: 1.6 }}>ML model identifies where erosion will strike NEXT.</p>
+            </div>
+          </div>
+
+          <div style={{ background: 'rgba(57,196,217,0.1)', padding: '2rem', borderRadius: '16px', border: '1px solid rgba(57,196,217,0.3)', display: 'flex', justifyContent: 'space-around', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+            <div style={{ fontWeight: 'bold', color: '#39c4d9' }}>ACQUIRE</div>
+            <div>→</div>
+            <div style={{ fontWeight: 'bold', color: '#39c4d9' }}>DETECT</div>
+            <div>→</div>
+            <div style={{ fontWeight: 'bold', color: '#39c4d9' }}>VALIDATE</div>
+            <div>→</div>
+            <div style={{ fontWeight: 'bold', color: '#39c4d9' }}>ALERT</div>
+          </div>
+        </div>
+      </section>
+
+      {/* The Proof & The Call */}
+      <section style={{ padding: '8rem 2rem', background: '#000', textAlign: 'center' }}>
+        <div style={{ maxWidth: 800, margin: '0 auto' }}>
+          <h2 style={{ fontSize: '2rem', marginBottom: '1rem' }}>4 continents. 12 SAR acquisitions. 1 unified platform.</h2>
+          <p style={{ color: '#666', marginBottom: '4rem' }}>Global reach, local impact.</p>
+          
+          <h1 style={{ fontSize: '3rem', fontWeight: 700, marginBottom: '2rem' }}>
+            Same River Twice — because no river,<br/>
+            and no home, should be lost unwitnessed.
+          </h1>
+          
+          <a href="/cases" style={{ display: 'inline-block', padding: '1.2rem 3rem', background: '#fff', borderRadius: '40px', color: '#000', textDecoration: 'none', fontWeight: 600, fontSize: '1.2rem' }}>
+            Launch Platform →
           </a>
-        </p>
-
-        <div className="sar-intro__grid">
-          {SAR_CONCEPTS.map((c) => (
-            <div key={c.title} className="sar-card">
-              <span className="sar-card__icon">{c.icon}</span>
-              <h3>{c.title}</h3>
-              <p>{c.body}</p>
-            </div>
-          ))}
         </div>
       </section>
 
-      <div className="divider" style={{ maxWidth: 1100, margin: '0 auto' }} />
-
-      {/* ════ Pipeline ════ */}
-      <section className="pipeline-section">
-        <div className="section-label">Processing Pipeline</div>
-        <h2>12-Step Analysis Pipeline</h2>
-        <p style={{ maxWidth: 640, marginTop: 'var(--s2)' }}>
-          Every number on this site passes through twelve offline processing steps — from raw
-          NISAR granule to verified, bundled result. No step is skipped, and no number is hand-typed.
-        </p>
-
-        <div className="pipeline-flow">
-          {PIPELINE_STEPS.map((step, i) => (
-            <div className="pipeline-step" key={`${step.label}-${i}`}>
-              <div className="pipeline-node">
-                <span className="pipeline-node__label">{step.label}</span>
-                <span className="pipeline-node__desc">{step.desc}</span>
-              </div>
-              {i < PIPELINE_STEPS.length - 1 && <span className="pipeline-arrow">→</span>}
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <div className="divider" style={{ maxWidth: 1100, margin: '0 auto' }} />
-
-      {/* ════ Evidence Trail ════ */}
-      <section className="evidence-trail">
-        <div className="section-label">Evidence Trail</div>
-        <h2>Five-Stage Verification</h2>
-        <p style={{ maxWidth: 640, marginTop: 'var(--s2)' }}>
-          Every investigation follows the same five-step trail: detect the change, investigate
-          with independent sources, challenge the finding, explain the result, connect to the field.
-        </p>
-
-        <div className="evidence-trail__flow">
-          {EVIDENCE_STAGES.map((s) => (
-            <div key={s.num} className="evidence-trail__step">
-              <span className="evidence-trail__step-num">STEP {s.num}</span>
-              <span className="evidence-trail__step-title">{s.title}</span>
-              <span className="evidence-trail__step-desc">{s.desc}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <div className="divider" style={{ maxWidth: 1100, margin: '0 auto' }} />
-
-      {/* ════ Data Sources ════ */}
-      <section className="data-sources">
-        <div className="section-label">Data Sources</div>
-        <h2>Built on NASA Open Data</h2>
-        <p style={{ maxWidth: 640, marginTop: 'var(--s2)' }}>
-          Every observation, validation, and context layer comes from a named, citable dataset.
-          No data is fabricated or simulated.
-        </p>
-
-        <div className="data-sources__grid">
-          {DATA_SOURCES.map((s) => (
-            <div key={s.name} className="data-source-card">
-              <div className="data-source-card__badge">{s.badge}</div>
-              <div className="data-source-card__info">
-                <div className="data-source-card__name">{s.name}</div>
-                <div className="data-source-card__role">{s.role}</div>
-                {s.doi && (
-                  <a
-                    className="data-source-card__doi"
-                    href={`https://doi.org/${s.doi}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    DOI: {s.doi}
-                  </a>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ════ Footer ════ */}
-      <footer className="landing-footer">
+      <footer className="landing-footer" style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
         Same River Twice &middot; NASA Space Apps Challenge 2026 &middot; Dancing with the SARs
-        &middot;{' '}
-        <a href="/methods">full methods &amp; sources</a> &middot;{' '}
-        <a
-          href="https://www.earthdata.nasa.gov/learn/earth-observation-data-basics/sar"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          NASA SAR Reference
-        </a>
       </footer>
     </div>
   );

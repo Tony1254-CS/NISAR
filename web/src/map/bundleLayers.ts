@@ -139,6 +139,29 @@ export function ensureReachLayers(
       paint: { 'line-color': '#2A3036', 'line-dasharray': [2, 4], 'line-width': 1, 'line-opacity': 0.5 },
     });
   }
+
+  if (!map.getSource('risk-source')) {
+    map.addSource('risk-source', { type: 'geojson', data: `${opts.baseUrl}/risk.geojson` });
+    map.addLayer({
+      id: 'layer-14-risk',
+      type: 'fill',
+      source: 'risk-source',
+      layout: { visibility: 'none' },
+      paint: {
+        'fill-color': [
+          'interpolate',
+          ['linear'],
+          ['get', 'risk_score'],
+          0.2, '#7FBF8E',
+          0.5, '#D9B26A',
+          0.8, '#E4572E',
+          1.0, '#FF0000'
+        ],
+        'fill-opacity': 0.6
+      }
+    });
+  }
+
   
   if (!map.getSource('earthquake-source')) {
     map.addSource('earthquake-source', { type: 'geojson', data: `${opts.baseUrl}/earthquakes.json` });
@@ -264,6 +287,10 @@ export function setChangeLayersVisible(
 
 let predictionAnimationId: number;
 let predAnimationStartTime = 0;
+
+export function setRiskLayerVisible(map: MlMap, visible: boolean) {
+  setLayerVisible(map, 'layer-14-risk', visible);
+}
 
 export function setPredictionLayerVisible(map: MlMap, visible: boolean) {
   const layers = ['layer-13-predict-erosion', 'layer-13-predict-accretion', 'layer-13-predict-ambiguity'];

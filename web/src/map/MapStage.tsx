@@ -15,6 +15,9 @@ import { FlyIn } from './FlyIn';
 import { OutsideCoverage } from '../states/OutsideCoverage';
 import { MapLegend } from './MapLegend';
 import { CompareSwipe } from './CompareSwipe';
+import { RiverMemory } from './RiverMemory';
+import { MissionBriefing } from './MissionBriefing';
+import { SensorFusion } from './SensorFusion';
 
 export function MapStage() {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -174,11 +177,12 @@ export function MapStage() {
     const map = mapRef.current;
     if (!map || !mapLoaded) return;
     // Assume setEarthquakeLayerVisible is exported from bundleLayers
-    import('./bundleLayers').then(({ setEarthquakeLayerVisible, setPredictionLayerVisible }) => {
+    import('./bundleLayers').then(({ setEarthquakeLayerVisible, setPredictionLayerVisible, setRiskLayerVisible }) => {
       setEarthquakeLayerVisible(map, layers.earthquakes);
       setPredictionLayerVisible(map, layers.forecast);
+      setRiskLayerVisible(map, layers.risk);
     });
-  }, [mapLoaded, layers.earthquakes, layers.forecast]);
+  }, [mapLoaded, layers.earthquakes, layers.forecast, layers.risk]);
 
   // Handle prediction clicks
   useEffect(() => {
@@ -351,6 +355,9 @@ export function MapStage() {
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
       <CompareSwipe primaryMap={mapInstance} />
+      <RiverMemory />
+      <SensorFusion />
+      <MissionBriefing map={mapInstance} />
       {isOutside && (
         <OutsideCoverage
           onFlyBack={() => {
