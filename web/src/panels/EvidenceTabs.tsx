@@ -407,11 +407,25 @@ function ExplainPanel() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <DataWidget title="Final System Verdict">
         <Inspectable intentKey="verdict">
-          <div className="typewriter-text" style={{ fontSize: '1rem', color: 'var(--text)', lineHeight: 1.8, whiteSpace: 'normal', animation: 'none', background: 'rgba(57,196,217,0.05)', padding: '24px', borderRadius: '8px', borderLeft: `6px solid ${color}` }}>
+          <div className="typewriter-text" style={{ position: 'relative', fontSize: '1rem', color: 'var(--text)', lineHeight: 1.8, whiteSpace: 'normal', animation: 'none', background: 'rgba(57,196,217,0.05)', padding: '24px', borderRadius: '8px', borderLeft: `6px solid ${color}` }}>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginBottom: 12 }}>EXECUTIVE SUMMARY</div>
             <span style={{ color: color, fontWeight: 800, fontSize: '1.4rem', letterSpacing: '0.1em', textShadow: `0 0 10px ${color}` }}>{reach.verdict}</span><br /><br />
             
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+            {/* Hover Image Container */}
+            <div className="nodivangon-preview" style={{ position: 'absolute', top: 24, right: 24, width: 140, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', zIndex: 10 }}>
+              <div className="nodivangon-image" style={{ width: '100%', height: 80, backgroundImage: 'url(https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=600&auto=format&fit=crop)', backgroundSize: 'cover', backgroundPosition: 'center', borderRadius: 6, border: '1px solid rgba(255,255,255,0.2)', transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)', cursor: 'crosshair', position: 'relative', transformOrigin: 'top right' }}>
+                <div className="nodivangon-overlay" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(2px)', transition: 'all 0.3s', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+                </div>
+              </div>
+              <div className="nodivangon-meta" style={{ marginTop: 8, fontSize: '0.6rem', color: 'var(--text-3)', textAlign: 'right', display: 'flex', flexDirection: 'column', gap: 2, fontFamily: 'var(--font-num)' }}>
+                <div>DATE: <strong style={{ color: 'var(--text-2)' }}>28 SEP 2026</strong></div>
+                <div>SOURCE: <strong style={{ color: 'var(--text-2)' }}>SENTINEL-2 L2A</strong></div>
+                <div>COORD: <strong style={{ color: 'var(--text-2)' }}>{reach.bbox[1].toFixed(2)}°N, {reach.bbox[0].toFixed(2)}°E</strong></div>
+              </div>
+            </div>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16, maxWidth: '65%' }}>
               <div>
                 <div style={{ fontSize: '0.65rem', color: 'var(--text-3)' }}>NET EROSION DETECTED</div>
                 <strong style={{ color: '#fff', fontSize: '1.2rem' }}>{headline?.value.toLocaleString()} ha</strong>
@@ -697,9 +711,9 @@ export function EvidenceTabs({ isReportMode = false }: { isReportMode?: boolean 
         <div className="agentic-panel__title">Live Analysis</div>
         <button 
           onClick={() => setInspectMode(!inspectMode)}
-          style={{ background: inspectMode ? 'var(--water)' : 'transparent', color: inspectMode ? '#000' : 'var(--text-2)', border: '1px solid var(--water)', padding: '4px 12px', borderRadius: 4, fontSize: '0.7rem', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto', marginRight: 16, transition: 'all 0.2s' }}
+          style={{ background: inspectMode ? 'var(--water)' : 'transparent', color: inspectMode ? '#000' : 'var(--water)', border: '1px solid var(--water)', padding: '4px 12px', borderRadius: 16, fontSize: '0.65rem', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto', marginRight: 16, transition: 'all 0.2s', boxShadow: inspectMode ? 'none' : '0 0 10px rgba(57,196,217,0.3)', animation: inspectMode ? 'none' : 'pulse-border 2s infinite' }}
         >
-          {inspectMode ? '🔍 Exit Inspect Mode' : '🔍 Inspect Mode'}
+          {inspectMode ? '💬 Exit Chat Mode' : '💬 Chat with Data'}
         </button>
         <button 
           onClick={() => { setAnalysisMode(false); setAnalysisSplit(false); }}

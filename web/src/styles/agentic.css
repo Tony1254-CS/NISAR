@@ -562,3 +562,12 @@
     text-shadow: none !important;
   }
 }
+/* Nodivangon Image Preview */
+.nodivangon-image:hover {
+  transform: scale(3.5);
+  z-index: 100;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.8), 0 0 0 1px rgba(57,196,217,0.5);
+}
+.nodivangon-image:hover .nodivangon-overlay {
+  opacity: 0;
+}

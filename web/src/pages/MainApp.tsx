@@ -25,6 +25,7 @@ export default function MainApp() {
   const [errorFile, setErrorFile] = useState('reaches.json');
   const [retryToken, setRetryToken] = useState(0);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const [showInspectTooltip, setShowInspectTooltip] = useState(true);
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -94,8 +95,16 @@ export default function MainApp() {
       display: 'flex', 
       flexDirection: 'column',
       transition: 'width 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-      overflow: 'hidden'
+      overflow: 'hidden',
+      cursor: inspectMode ? 'help' : 'default'
     }}>
+      {/* Global Toast for Inspect Mode */}
+      {inspectMode && (
+        <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', background: 'var(--water)', color: '#000', padding: '8px 16px', borderRadius: 20, fontWeight: 700, fontSize: '0.8rem', zIndex: 9999, boxShadow: '0 4px 12px rgba(57,196,217,0.4)', animation: 'fade-in 0.3s ease-out' }}>
+          Mode ON: Click on any highlighted box to start chatting
+        </div>
+      )}
+
       <TopBar reaches={reaches} />
       <div className="navbar-spacer" style={{ flexShrink: 0 }} />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>
@@ -141,12 +150,20 @@ export default function MainApp() {
                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                    Download PDF
                  </button>
-                 <button 
-                   onClick={() => setInspectMode(!inspectMode)}
-                   style={{ background: inspectMode ? 'var(--water)' : 'transparent', color: inspectMode ? '#000' : 'var(--text-2)', border: '1px solid var(--water)', padding: '6px 12px', borderRadius: 4, fontSize: '0.65rem', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, transition: 'all 0.2s' }}
-                 >
-                   {inspectMode ? '🔍 Exit Inspect Mode' : '🔍 Inspect Mode'}
-                 </button>
+                 <div style={{ position: 'relative' }}>
+                   <button 
+                     onClick={() => { setInspectMode(!inspectMode); setShowInspectTooltip(false); }}
+                     style={{ background: inspectMode ? 'var(--water)' : 'transparent', color: inspectMode ? '#000' : 'var(--water)', border: '1px solid var(--water)', padding: '6px 12px', borderRadius: 16, fontSize: '0.65rem', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, transition: 'all 0.2s', boxShadow: inspectMode ? 'none' : '0 0 10px rgba(57,196,217,0.3)', animation: inspectMode ? 'none' : 'pulse-border 2s infinite' }}
+                   >
+                     {inspectMode ? '💬 Exit Chat Mode' : '💬 Chat with Data'}
+                   </button>
+                   {showInspectTooltip && !inspectMode && (
+                     <div style={{ position: 'absolute', top: '120%', right: 0, width: 220, background: 'var(--water)', color: '#000', padding: 8, borderRadius: 8, fontSize: '0.65rem', fontWeight: 600, animation: 'fade-in 0.5s', zIndex: 100 }}>
+                       <div style={{ position: 'absolute', top: -4, right: 24, width: 8, height: 8, background: 'var(--water)', transform: 'rotate(45deg)' }} />
+                       Want to know more? Click here to ask AI about any data!
+                     </div>
+                   )}
+                 </div>
                </div>
                <button onClick={() => { setAnalysisMode(false); setAnalysisSplit(false); }} style={{ background: 'transparent', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: '1.2rem' }}>×</button>
              </div>
