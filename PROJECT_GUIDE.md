@@ -590,6 +590,15 @@ make check-bundle REACH=jamuna-chilmari
 - **LIMITED**: Some checks WARN. The measurement is directionally correct but has caveats.
 - **INCONCLUSIVE**: Any critical check FAIL. The result cannot be trusted without further investigation.
 
+### Explainable AI (XAI) Framework
+
+To build trust in our automated detection, the system provides an **Explainable AI (XAI) Attribution** breakdown. This makes the AI's "black box" fully transparent. The EXPLAIN panel visually displays the exact weight (percentage) of each feature contributing to the final verdict:
+
+1. **SAR Backscatter Intensity (Feature 1):** Primary radar return signal differences.
+2. **Sentinel-1 Optical Match (Feature 2):** Cross-validation using independent data.
+3. **Hydrological Stage Context (Feature 3):** River gauge height stability.
+4. **Geomorphic Prior Models (Feature 4):** Historical plausibility of the erosion area.
+
 ---
 
 ## 14. External Data Sources

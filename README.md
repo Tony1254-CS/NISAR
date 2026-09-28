@@ -298,6 +298,20 @@ Every result passes through a multi-layer verification system visible in the **E
 
 ---
 
+## 🧠 Explainable AI (XAI) Framework
+
+To build trust in our automated detection, the system doesn't just output a final verdict—it explains *why* using an **Explainable AI (XAI) Attribution** model. Users can inspect the exact weight of each feature that contributed to the final decision. 
+
+The primary features analyzed are:
+1. **SAR Backscatter Intensity:** The primary difference in radar return signal between the two dates.
+2. **Sentinel-1 Optical Match:** Cross-validation using independent optical or DSWx-S1 data.
+3. **Hydrological Stage Context:** Whether the river gauge heights match appropriately.
+4. **Geomorphic Prior Models:** Checking if the detected erosion exceeds plausible historical bounds (e.g., CEGIS reference figures).
+
+In the web app's `EXPLAIN` panel, these feature attributions are visually broken down into percentages (e.g., 78.2% SAR Backscatter, 14.5% Optical Match) alongside the final system verdict, making the AI's "black box" fully transparent to researchers and policymakers.
+
+---
+
 ## 🎨 Design System
 
 The visual language is purpose-built for scientific data communication — dark, precise, and information-dense.
