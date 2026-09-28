@@ -116,224 +116,162 @@ export function Landing() {
       <Navbar transparent />
 
       {/* ════ Hero ════ */}
-      <section style={{ position: 'relative', overflow: 'hidden', backgroundColor: '#07090A', minHeight: '90vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <section style={{ position: 'relative', overflow: 'hidden', backgroundColor: '#000000', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: '80px' }}>
         <style>
           {`
-            @keyframes radar-sweep {
-              0% { transform: translateX(-100%) skewX(-15deg); }
-              100% { transform: translateX(300%) skewX(-15deg); }
+            @keyframes subtle-sweep {
+              0% { transform: translateX(-100%) rotate(15deg); opacity: 0; }
+              50% { opacity: 0.15; }
+              100% { transform: translateX(200%) rotate(15deg); opacity: 0; }
             }
-            @keyframes pulse-glow {
-              0%, 100% { filter: drop-shadow(0 0 10px rgba(57, 196, 217, 0.4)); }
-              50% { filter: drop-shadow(0 0 25px rgba(57, 196, 217, 0.8)); }
+            @keyframes pulse-mesh {
+              0%, 100% { opacity: 0.2; transform: scale(1); }
+              50% { opacity: 0.4; transform: scale(1.05); }
             }
-            @keyframes dash-anim {
-              to { stroke-dashoffset: -1000; }
+            @keyframes float-up {
+              0% { opacity: 0; transform: translateY(30px); }
+              100% { opacity: 1; transform: translateY(0); }
             }
-            .hero-bg-layer {
+            .elegant-bg {
               position: absolute;
-              top: 0; left: 0; right: 0; bottom: 0;
-              background: radial-gradient(circle at center, #0a1118 0%, #07090A 100%);
+              inset: 0;
+              background: radial-gradient(circle at 50% 0%, #0c1824 0%, #000000 70%);
               z-index: 0;
             }
-            .radar-sweep-line {
+            .radar-light {
               position: absolute;
-              top: 0; left: 0; right: 0; bottom: 0;
-              background: linear-gradient(90deg, transparent, rgba(57, 196, 217, 0.05) 45%, rgba(57, 196, 217, 0.8) 50%, transparent 55%);
-              animation: radar-sweep 5s infinite linear;
+              top: -50%; bottom: -50%;
+              left: 0; width: 200px;
+              background: linear-gradient(90deg, transparent, #39C4D9, transparent);
+              filter: blur(50px);
+              animation: subtle-sweep 8s infinite ease-in-out;
               z-index: 1;
-              pointer-events: none;
             }
-            .river-svg {
+            .grid-mesh {
               position: absolute;
-              top: 50%; left: 50%;
-              transform: translate(-50%, -50%);
-              width: 140%;
-              height: 140%;
-              opacity: 0.6;
-              z-index: 0;
+              inset: 0;
+              background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+              background-size: 60px 60px;
+              background-position: center center;
+              mask-image: radial-gradient(circle at center, black 20%, transparent 80%);
+              -webkit-mask-image: radial-gradient(circle at center, black 20%, transparent 80%);
+              z-index: 1;
+              animation: pulse-mesh 10s infinite ease-in-out;
             }
-            .river-path {
-              fill: none;
-              stroke-width: 3;
-              animation: pulse-glow 4s infinite alternate;
-              stroke: #39C4D9;
-            }
-            .hero-content {
+            .hero-content-elegant {
               position: relative;
               z-index: 10;
               text-align: center;
               max-width: 900px;
               padding: 0 2rem;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              gap: 2rem;
+              animation: float-up 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
             }
-            .cinematic-title {
-              font-size: clamp(3rem, 6vw, 5.5rem);
+            .eyebrow {
+              color: #39C4D9;
+              font-size: 0.8rem;
+              font-weight: 600;
+              letter-spacing: 0.3em;
+              text-transform: uppercase;
+              background: rgba(57, 196, 217, 0.1);
+              padding: 6px 16px;
+              border-radius: 100px;
+              border: 1px solid rgba(57, 196, 217, 0.2);
+              backdrop-filter: blur(10px);
+            }
+            .headline {
+              font-size: clamp(3.5rem, 8vw, 6rem);
               font-weight: 800;
-              letter-spacing: -0.03em;
               line-height: 1.1;
               color: #ffffff;
-              margin-bottom: 1.5rem;
-              text-shadow: 0 0 20px rgba(57, 196, 217, 0.3);
+              letter-spacing: -0.02em;
+              margin: 0;
             }
-            .cinematic-title span {
-              color: transparent;
-              -webkit-text-stroke: 1px rgba(255, 255, 255, 0.3);
-              background: linear-gradient(90deg, #39C4D9, #E4572E, #D9B26A);
+            .headline-gradient {
+              background: linear-gradient(135deg, #ffffff 0%, #a5b4fc 100%);
               -webkit-background-clip: text;
-              background-clip: text;
-              animation: gradient-shift 6s infinite alternate;
-              background-size: 200% 200%;
+              -webkit-text-fill-color: transparent;
             }
-            @keyframes gradient-shift {
-              0% { background-position: 0% 50%; }
-              100% { background-position: 100% 50%; }
+            .headline-accent {
+              background: linear-gradient(135deg, #39C4D9 0%, #3b82f6 100%);
+              -webkit-background-clip: text;
+              -webkit-text-fill-color: transparent;
             }
-            .cinematic-subtitle {
-              font-size: 1.25rem;
-              color: #a0aec0;
-              line-height: 1.7;
-              margin-bottom: 3rem;
-              font-weight: 300;
+            .subheadline {
+              font-size: clamp(1.1rem, 2vw, 1.4rem);
+              line-height: 1.6;
+              color: #94a3b8;
               max-width: 700px;
-              margin-left: auto;
-              margin-right: auto;
+              margin: 0;
+              font-weight: 400;
             }
-            .hero-actions {
+            .btn-group {
               display: flex;
               gap: 1.5rem;
-              justify-content: center;
+              margin-top: 1rem;
             }
-            .btn-glow {
-              padding: 1.2rem 2.5rem;
-              font-size: 1.1rem;
+            .btn-elegant-primary {
+              background: #ffffff;
+              color: #000000;
+              padding: 16px 32px;
+              border-radius: 100px;
               font-weight: 600;
-              border-radius: 4px;
+              font-size: 1.1rem;
               text-decoration: none;
-              text-transform: uppercase;
-              letter-spacing: 0.1em;
               transition: all 0.3s ease;
+              box-shadow: 0 0 20px rgba(255,255,255,0.2);
             }
-            .btn-primary {
-              background: #39C4D9;
-              color: #07090A;
-              box-shadow: 0 0 15px rgba(57, 196, 217, 0.4);
-            }
-            .btn-primary:hover {
-              background: #fff;
-              box-shadow: 0 0 30px rgba(57, 196, 217, 0.8);
+            .btn-elegant-primary:hover {
               transform: translateY(-2px);
+              box-shadow: 0 0 30px rgba(255,255,255,0.4);
             }
-            .btn-secondary {
-              background: transparent;
-              color: #39C4D9;
-              border: 1px solid #39C4D9;
+            .btn-elegant-secondary {
+              background: rgba(255,255,255,0.05);
+              color: #ffffff;
+              padding: 16px 32px;
+              border-radius: 100px;
+              font-weight: 600;
+              font-size: 1.1rem;
+              text-decoration: none;
+              border: 1px solid rgba(255,255,255,0.1);
+              transition: all 0.3s ease;
+              backdrop-filter: blur(10px);
             }
-            .btn-secondary:hover {
-              background: rgba(57, 196, 217, 0.1);
-              box-shadow: 0 0 20px rgba(57, 196, 217, 0.3);
-              transform: translateY(-2px);
-            }
-            
-            /* Radar rings */
-            .radar-rings {
-              position: absolute;
-              top: 50%; left: 50%;
-              transform: translate(-50%, -50%);
-              width: 80vw; height: 80vw;
-              max-width: 900px; max-height: 900px;
-              border-radius: 50%;
-              border: 1px solid rgba(57, 196, 217, 0.1);
-              z-index: 0;
-            }
-            .radar-rings::before, .radar-rings::after {
-              content: '';
-              position: absolute;
-              top: 50%; left: 50%;
-              transform: translate(-50%, -50%);
-              border-radius: 50%;
-              border: 1px solid rgba(57, 196, 217, 0.15);
-            }
-            .radar-rings::before { width: 60%; height: 60%; }
-            .radar-rings::after { width: 30%; height: 30%; }
-
-            .morph-dot {
-              position: absolute;
-              width: 8px; height: 8px;
-              border-radius: 50%;
-              animation: blink-dot 2.5s infinite alternate;
-              z-index: 2;
-            }
-            .morph-dot.erosion {
-              background-color: #E4572E;
-              box-shadow: 0 0 12px #E4572E, 0 0 24px #E4572E;
-            }
-            .morph-dot.accretion {
-              background-color: #D9B26A;
-              box-shadow: 0 0 12px #D9B26A, 0 0 24px #D9B26A;
-              animation-direction: alternate-reverse;
-            }
-            @keyframes blink-dot {
-              0% { opacity: 0.2; transform: scale(0.8); }
-              100% { opacity: 1; transform: scale(1.5); }
+            .btn-elegant-secondary:hover {
+              background: rgba(255,255,255,0.1);
+              border-color: rgba(255,255,255,0.2);
             }
           `}
         </style>
-        
-        <div className="hero-bg-layer" />
-        <div className="radar-rings" />
-        
-        {/* River Topography SVG */}
-        <svg className="river-svg" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid slice">
-            {/* Global SAR Grid */}
-            <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(57, 196, 217, 0.05)" strokeWidth="1"/>
-            </pattern>
-            <rect width="1000" height="600" fill="url(#grid)" />
-            
-            {/* Orbital Paths */}
-            <ellipse cx="500" cy="300" rx="600" ry="200" fill="none" stroke="rgba(57,196,217,0.2)" strokeWidth="1" transform="rotate(-15 500 300)" strokeDasharray="10 15" />
-            <ellipse cx="500" cy="300" rx="400" ry="150" fill="none" stroke="rgba(57,196,217,0.15)" strokeWidth="1" transform="rotate(20 500 300)" />
-            
-            {/* Hazard Nodes */}
-            <circle cx="200" cy="200" r="4" fill="#E4572E" className="pulse-glow" />
-            <text x="215" y="205" fill="#E4572E" fontSize="11" letterSpacing="1">GLACIAL RETREAT</text>
-            
-            <circle cx="800" cy="150" r="4" fill="#D9B26A" className="pulse-glow" />
-            <text x="815" y="155" fill="#D9B26A" fontSize="11" letterSpacing="1">WILDFIRE SCARS</text>
-            
-            <circle cx="700" cy="450" r="4" fill="#39C4D9" className="pulse-glow" />
-            <text x="715" y="455" fill="#39C4D9" fontSize="11" letterSpacing="1">MANGROVE LOSS</text>
-            
-            <circle cx="350" cy="400" r="4" fill="#E4572E" className="pulse-glow" />
-            <text x="365" y="405" fill="#E4572E" fontSize="11" letterSpacing="1">RIVER EROSION</text>
-            
-            {/* Connecting telemetry lines */}
-            <path d="M 200 200 L 500 300 L 800 150" fill="none" stroke="rgba(255,255,255,0.1)" strokeDasharray="4 4" />
-            <path d="M 700 450 L 500 300 L 350 400" fill="none" stroke="rgba(255,255,255,0.1)" strokeDasharray="4 4" />
-          </svg>
 
-        {/* Scattered accretion and erosion points */}
-        <div className="radar-sweep-line" />
+        <div className="elegant-bg" />
+        <div className="grid-mesh" />
+        <div className="radar-light" />
 
-        <div className="hero-content">
-          <div style={{ color: '#39C4D9', fontWeight: 600, letterSpacing: '0.15em', fontSize: '0.85rem', marginBottom: '1.5rem', textTransform: 'uppercase' }}>
-            NASA SPACE APPS 2026 &middot; DANCING WITH THE SARS &middot; GLOBAL CHANGE DETECTION
+        <div className="hero-content-elegant">
+          <div className="eyebrow">
+            GLOBAL CHANGE INTELLIGENCE
           </div>
 
-          <h1 className="cinematic-title">
-            Decode the Earth&rsquo;s rhythm.<br />
-            <span>Don&rsquo;t just watch it change.</span>
+          <h1 className="headline">
+            <span className="headline-gradient">See the invisible.</span><br />
+            <span className="headline-accent">Predict the inevitable.</span>
           </h1>
 
-          <p className="cinematic-subtitle">
-            Same River Twice is a cloud-native intelligence platform that leverages NISAR L-band radar to quantify global surface changes. From <span style={{ color: '#E4572E', fontWeight: 500 }}>river erosion</span> and glacial retreat to <span style={{ color: '#D9B26A', fontWeight: 500 }}>wildfire scars</span>, our ML engine uncovers the physics of a transforming planet&mdash;with the evidence chain to back every claim.
+          <p className="subheadline">
+            A cloud-native intelligence platform leveraging NISAR L-band radar to quantify global surface changes. From river erosion to glacial retreat, our ML engine decodes the physics of a transforming planet.
           </p>
 
-          <div className="hero-actions">
-            <a href="/cases" className="btn-glow btn-primary">
-              Begin Investigation →
+          <div className="btn-group">
+            <a href="/cases" className="btn-elegant-primary">
+              Begin Investigation
             </a>
-            <a href="/methods" className="btn-glow btn-secondary">
+            <a href="/methods" className="btn-elegant-secondary">
               How it works
             </a>
           </div>
