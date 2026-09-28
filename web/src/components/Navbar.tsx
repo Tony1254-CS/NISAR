@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../state/store';
-import { TABS, type TabId } from '../panels/EvidenceTabs';
+import { TABS } from '../panels/EvidenceTabs';
 import '../styles/navbar.css';
 
 interface NavbarProps {

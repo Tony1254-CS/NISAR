@@ -608,7 +608,7 @@ const LOG_MESSAGES = [
 ];
 
 export function EvidenceTabs({ isReportMode = false }: { isReportMode?: boolean }) {
-  const { reach, manifest, qc, setAnalysisMode, setAnalysisSplit, analysisModeType, setAnalysisModeType, analysisActiveTab, setAnalysisActiveTab, analysisStepIndex, setAnalysisStepIndex, analysisState, setAnalysisState, inspectMode, setInspectMode } = useStore();
+  const { reach, manifest, qc, setAnalysisMode, setAnalysisSplit, analysisModeType, analysisActiveTab, setAnalysisActiveTab, analysisStepIndex, setAnalysisStepIndex, analysisState, setAnalysisState, inspectMode, setInspectMode } = useStore();
   const ready = useMemo(() => Boolean(reach && manifest && qc), [reach, manifest, qc]);
 
   const [logs, setLogs] = useState<string[]>(
@@ -651,18 +651,6 @@ export function EvidenceTabs({ isReportMode = false }: { isReportMode?: boolean 
 
   if (!ready) return null;
 
-  const startAnalysis = (selectedMode: 'FULL' | TabId) => {
-    if (selectedMode === 'FULL') {
-      setAnalysisModeType('FULL');
-      setAnalysisStepIndex(0);
-      setAnalysisActiveTab(TABS[0].id);
-    } else {
-      setAnalysisModeType('SINGLE');
-      setAnalysisActiveTab(selectedMode);
-    }
-    setAnalysisState('PROCESSING');
-    setLogs([`[SYS] UPLINK ESTABLISHED. STARTING ANALYSIS...`]);
-  };
 
   const resetAnalysis = () => {
     setAnalysisState('IDLE');

@@ -3,7 +3,7 @@ import type { ReachListItem } from './data/types';
 import { Navbar } from './components/Navbar';
 
 export function TopBar({ reaches }: { reaches: ReachListItem[] | null }) {
-  const { reachId, setReachId, reach, analysisMode, setAnalysisMode, setAnalysisSplit } = useStore();
+  const { reachId, setReachId, reach } = useStore();
 
   const dataInfo = reach
     ? `NISAR · ${reach.dates.length > 0 ? reach.dates[reach.dates.length - 1].date : '—'}`
