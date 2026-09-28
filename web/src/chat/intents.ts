@@ -243,43 +243,52 @@ export function classifyIntent(query: string): IntentCategory {
 /**
  * Returns suggested question chips based on the current context.
  */
-export function getSuggestedQuestions(context: 'general' | 'detect' | 'investigate' | 'challenge' | 'map'): string[] {
-  switch (context) {
-    case 'detect':
-      return [
-        'How much land was eroded?',
-        'What satellite was used?',
-        'When was this detected?',
-        'What does the threshold mean?',
-      ];
-    case 'investigate':
-      return [
-        'How was the rainfall?',
-        'What is the water level?',
-        'Which sensors were checked?',
-        'Why is DSWx not evaluated?',
-      ];
-    case 'challenge':
-      return [
-        'Why is confidence so low?',
-        'What is the RFI issue?',
-        'Is this data reliable?',
-        'What would improve confidence?',
-      ];
-    case 'map':
-      return [
-        'Where is the biggest erosion?',
-        'How many erosion zones are there?',
-        'Show me the worst damage',
-        'What happened near Chilmari?',
-      ];
-    default:
-      return [
-        'What is happening to this river?',
-        'How much land was lost?',
-        'Is this data reliable?',
-        'Where is the biggest erosion?',
-        'What should we do next?',
-      ];
-  }
+export function getSuggestedQuestions(context: 'general' | 'detect' | 'investigate' | 'challenge' | 'map' | 'random'): string[] {
+  const pools = {
+    detect: [
+      'How much land was eroded?',
+      'What satellite was used?',
+      'When was this detected?',
+      'What does the threshold mean?',
+      'Is there new land forming?'
+    ],
+    investigate: [
+      'How was the rainfall?',
+      'What is the water level?',
+      'Which sensors were checked?',
+      'Why is DSWx not evaluated?',
+      'Was this caused by a flood?'
+    ],
+    challenge: [
+      'Why is confidence so low?',
+      'What is the RFI issue?',
+      'Is this data reliable?',
+      'What would improve confidence?',
+      'Why is the result inconclusive?'
+    ],
+    map: [
+      'Where is the biggest erosion?',
+      'How many erosion zones are there?',
+      'Show me the worst damage',
+      'What happened near Chilmari?',
+      'Where did the river migrate?'
+    ],
+    general: [
+      'What is happening to this river?',
+      'How much land was lost?',
+      'Is this data reliable?',
+      'Where is the biggest erosion?',
+      'What should we do next?',
+      'Tell me about the net change.',
+      'Show me the forecast'
+    ]
+  };
+
+  const selectedPool = context === 'random' 
+    ? [...pools.detect, ...pools.investigate, ...pools.challenge, ...pools.map, ...pools.general]
+    : pools[context] || pools.general;
+
+  // Shuffle the pool and pick the first 3
+  const shuffled = [...selectedPool].sort(() => 0.5 - Math.random());
+  return shuffled.slice(0, 3);
 }

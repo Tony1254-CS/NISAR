@@ -71,12 +71,11 @@ function TypingIndicator() {
 }
 
 export function ChatWidget() {
-  const { reach, manifest, qc, stage, erosion, accretion } = useStore();
-  const [open, setOpen] = useState(false);
+  const { reach, manifest, qc, stage, erosion, accretion, chatOpen, setChatOpen } = useStore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
-  const [chips, setChips] = useState<string[]>(getSuggestedQuestions('general'));
+  const [chips, setChips] = useState<string[]>(getSuggestedQuestions('random'));
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const idCounter = useRef(0);
@@ -90,26 +89,12 @@ export function ChatWidget() {
   }, [messages, typing, scrollToBottom]);
 
   useEffect(() => {
-    if (open && inputRef.current) {
+    if (chatOpen && inputRef.current) {
       inputRef.current.focus();
     }
-  }, [open]);
+  }, [chatOpen]);
 
-  // Send initial greeting when first opened
-  useEffect(() => {
-    if (open && messages.length === 0) {
-      const intent = classifyIntent('hello');
-      const response = generateResponse(intent, { reach, manifest, qc, stage, erosion, accretion });
-      setMessages([{
-        id: idCounter.current++,
-        role: 'ai',
-        text: response.text,
-        sources: response.sources,
-      }]);
-      if (response.followUp) setChips(response.followUp);
-    }
-  }, [open]);
-
+  // (Removed initial greeting as user prefers starting with an empty chat or loading history manually)
   const handleSend = useCallback((text: string) => {
     if (!text.trim()) return;
 
@@ -144,7 +129,7 @@ export function ChatWidget() {
       if (response.followUp) {
         setChips(response.followUp);
       } else {
-        setChips(getSuggestedQuestions('general'));
+        setChips(getSuggestedQuestions('random'));
       }
 
       // Execute map action if any
@@ -167,8 +152,8 @@ export function ChatWidget() {
   return (
     <>
       {/* Floating Action Button */}
-      {!open && (
-        <button className="chat-fab" onClick={() => setOpen(true)} title="Ask the AI Assistant">
+      {!chatOpen && (
+        <button className="chat-fab" onClick={() => setChatOpen(true)} title="Ask the AI Assistant">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
           </svg>
@@ -176,7 +161,7 @@ export function ChatWidget() {
       )}
 
       {/* Chat Window */}
-      {open && (
+      {chatOpen && (
         <div className="chat-window">
           {/* Header */}
           <div className="chat-header">
@@ -185,7 +170,35 @@ export function ChatWidget() {
               <div className="chat-header-name">River Intelligence</div>
               <div className="chat-header-status">Online — {reach?.name ?? 'Loading...'}</div>
             </div>
-            <button className="chat-close" onClick={() => setOpen(false)}>×</button>
+            <button 
+              className="chat-history-btn" 
+              onClick={() => {
+                const historyMocks = [
+                  [
+                    { id: idCounter.current++, role: 'user' as const, text: 'Why is the river migrating east?' },
+                    { id: idCounter.current++, role: 'ai' as const, text: 'The river is migrating east due to increased sediment deposition on the western banks (accretion) and higher water velocity eroding the eastern banks, primarily driven by upstream flow patterns.' }
+                  ],
+                  [
+                    { id: idCounter.current++, role: 'user' as const, text: 'Show me the recent erosion areas.' },
+                    { id: idCounter.current++, role: 'ai' as const, text: 'I have highlighted the recent erosion risk areas in red on the map. These regions have experienced significant bank undercutting in the last two months.' }
+                  ],
+                  [
+                    { id: idCounter.current++, role: 'user' as const, text: 'What is the impact of the latest earthquake?' },
+                    { id: idCounter.current++, role: 'ai' as const, text: 'The recent 4.2 magnitude earthquake near the northern reach may have destabilized the soil, leading to an increased probability of sudden bank failure in the ambiguous zones.' }
+                  ]
+                ];
+                const randomHistory = historyMocks[Math.floor(Math.random() * historyMocks.length)];
+                setMessages(randomHistory);
+                setChips(getSuggestedQuestions('random'));
+              }}
+              title="Load Random History"
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 3v5h5"></path>
+                <path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"></path>
+              </svg>
+            </button>
+            <button className="chat-close" onClick={() => setChatOpen(false)}>×</button>
           </div>
 
           {/* Messages */}
@@ -213,7 +226,7 @@ export function ChatWidget() {
             <input
               ref={inputRef}
               className="chat-input"
-              placeholder="Ask about this river..."
+              placeholder="Ask why, what if, or how something is connected..."
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -224,10 +237,11 @@ export function ChatWidget() {
               onClick={() => handleSend(input)}
               disabled={typing || !input.trim()}
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '4px'}}>
                 <line x1="22" y1="2" x2="11" y2="13" />
                 <polygon points="22 2 15 22 11 13 2 9 22 2" />
               </svg>
+              Ask
             </button>
           </div>
         </div>

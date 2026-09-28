@@ -67,6 +67,8 @@ interface StoreState {
   setCinematicMode: (active: boolean) => void;
   setInspectMode: (active: boolean) => void;
   setCinematicDesc: (active: boolean) => void;
+  chatOpen: boolean;
+  setChatOpen: (active: boolean) => void;
 }
 
 export const useStore = create<StoreState>((set) => ({
@@ -139,4 +141,6 @@ export const useStore = create<StoreState>((set) => ({
   setCinematicMode: (active) => set({ cinematicMode: active }),
   setInspectMode: (active) => set({ inspectMode: active }),
   setCinematicDesc: (active) => set({ showCinematicDesc: active }),
+  chatOpen: false,
+  setChatOpen: (active) => set({ chatOpen: active }),
 }));

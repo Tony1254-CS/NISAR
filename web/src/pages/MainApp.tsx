@@ -19,11 +19,18 @@ import { CinematicDescription } from '../components/CinematicDescription';
 type LoadStatus = 'loading' | 'ready' | 'empty' | 'error';
 
 export default function MainApp() {
-  const { reachId, selectedFeatureId, panel, setReachId, loadBundle, analysisMode, analysisSplit, setAnalysisMode, setAnalysisSplit, analysisState, analysisActiveTab, analysisModeType, inspectMode, setInspectMode } = useStore();
+  const { reachId, selectedFeatureId, panel, setReachId, loadBundle, analysisMode, analysisSplit, setAnalysisMode, setAnalysisSplit, analysisState, analysisActiveTab, analysisModeType, inspectMode, setInspectMode, chatOpen } = useStore();
   const [reaches, setReaches] = useState<ReachListItem[] | null>(null);
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [errorFile, setErrorFile] = useState('reaches.json');
   const [retryToken, setRetryToken] = useState(0);
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useDeepLink();
 
@@ -81,7 +88,14 @@ export default function MainApp() {
   }, [reachId, retryToken, loadBundle]);
 
   return (
-    <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ 
+      width: chatOpen ? '70vw' : '100vw', 
+      height: '100vh', 
+      display: 'flex', 
+      flexDirection: 'column',
+      transition: 'width 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+      overflow: 'hidden'
+    }}>
       <TopBar reaches={reaches} />
       <div className="navbar-spacer" style={{ flexShrink: 0 }} />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>
@@ -146,7 +160,7 @@ export default function MainApp() {
       </div>
       <div className="print-hide" style={{ height: 150 }}>
         {status === 'ready' ? (
-          <Hydrograph width={window.innerWidth} height={150} />
+          <Hydrograph width={chatOpen ? windowWidth * 0.7 : windowWidth} height={150} />
         ) : (
           <div className="hydrograph-skeleton" style={{ height: '100%', background: 'var(--bg)' }} />
         )}
