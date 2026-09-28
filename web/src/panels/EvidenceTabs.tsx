@@ -281,6 +281,7 @@ function InvestigatePanel() {
 
 function ChallengePanel() {
   const { qc, reach } = useStore();
+  const [auditOpen, setAuditOpen] = useState(true);
   const verdict = reach?.verdict ?? 'INCONCLUSIVE';
   const confidencePct = verdict === 'SUPPORTED' ? 98 : verdict === 'LIMITED' ? 64 : 12;
   const gaugeColor = verdict === 'SUPPORTED' ? 'var(--pass)' : verdict === 'LIMITED' ? 'var(--warn)' : 'var(--fail)';
@@ -293,81 +294,93 @@ function ChallengePanel() {
   const rfiDeduct = rfiStatus !== 'PASS' ? 20 : 0;
   const alignDeduct = alignStatus !== 'PASS' ? 10 : 0;
   const limitDeduct = limitStatus !== 'PASS' ? 68 : 0;
+  
+  const dateStr = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase();
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <DataWidget title="Adversarial Testing & Plausibility">
-        <div style={{ fontSize: '0.75rem', color: 'var(--text-2)', marginBottom: 16, lineHeight: 1.5 }}>
-          Executing deep-dive quality control heuristics to challenge the primary hypothesis. Checking for signal noise, geometric distortion, and physical impossibility.
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '24px' }}>
-          {[
-            { id: 'rfi', label: 'RFI Filter', desc: 'Radio Frequency Interference' },
-            { id: 'alignment', label: 'Coregistration', desc: 'Geometric pixel alignment' },
-            { id: 'plausibility', label: 'Limits', desc: 'Physical geomorphic bounds' }
-          ].map(chk => {
-            const status = chk.id === 'rfi' ? rfiStatus : chk.id === 'alignment' ? alignStatus : limitStatus;
-            const color = status === 'PASS' ? 'var(--pass)' : status === 'FAIL' ? 'var(--fail)' : 'var(--warn)';
-            return (
-              <Inspectable key={chk.id} intentKey={chk.id === 'rfi' ? 'rfi_issue' : 'sensor_checks'}>
-                <div style={{ border: `1px solid ${color}`, background: 'rgba(0,0,0,0.4)', padding: '16px 8px', textAlign: 'center', borderRadius: '4px', position: 'relative', overflow: 'hidden' }}>
-                  <div style={{ fontSize: '0.6rem', color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: '8px' }}>{chk.label}</div>
-                  <div style={{ fontSize: '1rem', fontWeight: 800, color: color, textShadow: `0 0 10px ${color}`, marginBottom: '4px' }}>{status}</div>
-                  <div style={{ fontSize: '0.55rem', color: 'var(--text-3)' }}>{chk.desc}</div>
-                  {status === 'FAIL' && <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: 'var(--fail)', animation: 'pulse-dot 0.5s infinite' }} />}
-                </div>
-              </Inspectable>
-            );
-          })}
-        </div>
-        
-        <Inspectable intentKey="confidence">
-          <div style={{ background: 'rgba(0,0,0,0.2)', padding: '20px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-2)', letterSpacing: '0.1em' }}>AGGREGATE CONFIDENCE SCORE</div>
-              <div style={{ fontSize: '1rem', color: gaugeColor, fontWeight: 800 }}>{confidencePct}%</div>
+      <div style={{ background: 'var(--panel)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+        <div style={{ padding: '24px' }}>
+          {/* Header */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ border: '1px solid rgba(57,196,217,0.3)', background: 'rgba(57,196,217,0.1)', color: 'var(--water)', padding: '4px 12px', borderRadius: '16px', fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.05em' }}>
+                ANOMALY CHECK
+              </span>
+              <span style={{ color: 'var(--text-3)', fontSize: '0.75rem', letterSpacing: '0.05em' }}>{dateStr}</span>
             </div>
-            <div className="agentic-progress" style={{ height: '12px', background: 'rgba(255,255,255,0.05)', borderRadius: '6px', marginBottom: '16px' }}>
-              <div className="agentic-progress-bar" style={{ width: `${confidencePct}%`, background: gaugeColor, boxShadow: `0 0 20px ${gaugeColor}`, borderRadius: '6px' }} />
-            </div>
-
-            {/* Line-by-line Decision Breakdown */}
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-2)', display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px dashed rgba(255,255,255,0.1)', paddingTop: '16px' }}>
-               <div style={{ color: 'var(--text-3)', marginBottom: '4px' }}>DECISION BREAKDOWN:</div>
-               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                 <span>Base System Confidence</span>
-                 <span style={{ color: 'var(--pass)' }}>100%</span>
-               </div>
-               {rfiStatus !== 'PASS' && (
-                 <div style={{ display: 'flex', justifyContent: 'space-between', animation: 'fade-in 0.5s ease-out' }}>
-                   <span>Radio Frequency Interference penalty applied</span>
-                   <span style={{ color: 'var(--warn)' }}>-{rfiDeduct}%</span>
-                 </div>
-               )}
-               {alignStatus !== 'PASS' && (
-                 <div style={{ display: 'flex', justifyContent: 'space-between', animation: 'fade-in 0.5s ease-out' }}>
-                   <span>Suboptimal Pixel Coregistration penalty</span>
-                   <span style={{ color: 'var(--warn)' }}>-{alignDeduct}%</span>
-                 </div>
-               )}
-               {limitStatus !== 'PASS' && (
-                 <div style={{ display: 'flex', justifyContent: 'space-between', animation: 'fade-in 0.5s ease-out' }}>
-                   <span>Physical geomorphic limits exceeded</span>
-                   <span style={{ color: 'var(--fail)' }}>-{limitDeduct}%</span>
-                 </div>
-               )}
-               <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '8px', marginTop: '4px' }}>
-                 <span>Final Computed Confidence</span>
-                 <span style={{ color: gaugeColor, fontWeight: 'bold' }}>{confidencePct}%</span>
-               </div>
-            </div>
-
-            <div style={{ marginTop: 12, fontSize: '0.65rem', color: 'var(--text-3)', textAlign: 'right' }}>
-              Probability of false positive: {(100 - confidencePct).toFixed(1)}%
+            <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div style={{ fontSize: '2.4rem', fontWeight: 700, color: '#fff', lineHeight: 1 }}>{confidencePct}%</div>
+              <div style={{ fontSize: '0.6rem', color: 'var(--text-3)', letterSpacing: '0.05em', textTransform: 'uppercase', marginTop: 6 }}>
+                CONFIDENCE
+              </div>
             </div>
           </div>
-        </Inspectable>
-      </DataWidget>
+          
+          {/* Headline */}
+          <div style={{ fontSize: '1.25rem', color: '#fff', lineHeight: 1.5, marginBottom: '20px', fontWeight: 500 }}>
+            {verdict === 'SUPPORTED' 
+              ? 'The system confirms this detection with high confidence after rigorous adversarial testing and cross-sensor verification.' 
+              : verdict === 'LIMITED' 
+              ? 'The detection is probable, but confidence is reduced due to moderate radio frequency interference or alignment issues.' 
+              : 'The detection is flagged as a likely false positive due to significant physical and geomorphic limit violations.'}
+          </div>
+          
+          {/* Progress Bar */}
+          <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', marginBottom: '16px', overflow: 'hidden' }}>
+            <div style={{ width: `${confidencePct}%`, height: '100%', background: gaugeColor, borderRadius: '4px', boxShadow: `0 0 10px ${gaugeColor}` }} />
+          </div>
+          
+          {/* Toggle Audit Trail */}
+          <button 
+            onClick={() => setAuditOpen(!auditOpen)}
+            style={{ background: 'transparent', border: 'none', color: 'var(--water)', fontSize: '0.9rem', padding: 0, cursor: 'pointer', marginBottom: auditOpen ? 24 : 0 }}
+          >
+            {auditOpen ? 'Hide audit trail' : 'Show audit trail'}
+          </button>
+          
+          {/* Audit Trail Content */}
+          {auditOpen && (
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '24px', animation: 'fade-in 0.3s ease-out' }}>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-3)', letterSpacing: '0.05em', marginBottom: '8px' }}>REASONING</div>
+              <div style={{ fontSize: '0.95rem', color: 'var(--text)', lineHeight: 1.6, marginBottom: '24px' }}>
+                Base system confidence started at 100%. After applying our deep-dive quality control heuristics to challenge the primary hypothesis, {
+                  verdict === 'SUPPORTED' ? 'no significant penalties were found.' :
+                  `penalties were applied for anomalies in signal noise, geometric distortion, or physical impossibility.`
+                }
+              </div>
+              
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-3)', letterSpacing: '0.05em', marginBottom: '8px' }}>EVIDENCE</div>
+              <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '0.9rem', color: 'var(--text-2)', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '24px' }}>
+                <li>Base System Confidence: 100%</li>
+                {rfiStatus !== 'PASS' && <li>Radio Frequency Interference penalty applied: <span style={{ color: 'var(--warn)' }}>-{rfiDeduct}%</span></li>}
+                {alignStatus !== 'PASS' && <li>Suboptimal Pixel Coregistration penalty: <span style={{ color: 'var(--warn)' }}>-{alignDeduct}%</span></li>}
+                {limitStatus !== 'PASS' && <li>Physical geomorphic limits exceeded: <span style={{ color: 'var(--fail)' }}>-{limitDeduct}%</span></li>}
+                <li>Final Computed Confidence: <span style={{ color: gaugeColor, fontWeight: 'bold' }}>{confidencePct}%</span></li>
+                <li>Probability of false positive: {(100 - confidencePct).toFixed(1)}%</li>
+              </ul>
+              
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', border: '1px solid var(--pass)', background: 'rgba(127,191,142,0.1)', padding: '4px 10px', borderRadius: '16px', fontSize: '0.7rem', color: 'var(--pass)' }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                verified • just now
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {/* Feedback Section */}
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.2)', padding: '16px 24px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>DID THIS HAPPEN?</span>
+          <button className="agentic-action-btn" style={{ padding: '6px 16px', fontSize: '0.85rem', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '8px', background: 'transparent', border: '1px solid rgba(255,255,255,0.2)' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
+            Hit
+          </button>
+          <button className="agentic-action-btn" style={{ padding: '6px 16px', fontSize: '0.85rem', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '8px', background: 'transparent', border: '1px solid rgba(255,255,255,0.2)' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"></path></svg>
+            Miss
+          </button>
+        </div>
+      </div>
       
       <DataWidget title="Analysis Steps & Timeline">
         <StepTimeline lines={[
