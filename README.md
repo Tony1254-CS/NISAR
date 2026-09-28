@@ -1,4 +1,4 @@
-# SAME RIVER TWICE 🛰️ — Satellite-Verified River Erosion Intelligence
+# SAME RIVER TWICE  — Satellite-Verified River Erosion Intelligence
 
 <div align="center">
 
@@ -15,29 +15,29 @@
 
 ---
 
-## 🚀 Overview
+##  Overview
 
 **SAME RIVER TWICE** uses **NASA-ISRO's NISAR L-band radar** from the 2026 monsoon to answer a question that optical satellites cannot: *How much land did the Jamuna River permanently take — not flood temporarily, but erode forever?*
 
 The key scientific insight is **stage-matching**: by comparing the river at the *same water level* before and after the monsoon peak, we separate permanent bank erosion from temporary seasonal flooding. Every result is cross-checked against NASA's independent OPERA DSWx-S1 water product, subjected to threshold sensitivity analysis, and linked to exact source granules.
 
 ### Key Highlights
-- 🛰️ **NISAR L-Band Radar**: Works through monsoon clouds, day and night — exactly when erosion happens.
-- 🔬 **Stage-Matched Change Detection**: Compares the river at identical water levels to isolate permanent land loss from temporary flood.
-- 📊 **5-Stage Evidence Trail**: Detect → Investigate → Challenge → Explain → Field — every claim is verifiable.
-- 🗺️ **Interactive Map with Animated Overlays**: Erosion, accretion, earthquake epicenters, and AI-powered erosion forecasting.
-- 🤖 **River Intelligence AI Chat**: Context-aware assistant that answers questions using live data from the bundle.
-- 📡 **Full Provenance Chain**: Every number traces to a specific granule ID, gauge reading, and code commit.
+-  **NISAR L-Band Radar**: Works through monsoon clouds, day and night — exactly when erosion happens.
+-  **Stage-Matched Change Detection**: Compares the river at identical water levels to isolate permanent land loss from temporary flood.
+-  **5-Stage Evidence Trail**: Detect → Investigate → Challenge → Explain → Field — every claim is verifiable.
+-  **Interactive Map with Animated Overlays**: Erosion, accretion, earthquake epicenters, and AI-powered erosion forecasting.
+-  **River Intelligence AI Chat**: Context-aware assistant that answers questions using live data from the bundle.
+-  **Full Provenance Chain**: Every number traces to a specific granule ID, gauge reading, and code commit.
 
 ---
 
-## 🏛️ System Architecture
+##  System Architecture
 
 SAME RIVER TWICE is a **two-phase system**: an offline Python pipeline that processes raw satellite data into a verified data bundle, and a static React web app that renders the results with zero backend dependencies.
 
 ```mermaid
 flowchart TB
-    subgraph Offline["🖥️ Offline Pipeline (Python 3.11)"]
+    subgraph Offline[" Offline Pipeline (Python 3.11)"]
         ASF["ASF DAAC\n(NISAR GCOV)"]
         PODAAC["PO.DAAC\n(OPERA DSWx-S1)"]
         AWS["AWS\n(ASF GLO-30 HAND)"]
@@ -55,13 +55,13 @@ flowchart TB
         Manifest --> Check["check_bundle.py"]
     end
 
-    subgraph Bundle["📦 Static Data Bundle"]
+    subgraph Bundle[" Static Data Bundle"]
         JSON["reach.json\nmanifest.json\nstage.json\nqc.json\nbounds.json"]
         GeoJSON["erosion.geojson\naccretion.geojson\nprediction.geojson"]
         PNG["Radar PNGs\n(per-date water masks)"]
     end
 
-    subgraph Client["💻 Browser (Zero Backend)"]
+    subgraph Client[" Browser (Zero Backend)"]
         React["React 18 + TypeScript"]
         MapLibre["MapLibre GL JS\n(Interactive Map)"]
         D3["D3.js\n(Hydrograph)"]
@@ -69,7 +69,7 @@ flowchart TB
         Zustand["Zustand\n(State Management)"]
     end
 
-    subgraph External["🌐 External Tile Services"]
+    subgraph External[" External Tile Services"]
         GIBS["NASA GIBS\n(Basemap Tiles)"]
     end
 
@@ -89,12 +89,12 @@ flowchart TB
 
 ---
 
-## 📦 Data Bundle Schema
+##  Data Bundle Schema
 
 Every reach produces a self-contained, versioned data bundle at `web/public/data/v1/<reach_id>/`. The bundle is the contract between the pipeline and the web app.
 
 <details>
-<summary>📐 <b>Click to expand Bundle File Schema</b></summary>
+<summary> <b>Click to expand Bundle File Schema</b></summary>
 
 ```mermaid
 erDiagram
@@ -160,7 +160,7 @@ erDiagram
 
 ---
 
-## 📑 Feature Modules
+##  Feature Modules
 
 | Module | Route | Key Capabilities |
 |---|---|---|
@@ -188,7 +188,7 @@ erDiagram
 
 ---
 
-## 💻 Tech Stack
+##  Tech Stack
 
 ### Frontend (Web App)
 | Technology | Purpose |
@@ -225,7 +225,7 @@ erDiagram
 
 ---
 
-## 🔬 Scientific Method
+##  Scientific Method
 
 ### The Core Insight: Stage-Matching
 
@@ -240,13 +240,13 @@ Traditional flood maps show where water is *on a given day*. But during monsoon,
 ### Change Classification
 | Class | Color | Definition |
 |---|---|---|
-| **Erosion** | 🔴 `#E4572E` | Land at t₀ → water at t₁, at equal or lower stage. Confirmed persistent. |
+| **Erosion** |  `#E4572E` | Land at t₀ → water at t₁, at equal or lower stage. Confirmed persistent. |
 | **Accretion** | 🟡 `#D9B26A` | Water at t₀ → land at t₁. New char/sandbar formation. |
-| **Ambiguous** | ⚫ `#8A9299` | Changed but failed persistence or DSWx cross-check. |
+| **Ambiguous** |  `#8A9299` | Changed but failed persistence or DSWx cross-check. |
 
 ---
 
-## 🛰️ Data Sources
+##  Data Sources
 
 | Source | Dataset | Role | DOI / Reference |
 |---|---|---|---|
@@ -260,7 +260,7 @@ Traditional flood maps show where water is *on a given day*. But during monsoon,
 
 ---
 
-## 🗄️ Pipeline Steps
+##  Pipeline Steps
 
 The pipeline transforms raw satellite data into a verified data bundle. Each step is independently runnable via `make`.
 
@@ -280,7 +280,7 @@ make check-bundle REACH=jamuna-chilmari # Verify bundle integrity
 
 ---
 
-## 🛡️ Quality Control & Verification
+##  Quality Control & Verification
 
 Every result passes through a multi-layer verification system visible in the **Evidence Panel**:
 
@@ -298,7 +298,7 @@ Every result passes through a multi-layer verification system visible in the **E
 
 ---
 
-## 🧠 Explainable AI (XAI) Framework
+##  Explainable AI (XAI) Framework
 
 To build trust in our automated detection, the system doesn't just output a final verdict—it explains *why* using an **Explainable AI (XAI) Attribution** model. Users can inspect the exact weight of each feature that contributed to the final decision. 
 
@@ -312,7 +312,7 @@ In the web app's `EXPLAIN` panel, these feature attributions are visually broken
 
 ---
 
-## 🎨 Design System
+##  Design System
 
 The visual language is purpose-built for scientific data communication — dark, precise, and information-dense.
 
@@ -329,7 +329,7 @@ The visual language is purpose-built for scientific data communication — dark,
 
 ---
 
-## 🛠️ Quick Start (Local Setup)
+##  Quick Start (Local Setup)
 
 ### 1. Prerequisites
 - Node.js `18.x` or higher
@@ -366,7 +366,7 @@ make fetch REACH=jamuna-chilmari
 
 ---
 
-## 🚢 Deploying to Vercel
+##  Deploying to Vercel
 
 ```bash
 # Install Vercel CLI
@@ -380,7 +380,7 @@ The `vercel.json` configuration handles the build command (`cd web && npm instal
 
 ---
 
-## 📄 License
+##  License
 
 Distributed under the MIT License. See `LICENSE` for more information.
 
@@ -388,7 +388,7 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 <div align="center">
 
-Built with 🛰️ for the **NASA Space Apps Challenge 2026** — *Dancing with the SARs*
+Built with  for the **NASA Space Apps Challenge 2026** — *Dancing with the SARs*
 
 *"We compared the Jamuna at the same water level before and after the 2026 monsoon using NASA-ISRO's NISAR radar — so what changed isn't flood, it's land the river took."*
 

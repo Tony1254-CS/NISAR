@@ -120,31 +120,31 @@ Every page has its own URL. The navbar at the top provides navigation.
 ## 5. Feature Catalogue
 
 ### Investigation Features
-- 🗺️ **Interactive Radar Map** — MapLibre GL JS with per-date NISAR imagery, erosion/accretion GeoJSON overlays, and animated layers.
-- 📈 **Hydrograph** — D3-powered river stage timeline with danger level line, date selection, and NISAR pass markers.
-- ⚖️ **Match the Water** — one-click stage matching to compare the river at equal gauge heights.
-- 🔄 **Before/After Swipe** — split-screen comparison with draggable vertical divider.
-- 🔴 **Erosion & Accretion Overlays** — GeoJSON polygons with hover tooltips showing area, dates, and DSWx confirmation status.
-- 🌋 **Earthquake Epicenters** — pulsing animated circles with click popups showing magnitude, depth, and time.
-- 🔮 **Erosion Forecast** — prediction zones with fill-opacity animation for erosion, accretion, and ambiguity risk areas.
+-  **Interactive Radar Map** — MapLibre GL JS with per-date NISAR imagery, erosion/accretion GeoJSON overlays, and animated layers.
+-  **Hydrograph** — D3-powered river stage timeline with danger level line, date selection, and NISAR pass markers.
+-  **Match the Water** — one-click stage matching to compare the river at equal gauge heights.
+-  **Before/After Swipe** — split-screen comparison with draggable vertical divider.
+-  **Erosion & Accretion Overlays** — GeoJSON polygons with hover tooltips showing area, dates, and DSWx confirmation status.
+-  **Earthquake Epicenters** — pulsing animated circles with click popups showing magnitude, depth, and time.
+-  **Erosion Forecast** — prediction zones with fill-opacity animation for erosion, accretion, and ambiguity risk areas.
 
 ### Evidence & Verification
-- 📋 **5-Stage Evidence Trail** — Detect (how), Investigate (cross-check), Challenge (try to break), Explain (summarize), Field (ground truth).
-- 🛡️ **QC Panel** — threshold sensitivity, DSWx agreement, RFI screening, temporal persistence, stage match quality.
-- 📊 **Telemetry Panel** — real-time data metrics for the loaded reach (area, confidence, date ranges).
-- 🏷️ **Verdict Badge** — SUPPORTED / LIMITED / INCONCLUSIVE based on QC checks.
-- 🔍 **Inspect Mode** — click-anywhere to see raw provenance of any data element.
+-  **5-Stage Evidence Trail** — Detect (how), Investigate (cross-check), Challenge (try to break), Explain (summarize), Field (ground truth).
+-  **QC Panel** — threshold sensitivity, DSWx agreement, RFI screening, temporal persistence, stage match quality.
+-  **Telemetry Panel** — real-time data metrics for the loaded reach (area, confidence, date ranges).
+-  **Verdict Badge** — SUPPORTED / LIMITED / INCONCLUSIVE based on QC checks.
+-  **Inspect Mode** — click-anywhere to see raw provenance of any data element.
 
 ### Intelligence
-- 🤖 **River Intelligence AI Chat** — side-panel chat with context-aware responses, source citations, and map actions.
-- 💡 **Auto-Suggestions** — randomized follow-up question chips that adapt based on conversation context.
-- 📜 **Chat History** — load sample investigation conversations.
+-  **River Intelligence AI Chat** — side-panel chat with context-aware responses, source citations, and map actions.
+-  **Auto-Suggestions** — randomized follow-up question chips that adapt based on conversation context.
+-  **Chat History** — load sample investigation conversations.
 
 ### Presentation
-- 🎬 **Cinematic Description** — auto-generated narrative overlay describing what the user sees on the map.
-- 📺 **Fullscreen HUD** — cinematic processing overlay during analysis operations.
-- 🖨️ **Report Mode** — split-screen layout for evidence tabs as a printable report.
-- 🌐 **Methods Page** — complete scientific methodology with code references and data citations.
+-  **Cinematic Description** — auto-generated narrative overlay describing what the user sees on the map.
+-  **Fullscreen HUD** — cinematic processing overlay during analysis operations.
+-  **Report Mode** — split-screen layout for evidence tabs as a printable report.
+-  **Methods Page** — complete scientific methodology with code references and data citations.
 
 ---
 
@@ -153,9 +153,9 @@ Every page has its own URL. The navbar at the top provides navigation.
 ### SAR Radar Basics
 
 **What is SAR?** Synthetic Aperture Radar is a radar system mounted on a satellite. Unlike a camera, it sends its own microwave pulse and listens for the echo. This means:
-- ☁️ It works through clouds (microwaves pass through water vapor).
-- 🌙 It works at night (it brings its own "flashlight").
-- 🌧️ It works during monsoon — exactly when river erosion happens.
+-  It works through clouds (microwaves pass through water vapor).
+-  It works at night (it brings its own "flashlight").
+-  It works during monsoon — exactly when river erosion happens.
 
 **How does NISAR work?** NISAR (NASA-ISRO SAR) transmits at L-band (~24 cm wavelength). This long wavelength penetrates vegetation canopy and interacts with the ground surface. Key properties:
 - **Water** reflects radar like a mirror — the pulse bounces away, very little returns → dark pixels (low backscatter).
@@ -167,8 +167,8 @@ Every page has its own URL. The navbar at the top provides navigation.
 The river rises and falls with the monsoon. A pixel that's underwater in August might just be flooded — it could dry out by November. To distinguish **temporary flood** from **permanent erosion**, we need to compare the river at the **same water level** at two different times.
 
 ```
-Time t₀ (June, pre-monsoon):     River stage = 12.5 m    Pixel X = LAND ✓
-Time t₁ (October, post-monsoon): River stage = 12.5 m    Pixel X = WATER ✗
+Time t₀ (June, pre-monsoon):     River stage = 12.5 m    Pixel X = LAND 
+Time t₁ (October, post-monsoon): River stage = 12.5 m    Pixel X = WATER 
 
 → At the same water level, land became water = EROSION
 ```
