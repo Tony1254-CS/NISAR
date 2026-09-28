@@ -284,42 +284,49 @@ export function Landing() {
         
         {/* River Topography SVG */}
         <svg className="river-svg" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid slice">
-          <path className="river-path" d="M -100 300 C 100 100, 300 500, 500 300 C 700 100, 900 500, 1100 300" 
-                style={{ strokeDasharray: '15 15', animation: 'dash-anim 20s linear infinite' }} />
-          <path className="river-path" d="M -100 320 C 120 120, 280 480, 520 320 C 680 120, 920 480, 1100 320" 
-                style={{ stroke: 'rgba(57, 196, 217, 0.3)', strokeWidth: 1.5 }} />
-          <path className="river-path" d="M -100 280 C 80 80, 320 520, 480 280 C 720 80, 880 520, 1100 280" 
-                style={{ stroke: 'rgba(57, 196, 217, 0.3)', strokeWidth: 1.5 }} />
-          <path className="river-path" d="M 0 350 C 200 150, 250 550, 450 350 C 650 150, 850 550, 1050 350" 
-                style={{ stroke: '#E4572E', strokeWidth: 1, opacity: 0.4, strokeDasharray: '5 10' }} />
-          <path className="river-path" d="M 0 250 C 150 50, 350 450, 550 250 C 750 50, 950 450, 1150 250" 
-                style={{ stroke: '#D9B26A', strokeWidth: 1, opacity: 0.4, strokeDasharray: '5 10' }} />
-        </svg>
+            {/* Global SAR Grid */}
+            <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(57, 196, 217, 0.05)" strokeWidth="1"/>
+            </pattern>
+            <rect width="1000" height="600" fill="url(#grid)" />
+            
+            {/* Orbital Paths */}
+            <ellipse cx="500" cy="300" rx="600" ry="200" fill="none" stroke="rgba(57,196,217,0.2)" strokeWidth="1" transform="rotate(-15 500 300)" strokeDasharray="10 15" />
+            <ellipse cx="500" cy="300" rx="400" ry="150" fill="none" stroke="rgba(57,196,217,0.15)" strokeWidth="1" transform="rotate(20 500 300)" />
+            
+            {/* Hazard Nodes */}
+            <circle cx="200" cy="200" r="4" fill="#E4572E" className="pulse-glow" />
+            <text x="215" y="205" fill="#E4572E" fontSize="11" letterSpacing="1">GLACIAL RETREAT</text>
+            
+            <circle cx="800" cy="150" r="4" fill="#D9B26A" className="pulse-glow" />
+            <text x="815" y="155" fill="#D9B26A" fontSize="11" letterSpacing="1">WILDFIRE SCARS</text>
+            
+            <circle cx="700" cy="450" r="4" fill="#39C4D9" className="pulse-glow" />
+            <text x="715" y="455" fill="#39C4D9" fontSize="11" letterSpacing="1">MANGROVE LOSS</text>
+            
+            <circle cx="350" cy="400" r="4" fill="#E4572E" className="pulse-glow" />
+            <text x="365" y="405" fill="#E4572E" fontSize="11" letterSpacing="1">RIVER EROSION</text>
+            
+            {/* Connecting telemetry lines */}
+            <path d="M 200 200 L 500 300 L 800 150" fill="none" stroke="rgba(255,255,255,0.1)" strokeDasharray="4 4" />
+            <path d="M 700 450 L 500 300 L 350 400" fill="none" stroke="rgba(255,255,255,0.1)" strokeDasharray="4 4" />
+          </svg>
 
         {/* Scattered accretion and erosion points */}
-        <div className="morph-dot erosion" style={{ top: '35%', left: '25%' }} />
-        <div className="morph-dot erosion" style={{ top: '65%', left: '75%' }} />
-        <div className="morph-dot erosion" style={{ top: '48%', left: '52%' }} />
-        <div className="morph-dot accretion" style={{ top: '45%', left: '35%' }} />
-        <div className="morph-dot accretion" style={{ top: '55%', left: '60%' }} />
-        <div className="morph-dot accretion" style={{ top: '38%', left: '80%' }} />
-
         <div className="radar-sweep-line" />
 
         <div className="hero-content">
           <div style={{ color: '#39C4D9', fontWeight: 600, letterSpacing: '0.15em', fontSize: '0.85rem', marginBottom: '1.5rem', textTransform: 'uppercase' }}>
-            NASA NISAR &middot; L-BAND SAR &middot; JAMUNA RIVER, BANGLADESH
+            NASA SPACE APPS 2026 &middot; DANCING WITH THE SARS &middot; GLOBAL CHANGE DETECTION
           </div>
 
           <h1 className="cinematic-title">
-            Prove the river moved.<br />
-            <span>Don&rsquo;t just claim it.</span>
+            Decode the Earth&rsquo;s rhythm.<br />
+            <span>Don&rsquo;t just watch it change.</span>
           </h1>
 
           <p className="cinematic-subtitle">
-            Same River Twice compares real NISAR satellite radar of the same stretch of the
-            Jamuna on two dates — and shows exactly where land turned to water (<span style={{ color: '#E4572E', fontWeight: 500 }}>erosion</span>) and water turned
-            to land (<span style={{ color: '#D9B26A', fontWeight: 500 }}>accretion</span>), with the evidence chain to back every claim.
+            Same River Twice is a cloud-native intelligence platform that leverages NISAR L-band radar to quantify global surface changes. From <span style={{ color: '#E4572E', fontWeight: 500 }}>river erosion</span> and glacial retreat to <span style={{ color: '#D9B26A', fontWeight: 500 }}>wildfire scars</span>, our ML engine uncovers the physics of a transforming planet&mdash;with the evidence chain to back every claim.
           </p>
 
           <div className="hero-actions">
