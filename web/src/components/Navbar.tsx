@@ -105,17 +105,20 @@ export function Navbar({
           {/* Nav links (hidden on /app to save space on laptops) */}
           {!showReachInfo && (
             <div className={`navbar__nav${mobileOpen ? ' navbar__nav--open' : ''}`}>
-              <a href="/impact" className={linkClass('/impact')} style={{ color: '#ff4d4d', fontWeight: 'bold' }}>
-                ❤️ Impact
-              </a>
               <a href="/cases" className={linkClass('/cases')}>
                 Investigations
               </a>
-              <a href="/intelligence" className={linkClass('/intelligence')} style={{ color: 'var(--water)' }}>
-                🧠 Intelligence
+              <a href="/intelligence" className={linkClass('/intelligence')} style={{ color: 'var(--water)', textShadow: '0 0 10px rgba(57,196,217,0.3)' }}>
+                🧠 ML Intelligence
+              </a>
+              <a href="/sar-lab" className={linkClass('/sar-lab')} style={{ color: 'var(--pass)', textShadow: '0 0 10px rgba(127,191,142,0.3)' }}>
+                🔬 SAR Lab
               </a>
               <a href="/methods" className={linkClass('/methods')}>
                 Methods
+              </a>
+              <a href="/about" className={linkClass('/about')}>
+                About Us
               </a>
             </div>
           )}
@@ -177,11 +180,14 @@ export function Navbar({
                     {sensoryMode ? '✓ ' : ''}Sensory Inspector
                   </button>
                   <button onClick={() => setCinematicMode(!cinematicMode)} title="Auto-Narrated Mission Briefing">
-                    {cinematicMode ? '✓ ' : ''}Mission Briefing
-                  </button>
+                      {cinematicMode ? '✔️ ' : ''}Mission Briefing
+                    </button>
                   <button onClick={() => setLayers({ forecast: !layers.forecast })} title="Erosion & Accretion Forecast">
                     {layers.forecast ? '✓ ' : ''}Forecast Model
                   </button>
+                    <button onClick={() => setLayers({ risk: !layers.risk })} title="Predictive Risk Heatmap" style={{ color: 'var(--erosion)' }}>
+                      {layers.risk ? '✔️ ' : ''}Predictive Risk
+                    </button>
                 </div>
               </div>
 
@@ -240,16 +246,12 @@ export function Navbar({
               >
                 <span style={{ marginRight: 6 }}>●</span> Live Analysis
               </button>
-              
-              <a href="/report" className="navbar__btn" style={{ background: '#fff', color: '#000', marginLeft: '4px', textDecoration: 'none', padding: '6px 12px', fontSize: '0.75rem' }}>
-                📄 Report
-              </a>
             </div>
           )}
 
           {!showReachInfo && (
-            <a href="/report" className="navbar__btn" style={{ background: '#fff', color: '#000', fontWeight: 'bold', textDecoration: 'none' }}>
-              📄 Report
+            <a href="/auth" className="navbar__btn">
+              Sign in
             </a>
           )}
         </div>
