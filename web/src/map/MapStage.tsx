@@ -34,7 +34,38 @@ export function MapStage() {
     if (mapContainer.current && !mapRef.current) {
       const map = new maplibregl.Map({
         container: mapContainer.current,
-        style: 'https://tiles.openfreemap.org/styles/positron',
+        style: {
+          version: 8,
+          name: 'SAR Dark Satellite',
+          sources: {
+            'esri-satellite': {
+              type: 'raster',
+              tiles: [
+                'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+              ],
+              tileSize: 256,
+              maxzoom: 18,
+              attribution: 'Esri, Maxar, Earthstar Geographics'
+            }
+          },
+          layers: [
+            {
+              id: 'background',
+              type: 'background',
+              paint: { 'background-color': '#070A0C' }
+            },
+            {
+              id: 'satellite-tiles',
+              type: 'raster',
+              source: 'esri-satellite',
+              paint: {
+                'raster-opacity': 0.85,
+                'raster-saturation': -0.3,
+                'raster-contrast': 0.15
+              }
+            }
+          ]
+        },
         center: [89.7, 24.5],
         zoom: 6,
       });
@@ -233,8 +264,8 @@ export function MapStage() {
     };
   }, [mapLoaded]);
 
-  // Change layers (erosion/accretion/ambiguous): only meaningful in compare
-  // mode, and each also gated by its own LayerToggles state.
+  // Change layers (erosion/accretion/ambiguous): show whenever toggled on.
+  // Ambiguous layer still needs compare dates to be created.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapLoaded || !reachLayersReadyRef.current || !bounds || !reachId) return;
@@ -242,8 +273,8 @@ export function MapStage() {
       ensureAmbiguousLayer(map, { baseUrl: `/data/v1/${reachId}`, bounds, t0: compare.t0, t1: compare.t1 });
     }
     setChangeLayersVisible(map, {
-      erosion: compare.active && layers.erosion,
-      accretion: compare.active && layers.accretion,
+      erosion: layers.erosion,
+      accretion: layers.accretion,
       ambiguous: compare.active && layers.ambiguous,
     });
   }, [mapLoaded, compare.active, compare.t0, compare.t1, bounds, reachId, layers.erosion, layers.accretion, layers.ambiguous]);

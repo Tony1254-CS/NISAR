@@ -265,7 +265,7 @@ export function Landing() {
 
       {/* ════ Footer ════ */}
       <footer className="landing-footer">
-        Self-authored, independent build &middot; not an official NASA Space Apps submission
+        Same River Twice &middot; NASA Space Apps Challenge 2026 &middot; Dancing with the SARs
         &middot;{' '}
         <a href="/methods">full methods &amp; sources</a> &middot;{' '}
         <a

@@ -15,6 +15,30 @@
   overflow: hidden;
 }
 
+.landing-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: 
+    radial-gradient(2px 2px at 20px 30px, #eee, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 40px 70px, #fff, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 50px 160px, #ddd, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 90px 40px, #fff, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 130px 80px, #fff, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 160px 120px, #ddd, rgba(0,0,0,0));
+  background-repeat: repeat;
+  background-size: 200px 200px;
+  animation: stars-float 60s linear infinite;
+  opacity: 0.3;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes stars-float {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-200px); }
+}
+
 .landing-hero__bg {
   position: absolute;
   inset: 0;
@@ -67,6 +91,12 @@
   position: relative;
   max-width: 800px;
   z-index: 1;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-xl);
+  padding: var(--s6);
+  box-shadow: var(--glass-shadow);
 }
 
 .landing-hero__tag {
@@ -99,6 +129,21 @@
   line-height: 1.1;
   margin-bottom: var(--s4);
   animation: fade-in-up 0.8s var(--ease-out) 0.15s both;
+  position: relative;
+}
+
+.landing-hero h1::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 120%;
+  height: 120%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(57,196,217,0.15) 0%, transparent 70%);
+  z-index: -1;
+  pointer-events: none;
+  filter: blur(40px);
 }
 
 .landing-hero h1 span {
@@ -135,16 +180,18 @@
 }
 
 .landing-hero__cta--primary {
-  background: var(--water);
-  color: #04222b;
+  background: rgba(57, 196, 217, 0.2);
+  color: var(--water-strong);
   border: 1px solid var(--water);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--glow-water);
 }
 
 .landing-hero__cta--primary:hover {
-  background: var(--water-strong);
+  background: var(--water);
   color: #04222b;
-  box-shadow: 0 0 24px rgba(57, 196, 217, 0.3);
-  transform: translateY(-1px);
+  box-shadow: 0 0 30px rgba(57, 196, 217, 0.5);
+  transform: translateY(-2px);
 }
 
 .landing-hero__cta--secondary {

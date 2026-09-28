@@ -8,6 +8,17 @@
   --pass:#7FBF8E; --warn:#E0B34A; --fail:#E4572E; --na:#6F7880;
 
   /* ── Extended palette ── */
+  /* Glass system */
+  --glass-bg: rgba(18, 22, 26, 0.72);
+  --glass-border: rgba(57, 196, 217, 0.12);
+  --glass-blur: blur(24px) saturate(135%);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(57, 196, 217, 0.08);
+
+  /* Glow system */
+  --glow-water: 0 0 20px rgba(57, 196, 217, 0.15), 0 0 60px rgba(57, 196, 217, 0.05);
+  --glow-erosion: 0 0 20px rgba(228, 87, 46, 0.15);
+  --glow-pass: 0 0 20px rgba(127, 191, 142, 0.15);
+
   --water-dim: rgba(57, 196, 217, 0.15);
   --water-glow: rgba(57, 196, 217, 0.4);
   --water-strong: #4DD8EC;

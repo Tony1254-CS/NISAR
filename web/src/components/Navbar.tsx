@@ -108,6 +108,12 @@ export function Navbar({
               <a href="/cases" className={linkClass('/cases')}>
                 Investigations
               </a>
+              <a href="/intelligence" className={linkClass('/intelligence')} style={{ color: 'var(--water)', textShadow: '0 0 10px rgba(57,196,217,0.3)' }}>
+                🧠 ML Intelligence
+              </a>
+              <a href="/sar-lab" className={linkClass('/sar-lab')} style={{ color: 'var(--pass)', textShadow: '0 0 10px rgba(127,191,142,0.3)' }}>
+                🔬 SAR Lab
+              </a>
               <a href="/methods" className={linkClass('/methods')}>
                 Methods
               </a>
@@ -156,73 +162,72 @@ export function Navbar({
 
           {/* Extra PRD Features and Trigger for Agentic Workflow (only on /app page) */}
           {showReachInfo && (
-            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-              <button 
-                onClick={handleBanglaVoice}
-                className="navbar__btn"
-                style={{ background: 'transparent', border: '1px solid var(--water)', color: 'var(--water)', padding: '6px 10px', fontSize: '0.7rem' }}
-                title="Bangla Voice Report"
-              >
-                {voiceStatus}
-              </button>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               
-              <button 
-                onClick={() => setLayers({ earthquakes: !layers.earthquakes })}
-                className="navbar__btn"
-                style={{ background: layers.earthquakes ? '#ff5a00' : 'transparent', border: `1px solid #ff5a00`, color: layers.earthquakes ? '#000' : '#ff5a00', padding: '6px 10px', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}
-                title="NASA EONET Seismic Activity"
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-                Earthquakes
-              </button>
-              
-              <button 
-                onClick={() => setSensoryMode(!sensoryMode)}
-                className="navbar__btn"
-                style={{ background: sensoryMode ? 'var(--warn)' : 'transparent', border: `1px solid var(--warn)`, color: sensoryMode ? '#000' : 'var(--warn)', padding: '6px 10px', fontSize: '0.7rem' }}
-                title="Haptic & Audio Pixel Inspector"
-              >
-                {sensoryMode ? '🔎 Sensory' : '🔍 Sensory'}
-              </button>
-              
-              <button 
-                onClick={() => setCinematicMode(!cinematicMode)}
-                className="navbar__btn"
-                style={{ background: cinematicMode ? 'var(--pass)' : 'transparent', border: `1px solid var(--pass)`, color: cinematicMode ? '#000' : 'var(--pass)', padding: '6px 10px', fontSize: '0.7rem' }}
-                title="5-Sec X-Ray Optical/SAR Swipe"
-              >
-                🎬 Swipe
-              </button>
-
-              <button 
-                onClick={() => setLayers({ forecast: !layers.forecast })}
-                className="navbar__btn"
-                style={{ background: layers.forecast ? '#9b59b6' : 'transparent', border: `1px solid #9b59b6`, color: layers.forecast ? '#fff' : '#9b59b6', padding: '6px 10px', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}
-                title="Erosion & Accretion Forecast"
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                Forecast
-              </button>
-              
-              <div style={{ width: 1, height: 24, background: 'rgba(255,255,255,0.2)', margin: '0 8px' }} />
-
-              {TABS.map(t => (
-                <button
-                  key={t.id}
-                  onClick={() => {
-                    setAnalysisMode(true);
-                    setAnalysisModeType('SINGLE');
-                    setAnalysisActiveTab(t.id);
-                    setAnalysisState('PROCESSING');
-                    setAnalysisSplit(false);
-                  }}
-                  className="navbar__btn"
-                  style={{ background: 'transparent', border: '1px solid rgba(57,196,217,0.3)', color: 'var(--water)', padding: '6px 10px', fontSize: '0.65rem', textTransform: 'uppercase' }}
-                  title={t.hint}
-                >
-                  {t.label}
+              {/* Tool Group Dropdown */}
+              <div className="navbar__dropdown">
+                <button className="navbar__btn">
+                  🛠️ Tools ▾
                 </button>
-              ))}
+                <div className="navbar__dropdown-content">
+                  <button onClick={handleBanglaVoice} title="Bangla Voice Report">
+                    {voiceStatus}
+                  </button>
+                  <button onClick={() => setLayers({ earthquakes: !layers.earthquakes })} title="NASA EONET Seismic Activity">
+                    {layers.earthquakes ? '✓ ' : ''}Earthquakes
+                  </button>
+                  <button onClick={() => setSensoryMode(!sensoryMode)} title="Haptic & Audio Pixel Inspector">
+                    {sensoryMode ? '✓ ' : ''}Sensory Inspector
+                  </button>
+                  <button onClick={() => setCinematicMode(!cinematicMode)} title="5-Sec X-Ray Optical/SAR Swipe">
+                    {cinematicMode ? '✓ ' : ''}Optical Swipe
+                  </button>
+                  <button onClick={() => setLayers({ forecast: !layers.forecast })} title="Erosion & Accretion Forecast">
+                    {layers.forecast ? '✓ ' : ''}Forecast Model
+                  </button>
+                </div>
+              </div>
+
+              {/* Evidence Tabs Dropdown */}
+              <div className="navbar__dropdown">
+                <button className="navbar__btn" style={{ borderColor: 'rgba(57,196,217,0.3)', color: 'var(--water)' }}>
+                  Evidence ▾
+                </button>
+                <div className="navbar__dropdown-content">
+                  {TABS.map(t => (
+                    <button
+                      key={t.id}
+                      onClick={() => {
+                        setAnalysisMode(true);
+                        setAnalysisModeType('SINGLE');
+                        setAnalysisActiveTab(t.id);
+                        setAnalysisState('PROCESSING');
+                        setAnalysisSplit(false);
+                      }}
+                      title={t.hint}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              
+              <a 
+                href="/intelligence" 
+                className="navbar__btn" 
+                style={{ 
+                  borderColor: 'rgba(224,179,74,0.4)', 
+                  color: 'var(--warn)', 
+                  textDecoration: 'none',
+                  background: 'rgba(224,179,74,0.05)',
+                  boxShadow: '0 0 10px rgba(224,179,74,0.1)'
+                }}
+              >
+                🧠 Intelligence
+              </a>
+
+              <div style={{ width: 1, height: 24, background: 'rgba(255,255,255,0.2)', margin: '0 4px' }} />
 
               <button
                 onClick={() => {
