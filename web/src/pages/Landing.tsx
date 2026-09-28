@@ -116,38 +116,217 @@ export function Landing() {
       <Navbar transparent />
 
       {/* ════ Hero ════ */}
-      <section className="landing-hero">
-        <div
-          className="landing-hero__bg"
-          aria-hidden
-          style={{ backgroundImage: 'url(/data/v1/jamuna-chilmari/img/radar_20260919.png)' }}
-        />
-        <div className="landing-hero__sweep" aria-hidden />
-        <div className="landing-hero__grid" aria-hidden />
+      <section style={{ position: 'relative', overflow: 'hidden', backgroundColor: '#07090A', minHeight: '90vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <style>
+          {`
+            @keyframes radar-sweep {
+              0% { transform: translateX(-100%) skewX(-15deg); }
+              100% { transform: translateX(300%) skewX(-15deg); }
+            }
+            @keyframes pulse-glow {
+              0%, 100% { filter: drop-shadow(0 0 10px rgba(57, 196, 217, 0.4)); }
+              50% { filter: drop-shadow(0 0 25px rgba(57, 196, 217, 0.8)); }
+            }
+            @keyframes dash-anim {
+              to { stroke-dashoffset: -1000; }
+            }
+            .hero-bg-layer {
+              position: absolute;
+              top: 0; left: 0; right: 0; bottom: 0;
+              background: radial-gradient(circle at center, #0a1118 0%, #07090A 100%);
+              z-index: 0;
+            }
+            .radar-sweep-line {
+              position: absolute;
+              top: 0; left: 0; right: 0; bottom: 0;
+              background: linear-gradient(90deg, transparent, rgba(57, 196, 217, 0.05) 45%, rgba(57, 196, 217, 0.8) 50%, transparent 55%);
+              animation: radar-sweep 5s infinite linear;
+              z-index: 1;
+              pointer-events: none;
+            }
+            .river-svg {
+              position: absolute;
+              top: 50%; left: 50%;
+              transform: translate(-50%, -50%);
+              width: 140%;
+              height: 140%;
+              opacity: 0.6;
+              z-index: 0;
+            }
+            .river-path {
+              fill: none;
+              stroke-width: 3;
+              animation: pulse-glow 4s infinite alternate;
+              stroke: #39C4D9;
+            }
+            .hero-content {
+              position: relative;
+              z-index: 10;
+              text-align: center;
+              max-width: 900px;
+              padding: 0 2rem;
+            }
+            .cinematic-title {
+              font-size: clamp(3rem, 6vw, 5.5rem);
+              font-weight: 800;
+              letter-spacing: -0.03em;
+              line-height: 1.1;
+              color: #ffffff;
+              margin-bottom: 1.5rem;
+              text-shadow: 0 0 20px rgba(57, 196, 217, 0.3);
+            }
+            .cinematic-title span {
+              color: transparent;
+              -webkit-text-stroke: 1px rgba(255, 255, 255, 0.3);
+              background: linear-gradient(90deg, #39C4D9, #E4572E, #D9B26A);
+              -webkit-background-clip: text;
+              background-clip: text;
+              animation: gradient-shift 6s infinite alternate;
+              background-size: 200% 200%;
+            }
+            @keyframes gradient-shift {
+              0% { background-position: 0% 50%; }
+              100% { background-position: 100% 50%; }
+            }
+            .cinematic-subtitle {
+              font-size: 1.25rem;
+              color: #a0aec0;
+              line-height: 1.7;
+              margin-bottom: 3rem;
+              font-weight: 300;
+              max-width: 700px;
+              margin-left: auto;
+              margin-right: auto;
+            }
+            .hero-actions {
+              display: flex;
+              gap: 1.5rem;
+              justify-content: center;
+            }
+            .btn-glow {
+              padding: 1.2rem 2.5rem;
+              font-size: 1.1rem;
+              font-weight: 600;
+              border-radius: 4px;
+              text-decoration: none;
+              text-transform: uppercase;
+              letter-spacing: 0.1em;
+              transition: all 0.3s ease;
+            }
+            .btn-primary {
+              background: #39C4D9;
+              color: #07090A;
+              box-shadow: 0 0 15px rgba(57, 196, 217, 0.4);
+            }
+            .btn-primary:hover {
+              background: #fff;
+              box-shadow: 0 0 30px rgba(57, 196, 217, 0.8);
+              transform: translateY(-2px);
+            }
+            .btn-secondary {
+              background: transparent;
+              color: #39C4D9;
+              border: 1px solid #39C4D9;
+            }
+            .btn-secondary:hover {
+              background: rgba(57, 196, 217, 0.1);
+              box-shadow: 0 0 20px rgba(57, 196, 217, 0.3);
+              transform: translateY(-2px);
+            }
+            
+            /* Radar rings */
+            .radar-rings {
+              position: absolute;
+              top: 50%; left: 50%;
+              transform: translate(-50%, -50%);
+              width: 80vw; height: 80vw;
+              max-width: 900px; max-height: 900px;
+              border-radius: 50%;
+              border: 1px solid rgba(57, 196, 217, 0.1);
+              z-index: 0;
+            }
+            .radar-rings::before, .radar-rings::after {
+              content: '';
+              position: absolute;
+              top: 50%; left: 50%;
+              transform: translate(-50%, -50%);
+              border-radius: 50%;
+              border: 1px solid rgba(57, 196, 217, 0.15);
+            }
+            .radar-rings::before { width: 60%; height: 60%; }
+            .radar-rings::after { width: 30%; height: 30%; }
 
-        <div className="landing-hero__content">
-          <div className="landing-hero__tag">
-            <span className="landing-hero__tag-dot" />
+            .morph-dot {
+              position: absolute;
+              width: 8px; height: 8px;
+              border-radius: 50%;
+              animation: blink-dot 2.5s infinite alternate;
+              z-index: 2;
+            }
+            .morph-dot.erosion {
+              background-color: #E4572E;
+              box-shadow: 0 0 12px #E4572E, 0 0 24px #E4572E;
+            }
+            .morph-dot.accretion {
+              background-color: #D9B26A;
+              box-shadow: 0 0 12px #D9B26A, 0 0 24px #D9B26A;
+              animation-direction: alternate-reverse;
+            }
+            @keyframes blink-dot {
+              0% { opacity: 0.2; transform: scale(0.8); }
+              100% { opacity: 1; transform: scale(1.5); }
+            }
+          `}
+        </style>
+        
+        <div className="hero-bg-layer" />
+        <div className="radar-rings" />
+        
+        {/* River Topography SVG */}
+        <svg className="river-svg" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid slice">
+          <path className="river-path" d="M -100 300 C 100 100, 300 500, 500 300 C 700 100, 900 500, 1100 300" 
+                style={{ strokeDasharray: '15 15', animation: 'dash-anim 20s linear infinite' }} />
+          <path className="river-path" d="M -100 320 C 120 120, 280 480, 520 320 C 680 120, 920 480, 1100 320" 
+                style={{ stroke: 'rgba(57, 196, 217, 0.3)', strokeWidth: 1.5 }} />
+          <path className="river-path" d="M -100 280 C 80 80, 320 520, 480 280 C 720 80, 880 520, 1100 280" 
+                style={{ stroke: 'rgba(57, 196, 217, 0.3)', strokeWidth: 1.5 }} />
+          <path className="river-path" d="M 0 350 C 200 150, 250 550, 450 350 C 650 150, 850 550, 1050 350" 
+                style={{ stroke: '#E4572E', strokeWidth: 1, opacity: 0.4, strokeDasharray: '5 10' }} />
+          <path className="river-path" d="M 0 250 C 150 50, 350 450, 550 250 C 750 50, 950 450, 1150 250" 
+                style={{ stroke: '#D9B26A', strokeWidth: 1, opacity: 0.4, strokeDasharray: '5 10' }} />
+        </svg>
+
+        {/* Scattered accretion and erosion points */}
+        <div className="morph-dot erosion" style={{ top: '35%', left: '25%' }} />
+        <div className="morph-dot erosion" style={{ top: '65%', left: '75%' }} />
+        <div className="morph-dot erosion" style={{ top: '48%', left: '52%' }} />
+        <div className="morph-dot accretion" style={{ top: '45%', left: '35%' }} />
+        <div className="morph-dot accretion" style={{ top: '55%', left: '60%' }} />
+        <div className="morph-dot accretion" style={{ top: '38%', left: '80%' }} />
+
+        <div className="radar-sweep-line" />
+
+        <div className="hero-content">
+          <div style={{ color: '#39C4D9', fontWeight: 600, letterSpacing: '0.15em', fontSize: '0.85rem', marginBottom: '1.5rem', textTransform: 'uppercase' }}>
             NASA NISAR &middot; L-BAND SAR &middot; JAMUNA RIVER, BANGLADESH
           </div>
 
-          <h1>
-            Prove the river moved.
-            <br />
+          <h1 className="cinematic-title">
+            Prove the river moved.<br />
             <span>Don&rsquo;t just claim it.</span>
           </h1>
 
-          <p className="landing-hero__subtitle">
+          <p className="cinematic-subtitle">
             Same River Twice compares real NISAR satellite radar of the same stretch of the
-            Jamuna on two dates — and shows exactly where land turned to water and water turned
-            to land, with the evidence chain to back every claim.
+            Jamuna on two dates — and shows exactly where land turned to water (<span style={{ color: '#E4572E', fontWeight: 500 }}>erosion</span>) and water turned
+            to land (<span style={{ color: '#D9B26A', fontWeight: 500 }}>accretion</span>), with the evidence chain to back every claim.
           </p>
 
-          <div className="landing-hero__actions">
-            <a href="/cases" className="landing-hero__cta landing-hero__cta--primary">
+          <div className="hero-actions">
+            <a href="/cases" className="btn-glow btn-primary">
               Begin Investigation →
             </a>
-            <a href="/methods" className="landing-hero__cta landing-hero__cta--secondary">
+            <a href="/methods" className="btn-glow btn-secondary">
               How it works
             </a>
           </div>

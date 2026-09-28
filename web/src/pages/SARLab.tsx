@@ -65,6 +65,9 @@ export function SARLabPage() {
   const [activePol, setActivePol] = useState(0);
   const [activeStep, setActiveStep] = useState(0);
   const [showCoherence, setShowCoherence] = useState(false);
+  const [otsuThreshold, setOtsuThreshold] = useState(-15);
+  const [insarFringes, setInsarFringes] = useState(false);
+  const [hAlphaMode, setHAlphaMode] = useState(false);
 
   return (
     <div style={{ background: '#07090A', minHeight: '100vh', color: 'var(--text)' }}>
@@ -408,6 +411,111 @@ export function SARLabPage() {
                 <li>Sensitive to biomass, soil moisture, AND surface deformation simultaneously</li>
               </ul>
             </GlassCard>
+          </div>
+        </div>
+
+        {/* ═══ SECTION 7: ADVANCED SAR PHYSICS ═══ */}
+        <div style={{ marginBottom: 'var(--s8)' }}>
+          <SectionTitle title="Advanced SAR Physics Console" subtitle="Deep dive into processing techniques used in our analysis. Adjust parameters in real-time." />
+          
+          <div style={{ display: 'grid', gap: 'var(--s4)' }}>
+            {/* Otsu Threshold */}
+            <GlassCard>
+              <h3 style={{ margin: '0 0 var(--s3) 0', color: 'var(--water)', fontSize: '1.2rem' }}>Dynamic Otsu Threshold (σ⁰)</h3>
+              <p style={{ color: 'var(--text-3)', fontSize: '0.9rem', marginBottom: 'var(--s3)' }}>Adjust the threshold to distinguish water (low backscatter) from land (high backscatter).</p>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s3)' }}>
+                <span style={{ fontSize: '0.9rem', fontFamily: 'var(--font-num)' }}>-25 dB</span>
+                <input 
+                  type="range" 
+                  min="-25" max="-5" step="0.5" 
+                  value={otsuThreshold} 
+                  onChange={(e) => setOtsuThreshold(parseFloat(e.target.value))} 
+                  style={{ flex: 1, accentColor: 'var(--water)' }} 
+                />
+                <span style={{ fontSize: '0.9rem', fontFamily: 'var(--font-num)' }}>-5 dB</span>
+              </div>
+              <div style={{ textAlign: 'center', marginTop: 'var(--s2)', fontSize: '1.2rem', fontWeight: 700, fontFamily: 'var(--font-num)', color: 'var(--water)' }}>
+                Threshold: {otsuThreshold.toFixed(1)} dB
+              </div>
+              
+              <div style={{ marginTop: 'var(--s4)', height: 60, background: 'linear-gradient(90deg, rgba(57,196,217,0.4) 0%, rgba(228,87,46,0.4) 100%)', position: 'relative', borderRadius: 'var(--r-md)' }}>
+                <div style={{ position: 'absolute', left: `${((otsuThreshold + 25) / 20) * 100}%`, top: 0, bottom: 0, width: 4, background: 'var(--water)', boxShadow: '0 0 10px var(--water)', zIndex: 2 }}></div>
+                <div style={{ position: 'absolute', left: '10%', top: '30%', fontSize: '0.9rem', color: '#fff', fontWeight: 700, textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>WATER</div>
+                <div style={{ position: 'absolute', right: '10%', top: '30%', fontSize: '0.9rem', color: '#fff', fontWeight: 700, textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>LAND</div>
+              </div>
+            </GlassCard>
+
+            {/* InSAR Fringes */}
+            <GlassCard>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--s3)' }}>
+                <div>
+                  <h3 style={{ margin: '0 0 var(--s2) 0', color: '#ff5a5a', fontSize: '1.2rem' }}>InSAR Fringes (Phase)</h3>
+                  <p style={{ color: 'var(--text-3)', fontSize: '0.9rem', margin: 0 }}>Simulate interferometric phase over the terrain.</p>
+                </div>
+                <button 
+                  onClick={() => setInsarFringes(!insarFringes)}
+                  style={{ padding: '8px 16px', background: insarFringes ? 'rgba(255,90,90,0.15)' : 'transparent', border: `1px solid ${insarFringes ? '#ff5a5a' : 'var(--glass-border)'}`, color: insarFringes ? '#ff5a5a' : 'var(--text)', borderRadius: 'var(--r-full)', cursor: 'pointer', transition: 'all 0.3s' }}
+                >
+                  {insarFringes ? 'Disable Fringes' : 'Enable Fringes'}
+                </button>
+              </div>
+              
+              <div style={{ 
+                height: 200, 
+                borderRadius: 'var(--r-md)', 
+                background: insarFringes 
+                  ? 'repeating-radial-gradient(circle at 30% 40%, #ff0000 0%, #ffff00 16.6%, #00ff00 33.3%, #00ffff 50%, #0000ff 66.6%, #ff00ff 83.3%, #ff0000 100%)' 
+                  : 'linear-gradient(135deg, #1a2a3a, #0a1520)',
+                backgroundSize: insarFringes ? '100px 100px' : 'auto',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'background 0.5s',
+                border: '1px solid var(--glass-border)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ background: 'rgba(0,0,0,0.6)', padding: '10px 20px', borderRadius: 'var(--r-md)', backdropFilter: 'blur(4px)', color: insarFringes ? '#fff' : 'var(--text-3)' }}>
+                  {insarFringes ? 'Psychedelic Phase Unwrapping Active' : 'Terrain Map (Phase Hidden)'}
+                </div>
+              </div>
+            </GlassCard>
+
+            {/* H-Alpha */}
+            <GlassCard>
+               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--s3)' }}>
+                <div>
+                  <h3 style={{ margin: '0 0 var(--s2) 0', color: 'var(--accretion)', fontSize: '1.2rem' }}>Polarimetric H-Alpha Decomposition</h3>
+                  <p style={{ color: 'var(--text-3)', fontSize: '0.9rem', margin: 0 }}>Analyze scattering mechanisms (Entropy/Alpha space).</p>
+                </div>
+                <button 
+                  onClick={() => setHAlphaMode(!hAlphaMode)}
+                  style={{ padding: '8px 16px', background: hAlphaMode ? 'rgba(217,178,106,0.15)' : 'transparent', border: `1px solid ${hAlphaMode ? 'var(--accretion)' : 'var(--glass-border)'}`, color: hAlphaMode ? 'var(--accretion)' : 'var(--text)', borderRadius: 'var(--r-full)', cursor: 'pointer', transition: 'all 0.3s' }}
+                >
+                  {hAlphaMode ? 'Deactivate Mode' : 'Activate Mode'}
+                </button>
+              </div>
+
+              {hAlphaMode && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 'var(--s3)', marginTop: 'var(--s4)', animation: 'fadeIn 0.5s' }}>
+                  <div style={{ padding: 'var(--s3)', background: 'rgba(255,90,90,0.1)', border: '1px solid #ff5a5a', borderRadius: 'var(--r-md)', textAlign: 'center', color: '#ff5a5a' }}>
+                    <div style={{ fontSize: '1.5rem', marginBottom: '4px' }}>🏢</div>
+                    <strong>Double-Bounce</strong><br/>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-3)' }}>Urban / Trunks</span>
+                  </div>
+                  <div style={{ padding: 'var(--s3)', background: 'rgba(127,191,142,0.1)', border: '1px solid #7FBF8E', borderRadius: 'var(--r-md)', textAlign: 'center', color: '#7FBF8E' }}>
+                    <div style={{ fontSize: '1.5rem', marginBottom: '4px' }}>🌳</div>
+                    <strong>Volume</strong><br/>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-3)' }}>Forest Canopy</span>
+                  </div>
+                  <div style={{ padding: 'var(--s3)', background: 'rgba(57,196,217,0.1)', border: '1px solid #39C4D9', borderRadius: 'var(--r-md)', textAlign: 'center', color: '#39C4D9' }}>
+                    <div style={{ fontSize: '1.5rem', marginBottom: '4px' }}>🌊</div>
+                    <strong>Surface</strong><br/>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-3)' }}>Water / Bare Soil</span>
+                  </div>
+                </div>
+              )}
+            </GlassCard>
+
           </div>
         </div>
 

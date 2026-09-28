@@ -578,6 +578,84 @@ export function IntelligencePage() {
           </div>
         </section>
 
+        {/* Section 10b: SBAS Network Graph */}
+        <section className="glass-panel" style={{ padding: '3rem', marginBottom: '4rem', borderRadius: '16px' }}>
+          <h2 style={{ margin: '0 0 0.5rem 0', fontSize: '2rem' }}>SBAS (Small Baseline Subset) Network Graph</h2>
+          <p style={{ color: 'var(--text-2, #94A3B8)', margin: '0 0 2rem 0' }}>Visualizing the network of interferogram pairs formed from satellite acquisitions over time and perpendicular baseline.</p>
+          
+          <div style={{ height: '350px', position: 'relative', borderBottom: '1px solid #333', borderLeft: '1px solid #333', marginTop: '2rem', paddingLeft: '20px', paddingBottom: '20px' }}>
+            <svg width="100%" height="100%" viewBox="0 0 800 350" preserveAspectRatio="none" style={{ overflow: 'visible' }}>
+              <text x="-40" y="20" fill="#aaa" fontSize="12" transform="rotate(-90 -40 20)">Perp Baseline (m)</text>
+              <text x="400" y="380" fill="#aaa" fontSize="12" textAnchor="middle">Temporal Baseline (Days)</text>
+              
+              {/* Axes lines */}
+              <line x1="0" y1="175" x2="800" y2="175" stroke="#333" strokeDasharray="4,4" />
+              <text x="-25" y="179" fill="#888" fontSize="12">0</text>
+              <text x="-35" y="30" fill="#888" fontSize="12">200</text>
+              <text x="-40" y="330" fill="#888" fontSize="12">-200</text>
+
+              {/* Lines (Interferograms) */}
+              <g stroke="rgba(57, 196, 217, 0.4)" strokeWidth="2">
+                <line x1="50" y1="200" x2="150" y2="150" />
+                <line x1="50" y1="200" x2="250" y2="220" />
+                <line x1="150" y1="150" x2="250" y2="220" />
+                <line x1="150" y1="150" x2="350" y2="100" />
+                <line x1="250" y1="220" x2="350" y2="100" />
+                <line x1="250" y1="220" x2="450" y2="180" />
+                <line x1="350" y1="100" x2="450" y2="180" />
+                <line x1="350" y1="100" x2="550" y2="50" />
+                <line x1="450" y1="180" x2="550" y2="50" />
+                <line x1="450" y1="180" x2="650" y2="210" />
+                <line x1="550" y1="50" x2="650" y2="210" />
+                <line x1="550" y1="50" x2="750" y2="160" />
+                <line x1="650" y1="210" x2="750" y2="160" />
+              </g>
+
+              {/* Nodes */}
+              <g fill="var(--water, #39C4D9)">
+                <circle cx="50" cy="200" r="6" />
+                <circle cx="150" cy="150" r="6" />
+                <circle cx="250" cy="220" r="6" />
+                <circle cx="350" cy="100" r="6" />
+                <circle cx="450" cy="180" r="6" />
+                <circle cx="550" cy="50" r="6" />
+                <circle cx="650" cy="210" r="6" />
+                <circle cx="750" cy="160" r="6" />
+              </g>
+
+              <g fill="#fff" fontSize="12" fontWeight="600">
+                <text x="40" y="225">t0</text>
+                <text x="140" y="135">t1</text>
+                <text x="240" y="240">t2</text>
+                <text x="340" y="85">t3</text>
+                <text x="440" y="200">t4</text>
+                <text x="540" y="35">t5</text>
+                <text x="640" y="230">t6</text>
+                <text x="740" y="145">t7</text>
+              </g>
+            </svg>
+          </div>
+        </section>
+
+        {/* Section 10c: Ionospheric Faraday Rotation */}
+        <section className="glass-panel" style={{ padding: '3rem', marginBottom: '4rem', borderRadius: '16px', background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(127,191,142,0.1) 100%)', border: '1px solid rgba(127,191,142,0.3)' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '2rem' }}>
+            <div style={{ flexShrink: 0, fontSize: '3.5rem' }}>🧠</div>
+            <div>
+              <h2 style={{ margin: '0 0 0.5rem 0', fontSize: '2rem', color: 'var(--pass, #7FBF8E)' }}>AI Ionospheric Faraday Rotation Compensation</h2>
+              <p style={{ color: 'var(--text-2, #94A3B8)', margin: '0 0 1rem 0', lineHeight: 1.6, fontSize: '1.1rem' }}>
+                L-band SAR signals are highly susceptible to Faraday rotation as they pass through the Earth's ionosphere, 
+                causing polarization shifts and phase unwrapping errors. Our neural network architecture incorporates a specialized 
+                <strong> Total Electron Content (TEC)</strong> estimation module that dynamically compensates for these atmospheric anomalies 
+                using quad-polarimetric signatures.
+              </p>
+              <div style={{ display: 'inline-block', padding: '0.75rem 1.25rem', background: 'rgba(0,0,0,0.4)', borderRadius: '8px', border: '1px solid rgba(127,191,142,0.3)', fontSize: '0.95rem', color: '#fff' }}>
+                <span style={{ color: 'var(--pass)', marginRight: '8px' }}>✔</span> Phase Unwrapping Error reduced by <strong>42%</strong> globally.
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* Section 11: Methodology & Data Provenance */}
         <section className="glass-panel" style={{ padding: '3rem', borderRadius: '16px' }}>
           <h2 style={{ margin: '0 0 1.5rem 0', fontSize: '2rem' }}>Methodology &amp; Reproducibility</h2>
