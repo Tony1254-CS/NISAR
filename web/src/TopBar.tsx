@@ -15,14 +15,6 @@ export function TopBar({ reaches }: { reaches: ReachListItem[] | null }) {
       reaches={reaches}
       reachId={reachId}
       onReachChange={setReachId}
-      onAnalyzeClick={() => {
-        if (analysisMode) {
-          setAnalysisMode(false);
-          setAnalysisSplit(false);
-        } else {
-          setAnalysisMode(true);
-        }
-      }}
       dataInfo={dataInfo}
     />
   );

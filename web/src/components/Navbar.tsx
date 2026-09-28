@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../state/store';
+import { TABS, type TabId } from '../panels/EvidenceTabs';
 import '../styles/navbar.css';
 
 interface NavbarProps {
@@ -13,8 +14,6 @@ interface NavbarProps {
   reachId?: string | null;
   /** Callback when reach changes */
   onReachChange?: (id: string) => void;
-  /** Callback to open agentic workflow */
-  onAnalyzeClick?: () => void;
   /** Latest data info */
   dataInfo?: string;
 }
@@ -25,10 +24,9 @@ export function Navbar({
   reaches,
   reachId,
   onReachChange,
-  onAnalyzeClick,
   dataInfo,
 }: NavbarProps) {
-  const { sensoryMode, setSensoryMode, cinematicMode, setCinematicMode, layers, setLayers } = useStore();
+  const { sensoryMode, setSensoryMode, cinematicMode, setCinematicMode, layers, setLayers, setAnalysisMode, setAnalysisModeType, setAnalysisActiveTab, setAnalysisStepIndex, setAnalysisState, setAnalysisSplit } = useStore();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [voiceStatus, setVoiceStatus] = useState('🔊 Audio');
@@ -205,9 +203,36 @@ export function Navbar({
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                 Forecast
               </button>
+              
+              <div style={{ width: 1, height: 24, background: 'rgba(255,255,255,0.2)', margin: '0 8px' }} />
+
+              {TABS.map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => {
+                    setAnalysisMode(true);
+                    setAnalysisModeType('SINGLE');
+                    setAnalysisActiveTab(t.id);
+                    setAnalysisState('PROCESSING');
+                    setAnalysisSplit(false);
+                  }}
+                  className="navbar__btn"
+                  style={{ background: 'transparent', border: '1px solid rgba(57,196,217,0.3)', color: 'var(--water)', padding: '6px 10px', fontSize: '0.65rem', textTransform: 'uppercase' }}
+                  title={t.hint}
+                >
+                  {t.label}
+                </button>
+              ))}
 
               <button
-                onClick={onAnalyzeClick}
+                onClick={() => {
+                  setAnalysisMode(true);
+                  setAnalysisModeType('FULL');
+                  setAnalysisStepIndex(0);
+                  setAnalysisActiveTab(TABS[0].id);
+                  setAnalysisState('PROCESSING');
+                  setAnalysisSplit(false);
+                }}
                 className="navbar__btn navbar__btn--primary"
                 style={{ padding: '6px 16px', marginLeft: '4px', fontSize: '0.75rem' }}
               >

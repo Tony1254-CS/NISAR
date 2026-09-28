@@ -3,9 +3,9 @@ import { useStore } from '../state/store';
 import type { QCCheck } from '../data/types';
 import { Inspectable } from '../components/Inspectable';
 
-type TabId = 'detect' | 'investigate' | 'challenge' | 'explain' | 'field' | 'impact';
+export type TabId = 'detect' | 'investigate' | 'challenge' | 'explain' | 'field' | 'impact';
 
-const TABS: { id: TabId; label: string; hint: string }[] = [
+export const TABS: { id: TabId; label: string; hint: string }[] = [
   { id: 'detect', label: 'Detect', hint: 'radar measurement' },
   { id: 'investigate', label: 'Investigate', hint: 'cross-sensor sync' },
   { id: 'challenge', label: 'Challenge', hint: 'adversarial test' },
@@ -642,6 +642,7 @@ export function EvidenceTabs({ isReportMode = false }: { isReportMode?: boolean 
     setAnalysisActiveTab(null);
     setLogs([]);
     setAnalysisSplit(false);
+    setAnalysisMode(false);
   };
 
   if (isReportMode && analysisActiveTab) {
@@ -695,20 +696,6 @@ export function EvidenceTabs({ isReportMode = false }: { isReportMode?: boolean 
         </button>
       </div>
       <div className="agentic-panel__content">
-        {analysisState === 'IDLE' ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <button className="agentic-action-btn" onClick={() => startAnalysis('FULL')} style={{ width: '100%', marginBottom: 16 }}>
-            Start Full Analysis
-          </button>
-          
-          <div style={{ fontSize: '0.65rem', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Or analyze individually:</div>
-          {TABS.map(t => (
-            <button key={t.id} className="agentic-action-btn" onClick={() => startAnalysis(t.id)} style={{ width: '100%', padding: '8px', fontSize: '0.75rem', background: 'transparent' }}>
-              {t.label}
-            </button>
-          ))}
-        </div>
-      ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           
           {/* Step Indicators (Only show in FULL mode) */}
@@ -760,8 +747,7 @@ export function EvidenceTabs({ isReportMode = false }: { isReportMode?: boolean 
             </button>
           )}
         </div>
-      )}
-    </div>
+      </div>
     </>
   );
 }
