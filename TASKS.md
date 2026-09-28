@@ -352,6 +352,22 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (r
   - Test: toggles only appear when P10.1 produced real data for that layer.
   - Depends: P10.1, P9.1
 
+- [ ] **P10.3** `pipeline/fetch_earthquakes.py` — fetch regional earthquake events using NASA EONET API.
+  - Test: API call to `eonet.gsfc.nasa.gov` succeeds and produces `data/raw/common/earthquakes.json` containing valid GeoJSON points for recent earthquakes.
+  - Depends: P10.1
+
+- [ ] **P10.4** Frontend visualization of earthquakes on the map and hydrograph.
+  - Test: UI reads earthquake data from the bundle and plots epicenters on `MapStage.tsx` and seismic ticks on `Hydrograph.tsx`.
+  - Depends: P10.3
+
+- [ ] **P10.5** `pipeline/predict.py` — generate geomorphological forecast based on historical change and CEGIS data.
+  - Test: produces `data/raw/common/prediction.geojson` with erosion, accretion, and ambiguity regions.
+  - Depends: P10.1
+
+- [ ] **P10.6** Frontend visualization of `prediction.geojson` layers.
+  - Test: UI shows a Forecast toggle button that activates prediction risk areas (red/yellow) on the map and includes interactive popups with reasoning.
+  - Depends: P10.5
+
 ---
 
 ## Phase 11 — Error handling pass (§27 row P11)

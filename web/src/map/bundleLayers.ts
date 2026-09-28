@@ -139,6 +139,98 @@ export function ensureReachLayers(
       paint: { 'line-color': '#2A3036', 'line-dasharray': [2, 4], 'line-width': 1, 'line-opacity': 0.5 },
     });
   }
+  
+  if (!map.getSource('earthquake-source')) {
+    map.addSource('earthquake-source', { type: 'geojson', data: `${opts.baseUrl}/earthquakes.json` });
+    map.addLayer({
+      id: 'layer-12-earthquakes',
+      type: 'circle',
+      source: 'earthquake-source',
+      layout: { visibility: 'none' },
+      paint: {
+        'circle-radius': ['*', ['get', 'mag'], 4],
+        'circle-color': '#ff5a00',
+        'circle-opacity': 0.6,
+        'circle-stroke-width': 2,
+        'circle-stroke-color': '#ffaa00'
+      }
+    });
+  }
+
+  if (!map.getSource('prediction-source')) {
+    map.addSource('prediction-source', { type: 'geojson', data: `${opts.baseUrl}/prediction.geojson` });
+    
+    // Erosion Prediction
+    map.addLayer({
+      id: 'layer-13-predict-erosion',
+      type: 'fill',
+      source: 'prediction-source',
+      layout: { visibility: 'none' },
+      filter: ['==', 'type', 'erosion_risk'],
+      paint: {
+        'fill-color': '#ff0000',
+        'fill-opacity': 0.4,
+        'fill-outline-color': '#ff0000'
+      }
+    });
+
+    // Accretion Prediction
+    map.addLayer({
+      id: 'layer-13-predict-accretion',
+      type: 'fill',
+      source: 'prediction-source',
+      layout: { visibility: 'none' },
+      filter: ['==', 'type', 'accretion_risk'],
+      paint: {
+        'fill-color': '#f1c40f',
+        'fill-opacity': 0.4,
+        'fill-outline-color': '#f1c40f'
+      }
+    });
+
+    // Ambiguity Prediction
+    map.addLayer({
+      id: 'layer-13-predict-ambiguity',
+      type: 'fill',
+      source: 'prediction-source',
+      layout: { visibility: 'none' },
+      filter: ['==', 'type', 'ambiguity'],
+      paint: {
+        'fill-color': '#95a5a6',
+        'fill-opacity': 0.3,
+        'fill-outline-color': '#7f8c8d'
+      }
+    });
+  }
+}
+
+let earthquakeAnimationId: number;
+let animationStartTime = 0;
+
+export function setEarthquakeLayerVisible(map: MlMap, visible: boolean) {
+  if (map.getLayer('layer-12-earthquakes')) {
+    map.setLayoutProperty('layer-12-earthquakes', 'visibility', visible ? 'visible' : 'none');
+    
+    if (visible) {
+      animationStartTime = performance.now();
+      const animate = (timestamp: number) => {
+        if (!map.getLayer('layer-12-earthquakes')) return;
+        // Calculate a pulsating value between 0 and 1
+        const progress = ((timestamp - animationStartTime) % 2000) / 2000;
+        const radiusMultiplier = 1 + progress * 1.5; // expands up to 2.5x
+        const opacity = 1 - progress; // fades out
+
+        map.setPaintProperty('layer-12-earthquakes', 'circle-radius', ['*', ['get', 'mag'], 4 * radiusMultiplier]);
+        map.setPaintProperty('layer-12-earthquakes', 'circle-opacity', 0.8 * opacity);
+        map.setPaintProperty('layer-12-earthquakes', 'circle-stroke-opacity', opacity);
+
+        earthquakeAnimationId = requestAnimationFrame(animate);
+      };
+      earthquakeAnimationId = requestAnimationFrame(animate);
+    } else {
+      cancelAnimationFrame(earthquakeAnimationId);
+    }
+  }
 }
 
 export function updateRadarWaterImage(map: MlMap, baseUrl: string, date: string) {
@@ -168,6 +260,33 @@ export function setChangeLayersVisible(
   setLayerVisible(map, 'layer-8-erosion', opts.erosion);
   setLayerVisible(map, 'layer-9-outlines', opts.erosion);
   setLayerVisible(map, 'layer-6-ambiguous', opts.ambiguous);
+}
+
+let predictionAnimationId: number;
+let predAnimationStartTime = 0;
+
+export function setPredictionLayerVisible(map: MlMap, visible: boolean) {
+  const layers = ['layer-13-predict-erosion', 'layer-13-predict-accretion', 'layer-13-predict-ambiguity'];
+  layers.forEach(layer => setLayerVisible(map, layer, visible));
+
+  if (visible) {
+    predAnimationStartTime = performance.now();
+    const animate = (timestamp: number) => {
+      // Pulse between 0.2 and 0.6 opacity
+      const progress = (Math.sin((timestamp - predAnimationStartTime) / 300) + 1) / 2; // 0 to 1
+      const opacity = 0.2 + progress * 0.4;
+      
+      layers.forEach(layer => {
+        if (map.getLayer(layer)) {
+          map.setPaintProperty(layer, 'fill-opacity', opacity);
+        }
+      });
+      predictionAnimationId = requestAnimationFrame(animate);
+    };
+    predictionAnimationId = requestAnimationFrame(animate);
+  } else {
+    cancelAnimationFrame(predictionAnimationId);
+  }
 }
 
 /** Ambiguous overlay: pre-rendered raster PNG (class 4 pixels only), Section 22.1 row 6. */

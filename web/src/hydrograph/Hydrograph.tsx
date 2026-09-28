@@ -158,6 +158,23 @@ export function Hydrograph({ width = 800, height = 150 }) {
               </g>
             );
           })}
+          {/* Earthquake Ticks */}
+          {[{ date: "2026-08-26", mag: 5.2 }, { date: "2026-09-19", mag: 4.8 }].map(eq => {
+            const dateStr = eq.date + "T00:00:00Z";
+            const cx = xScale(tParse(dateStr));
+            // Find stage height at this date to put the marker on the curve if possible
+            const acq = acqs.find(a => a.date === eq.date.replace(/-/g, ''));
+            const cy = acq ? yScale(acq.h) : (innerHeight / 2);
+            return (
+              <g key={eq.date} transform={`translate(${cx},${cy})`}>
+                <line y1={-20} y2={20} stroke="#ff5a00" strokeWidth={1} strokeDasharray="2,2" />
+                <circle r={3} fill="#ff5a00" />
+                <rect x={-8} y={-35} width={16} height={12} fill="#ff5a00" rx={2} />
+                <text y={-26} fill="#fff" fontSize="8" textAnchor="middle" fontWeight="bold">EQ</text>
+                <text x={10} y={-26} fill="#ff5a00" fontSize="9" fontWeight="bold">M {eq.mag}</text>
+              </g>
+            );
+          })}
         </g>
       </svg>
     </div>

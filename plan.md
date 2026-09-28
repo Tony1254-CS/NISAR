@@ -398,6 +398,22 @@ Source: CEGIS forecast as published/visualised by The Daily Star (https://campai
 ### 6.10 Admin boundaries & place names (SHOULD)
 geoBoundaries (CC BY 4.0) Bangladesh ADM3/ADM4 — https://www.geoboundaries.org — for upazila/union labels only. Bengali names: take from the dataset if present; otherwise English only. Do not machine-translate names.
 
+### 6.11 NASA EONET Earthquakes (SHOULD)
+| Field | Value |
+|---|---|
+| Provider | NASA Earth Observatory Natural Event Tracker (EONET) |
+| Docs | https://eonet.gsfc.nasa.gov/docs/v3 |
+| Endpoint | `https://eonet.gsfc.nasa.gov/api/v3/categories/earthquakes` |
+| Use | Fetch regional seismic activity (date, coordinates, magnitude) overlapping the time period of our radar acquisitions. This helps provide natural disaster context that might correlate with river morphology changes. |
+| Fallback | If the API is unreachable, skip showing seismic activity (graceful degradation). |
+Storage: `data/raw/common/earthquakes.json`
+
+### 6.12 CEGIS Forecast & Geomorphological Prediction (SHOULD)
+| Field | Value |
+|---|---|
+| Provider | CEGIS 2026 River Erosion Forecast or derived Geomorphological rules |
+| Output | `prediction.geojson` (Polygons with erosion_risk, accretion_risk, ambiguity) |
+| Use | Displays future predicted river bank migration and sediment buildup to create an Early Warning System layer. Hovering/clicking on these areas explains the probability and morphological rationale. |
 ---
 
 ## 7. Raw data structure (what we actually read)

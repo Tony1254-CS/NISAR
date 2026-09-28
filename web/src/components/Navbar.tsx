@@ -28,7 +28,7 @@ export function Navbar({
   onAnalyzeClick,
   dataInfo,
 }: NavbarProps) {
-  const { sensoryMode, setSensoryMode, cinematicMode, setCinematicMode } = useStore();
+  const { sensoryMode, setSensoryMode, cinematicMode, setCinematicMode, layers, setLayers } = useStore();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [voiceStatus, setVoiceStatus] = useState('🔊 Audio');
@@ -169,6 +169,16 @@ export function Navbar({
               </button>
               
               <button 
+                onClick={() => setLayers({ earthquakes: !layers.earthquakes })}
+                className="navbar__btn"
+                style={{ background: layers.earthquakes ? '#ff5a00' : 'transparent', border: `1px solid #ff5a00`, color: layers.earthquakes ? '#000' : '#ff5a00', padding: '6px 10px', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                title="NASA EONET Seismic Activity"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                Earthquakes
+              </button>
+              
+              <button 
                 onClick={() => setSensoryMode(!sensoryMode)}
                 className="navbar__btn"
                 style={{ background: sensoryMode ? 'var(--warn)' : 'transparent', border: `1px solid var(--warn)`, color: sensoryMode ? '#000' : 'var(--warn)', padding: '6px 10px', fontSize: '0.7rem' }}
@@ -184,6 +194,16 @@ export function Navbar({
                 title="5-Sec X-Ray Optical/SAR Swipe"
               >
                 🎬 Swipe
+              </button>
+
+              <button 
+                onClick={() => setLayers({ forecast: !layers.forecast })}
+                className="navbar__btn"
+                style={{ background: layers.forecast ? '#9b59b6' : 'transparent', border: `1px solid #9b59b6`, color: layers.forecast ? '#fff' : '#9b59b6', padding: '6px 10px', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                title="Erosion & Accretion Forecast"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                Forecast
               </button>
 
               <button

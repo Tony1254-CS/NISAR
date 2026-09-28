@@ -139,6 +139,100 @@ export function MapStage() {
     setWaterVisible(map, layers.water);
   }, [mapLoaded, layers.water]);
 
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+    // Assume setEarthquakeLayerVisible is exported from bundleLayers
+    import('./bundleLayers').then(({ setEarthquakeLayerVisible, setPredictionLayerVisible }) => {
+      setEarthquakeLayerVisible(map, layers.earthquakes);
+      setPredictionLayerVisible(map, layers.forecast);
+    });
+  }, [mapLoaded, layers.earthquakes, layers.forecast]);
+
+  // Handle prediction clicks
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+    
+    const clickHandler = (e: any) => {
+      const f = e.features?.[0];
+      if (!f) return;
+      const p = f.properties;
+      let title = 'Forecast';
+      let color = '#999';
+      if (p.type === 'erosion_risk') { title = 'Erosion Risk'; color = '#ff0000'; }
+      else if (p.type === 'accretion_risk') { title = 'Accretion Risk'; color = '#f1c40f'; }
+      else if (p.type === 'ambiguity') { title = 'Ambiguity / Uncertainty'; color = '#95a5a6'; }
+      
+      new maplibregl.Popup({ closeButton: true })
+        .setLngLat(e.lngLat)
+        .setHTML(`
+          <div style="padding:4px; color:#111; font-family:var(--font-base);">
+            <h4 style="margin:0 0 8px 0; color:${color}; font-size:14px;">${title}</h4>
+            <div style="margin-bottom:4px;"><b>Probability:</b> ${p.probability}%</div>
+            <div style="margin-bottom:4px;"><b>Reasoning:</b> ${p.reason}</div>
+            <div style="font-size:11px; color:#666; margin-top:8px;">AI Prediction Model</div>
+          </div>
+        `)
+        .addTo(map);
+    };
+
+    const mouseEnterHandler = () => { map.getCanvas().style.cursor = 'pointer'; };
+    const mouseLeaveHandler = () => { map.getCanvas().style.cursor = ''; };
+
+    const layers = ['layer-13-predict-erosion', 'layer-13-predict-accretion', 'layer-13-predict-ambiguity'];
+    layers.forEach(layer => {
+      map.on('click', layer, clickHandler);
+      map.on('mouseenter', layer, mouseEnterHandler);
+      map.on('mouseleave', layer, mouseLeaveHandler);
+    });
+
+    return () => {
+      layers.forEach(layer => {
+        map.off('click', layer, clickHandler);
+        map.off('mouseenter', layer, mouseEnterHandler);
+        map.off('mouseleave', layer, mouseLeaveHandler);
+      });
+    };
+  }, [mapLoaded]);
+
+  // Handle earthquake clicks for descriptive popup
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+    
+    const clickHandler = (e: any) => {
+      const f = e.features?.[0];
+      if (!f || f.geometry.type !== 'Point') return;
+      const coords = f.geometry.coordinates as [number, number];
+      const p = f.properties;
+      new maplibregl.Popup({ closeButton: true })
+        .setLngLat(coords)
+        .setHTML(`
+          <div style="padding:4px; color:#111; font-family:var(--font-base);">
+            <h4 style="margin:0 0 8px 0; color:#ff5a00; font-size:14px;">${p.title}</h4>
+            <div style="margin-bottom:4px;"><b>Magnitude:</b> ${p.mag}</div>
+            <div style="margin-bottom:4px;"><b>Date:</b> ${p.date}</div>
+            <div style="font-size:11px; color:#666; margin-top:8px;">Source: NASA EONET API</div>
+          </div>
+        `)
+        .addTo(map);
+    };
+
+    const mouseEnterHandler = () => { map.getCanvas().style.cursor = 'pointer'; };
+    const mouseLeaveHandler = () => { map.getCanvas().style.cursor = ''; };
+
+    map.on('click', 'layer-12-earthquakes', clickHandler);
+    map.on('mouseenter', 'layer-12-earthquakes', mouseEnterHandler);
+    map.on('mouseleave', 'layer-12-earthquakes', mouseLeaveHandler);
+
+    return () => {
+      map.off('click', 'layer-12-earthquakes', clickHandler);
+      map.off('mouseenter', 'layer-12-earthquakes', mouseEnterHandler);
+      map.off('mouseleave', 'layer-12-earthquakes', mouseLeaveHandler);
+    };
+  }, [mapLoaded]);
+
   // Change layers (erosion/accretion/ambiguous): only meaningful in compare
   // mode, and each also gated by its own LayerToggles state.
   useEffect(() => {

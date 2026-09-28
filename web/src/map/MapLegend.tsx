@@ -46,11 +46,29 @@ export function MapLegend() {
       )}
       
       {layers.forecast && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s2)', marginTop: 'var(--s1)' }}>
-          <span style={{ display: 'inline-block', width: 12, height: 12, borderTop: '2px dashed var(--forecast)' }}></span>
-          <span>CEGIS 2026 forecast</span>
+        <div style={{ marginTop: 'var(--s2)', paddingTop: 'var(--s1)', borderTop: '1px solid var(--line)', animation: 'fadeInUp 0.3s ease-out' }}>
+          <h5 style={{ margin: '0 0 var(--s1) 0', color: '#9b59b6' }}>Forecast Prediction</h5>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s2)' }}>
+            <span style={{ display: 'inline-block', width: 12, height: 12, background: '#ff0000', opacity: 0.4, border: '1px solid #ff0000' }}></span>
+            <span>Erosion Risk</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s2)', marginTop: '4px' }}>
+            <span style={{ display: 'inline-block', width: 12, height: 12, background: '#f1c40f', opacity: 0.4, border: '1px solid #f1c40f' }}></span>
+            <span>Accretion Risk</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s2)', marginTop: '4px' }}>
+            <span style={{ display: 'inline-block', width: 12, height: 12, background: '#95a5a6', opacity: 0.3, border: '1px solid #7f8c8d' }}></span>
+            <span>Ambiguity</span>
+          </div>
         </div>
       )}
+
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}} />
     </div>
   );
 }
