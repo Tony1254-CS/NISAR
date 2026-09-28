@@ -8,7 +8,7 @@ import '../styles/globe.css';
    ═══════════════════════════════════════════════════════════════ */
 
 const BANDS = [
-  { name: 'X-band', freq: '8–12 GHz', wl: '2.5–3.75 cm', pen: '~1 cm', use: 'Urban mapping, subsidence', color: '#ff5a5a', sat: 'TerraSAR-X, COSMO-SkyMed' },
+  { name: 'X-band', freq: '8–12 GHz', wl: '2.5–3.75 cm', pen: '~1 cm', use: 'Urban mapping, subsidence', color: 'var(--erosion)', sat: 'TerraSAR-X, COSMO-SkyMed' },
   { name: 'C-band', freq: '4–8 GHz', wl: '3.75–7.5 cm', pen: '~5 cm', use: 'Sea ice, agriculture, Sentinel-1', color: '#E0B34A', sat: 'Sentinel-1 A/B, Radarsat-2' },
   { name: 'L-band', freq: '1–2 GHz', wl: '15–30 cm', pen: '~30 cm', use: 'Forest biomass, soil moisture, NISAR', color: 'var(--water)', sat: 'NISAR, ALOS-2 PALSAR', highlight: true },
   { name: 'P-band', freq: '0.3–1 GHz', wl: '30–100 cm', pen: '>1 m', use: 'Subsurface, biomass (BIOMASS mission)', color: '#7FBF8E', sat: 'ESA BIOMASS (planned)' },
@@ -45,7 +45,7 @@ const NISAR_SPECS = [
 
 function GlassCard({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return (
-    <div className="glass-panel" style={{ padding: 'var(--s5)', ...style }}>
+    <div className="glass-panel hover-lift" style={{ padding: 'var(--s5)', ...style }}>
       {children}
     </div>
   );
@@ -70,7 +70,7 @@ export function SARLabPage() {
   const [hAlphaMode, setHAlphaMode] = useState(false);
 
   return (
-    <div style={{ background: '#07090A', minHeight: '100vh', color: 'var(--text)' }}>
+    <div style={{ background: 'var(--bg)', minHeight: '100vh', color: 'var(--text)' }}>
       <Navbar />
       <div className="navbar-spacer" />
 
@@ -97,7 +97,7 @@ export function SARLabPage() {
           <SectionTitle title="NISAR Mission Parameters" subtitle="The most expensive Earth science radar satellite ever built — a joint NASA-ISRO mission designed to measure Earth's changing ecosystems." />
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 'var(--s3)' }}>
             {NISAR_SPECS.map((spec) => (
-              <div key={spec.param} className="glass-panel" style={{ padding: 'var(--s4)', display: 'flex', gap: 'var(--s3)', alignItems: 'flex-start' }}>
+              <div key={spec.param} className="glass-panel hover-lift" style={{ padding: 'var(--s4)', display: 'flex', gap: 'var(--s3)', alignItems: 'flex-start' }}>
                 <div style={{ fontSize: '1.5rem', flexShrink: 0, width: 40, textAlign: 'center' }}>{spec.icon}</div>
                 <div>
                   <div style={{ fontSize: '0.7rem', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{spec.param}</div>
@@ -220,7 +220,7 @@ export function SARLabPage() {
             {POL_CHANNELS.map((pol, i) => (
               <div
                 key={pol.id}
-                className="glass-panel"
+                className="glass-panel hover-lift"
                 onClick={() => setActivePol(i)}
                 style={{
                   padding: 'var(--s4)',
@@ -450,12 +450,12 @@ export function SARLabPage() {
             <GlassCard>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--s3)' }}>
                 <div>
-                  <h3 style={{ margin: '0 0 var(--s2) 0', color: '#ff5a5a', fontSize: '1.2rem' }}>InSAR Fringes (Phase)</h3>
+                  <h3 style={{ margin: '0 0 var(--s2) 0', color: 'var(--erosion)', fontSize: '1.2rem' }}>InSAR Fringes (Phase)</h3>
                   <p style={{ color: 'var(--text-3)', fontSize: '0.9rem', margin: 0 }}>Simulate interferometric phase over the terrain.</p>
                 </div>
                 <button 
                   onClick={() => setInsarFringes(!insarFringes)}
-                  style={{ padding: '8px 16px', background: insarFringes ? 'rgba(255,90,90,0.15)' : 'transparent', border: `1px solid ${insarFringes ? '#ff5a5a' : 'var(--glass-border)'}`, color: insarFringes ? '#ff5a5a' : 'var(--text)', borderRadius: 'var(--r-full)', cursor: 'pointer', transition: 'all 0.3s' }}
+                  style={{ padding: '8px 16px', background: insarFringes ? 'rgba(255,90,90,0.15)' : 'transparent', border: `1px solid ${insarFringes ? 'var(--erosion)' : 'var(--glass-border)'}`, color: insarFringes ? 'var(--erosion)' : 'var(--text)', borderRadius: 'var(--r-full)', cursor: 'pointer', transition: 'all 0.3s' }}
                 >
                   {insarFringes ? 'Disable Fringes' : 'Enable Fringes'}
                 </button>
@@ -497,7 +497,7 @@ export function SARLabPage() {
 
               {hAlphaMode && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 'var(--s3)', marginTop: 'var(--s4)', animation: 'fadeIn 0.5s' }}>
-                  <div style={{ padding: 'var(--s3)', background: 'rgba(255,90,90,0.1)', border: '1px solid #ff5a5a', borderRadius: 'var(--r-md)', textAlign: 'center', color: '#ff5a5a' }}>
+                  <div style={{ padding: 'var(--s3)', background: 'rgba(255,90,90,0.1)', border: '1px solid var(--erosion)', borderRadius: 'var(--r-md)', textAlign: 'center', color: 'var(--erosion)' }}>
                     <div style={{ fontSize: '1.5rem', marginBottom: '4px' }}>🏢</div>
                     <strong>Double-Bounce</strong><br/>
                     <span style={{ fontSize: '0.8rem', color: 'var(--text-3)' }}>Urban / Trunks</span>
