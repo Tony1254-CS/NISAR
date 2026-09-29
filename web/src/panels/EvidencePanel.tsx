@@ -35,20 +35,7 @@ export function EvidencePanel() {
     .filter((c): c is NonNullable<typeof c> => Boolean(c));
 
   return (
-    <div
-      style={{
-        position: 'absolute',
-        top: 20,
-        right: 20,
-        width: 400,
-        maxHeight: '90vh',
-        background: 'var(--panel)',
-        border: '1px solid var(--line)',
-        padding: 'var(--s4)',
-        overflowY: 'auto',
-        zIndex: 200,
-      }}
-    >
+    <div className="evidence-panel">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--s3)' }}>
         <h3 style={{ margin: 0 }}>Evidence: {selectedFeatureId}</h3>
         <button

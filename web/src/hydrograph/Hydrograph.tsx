@@ -10,7 +10,7 @@ export function Hydrograph({ width = 800, height = 150 }) {
   
   if (!stage) return <div className="hydrograph-skeleton" style={{ width, height }} />;
 
-  const margin = { top: 20, right: 20, bottom: 20, left: 40 };
+  const margin = { top: 20, right: 100, bottom: 20, left: 60 };
   const innerWidth = width - margin.left - margin.right;
   const innerHeight = height - margin.top - margin.bottom;
 

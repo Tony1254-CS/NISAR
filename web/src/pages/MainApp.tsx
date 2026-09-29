@@ -19,7 +19,7 @@ import { CinematicDescription } from '../components/CinematicDescription';
 type LoadStatus = 'loading' | 'ready' | 'empty' | 'error';
 
 export default function MainApp() {
-  const { reachId, selectedFeatureId, panel, setReachId, loadBundle, analysisMode, analysisSplit, setAnalysisMode, setAnalysisSplit, analysisState, analysisActiveTab, analysisModeType, inspectMode, setInspectMode, chatOpen } = useStore();
+  const { reachId, selectedFeatureId, panel, setReachId, loadBundle, analysisMode, analysisSplit, setAnalysisMode, setAnalysisSplit, analysisState, analysisActiveTab, analysisModeType, inspectMode, setInspectMode, chatOpen, cinematicMode } = useStore();
   const [reaches, setReaches] = useState<ReachListItem[] | null>(null);
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [errorFile, setErrorFile] = useState('reaches.json');
@@ -89,26 +89,18 @@ export default function MainApp() {
   }, [reachId, retryToken, loadBundle]);
 
   return (
-    <div style={{ 
-      width: chatOpen ? '70vw' : '100vw', 
-      height: '100vh', 
-      display: 'flex', 
-      flexDirection: 'column',
-      transition: 'width 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-      overflow: 'hidden',
-      cursor: inspectMode ? 'help' : 'default'
-    }}>
+    <div className={`main-app-container ${chatOpen ? 'chat-open' : ''} ${inspectMode ? 'inspect-mode' : ''}`}>
       {/* Global Toast for Inspect Mode */}
       {inspectMode && (
-        <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', background: 'var(--water)', color: '#000', padding: '8px 16px', borderRadius: 20, fontWeight: 700, fontSize: '0.8rem', zIndex: 9999, boxShadow: '0 4px 12px rgba(57,196,217,0.4)', animation: 'fade-in 0.3s ease-out' }}>
+        <div className="inspect-toast">
           Mode ON: Click on any highlighted box to start chatting
         </div>
       )}
 
       <TopBar reaches={reaches} />
       <div className="navbar-spacer" style={{ flexShrink: 0 }} />
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>
-        <div className="print-hide" style={{ flex: 1, position: 'relative' }}>
+      <div className={`main-app-content ${analysisSplit ? 'split-active' : ''}`}>
+        <div className="print-hide map-container-area" style={{ flex: 1, position: 'relative' }}>
           {status === 'loading' && <Loading />}
         {status === 'empty' && (
           <div style={{ padding: 'var(--s6)', color: 'var(--text-2)' }}>
@@ -124,9 +116,9 @@ export default function MainApp() {
         {status === 'ready' && (
           <>
             <MapStage />
-            {!analysisSplit && <StoryPanel />}
-            {selectedFeatureId && <EvidencePanel />}
-            {panel === 'qc' && <QCPanel />}
+            {!analysisSplit && !cinematicMode && <StoryPanel />}
+            {selectedFeatureId && !cinematicMode && <EvidencePanel />}
+            {panel === 'qc' && !cinematicMode && <QCPanel />}
             
             {/* Agentic Workflow Panel */}
             {analysisMode && !analysisSplit && (
@@ -140,7 +132,7 @@ export default function MainApp() {
         
         {/* The Split Screen Report (Right Half) */}
         {analysisSplit && status === 'ready' && (
-          <div id="report-container" style={{ flex: 1, borderLeft: '1px solid var(--water)', background: 'var(--bg)', display: 'flex', flexDirection: 'column', padding: 'var(--s6)', overflowY: 'auto', position: 'relative' }}>
+          <div id="report-container" className="report-container">
              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--s6)' }} className="print-hide">
                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                  <h2 style={{ color: 'var(--water)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>
@@ -175,9 +167,12 @@ export default function MainApp() {
           </div>
         )}
       </div>
-      <div className="print-hide" style={{ height: 150 }}>
+      <div className="print-hide hydrograph-wrapper">
         {status === 'ready' ? (
-          <Hydrograph width={chatOpen ? windowWidth * 0.7 : windowWidth} height={150} />
+          <Hydrograph 
+             width={chatOpen && windowWidth >= 1024 ? windowWidth * 0.7 : windowWidth} 
+             height={windowWidth <= 480 ? 100 : windowWidth <= 767 ? 120 : 150} 
+          />
         ) : (
           <div className="hydrograph-skeleton" style={{ height: '100%', background: 'var(--bg)' }} />
         )}

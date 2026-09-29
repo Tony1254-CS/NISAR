@@ -215,6 +215,17 @@ export function Landing() {
               gap: 1.5rem;
               margin-top: 1rem;
             }
+            @media (max-width: 600px) {
+              .btn-group {
+                flex-direction: column;
+                gap: 1rem;
+                width: 100%;
+              }
+              .btn-elegant-primary, .btn-elegant-secondary {
+                width: 100%;
+                text-align: center;
+              }
+            }
             .btn-elegant-primary {
               background: #ffffff;
               color: #000000;

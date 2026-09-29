@@ -12,7 +12,7 @@ export function QCPanel() {
   });
 
   return (
-    <div style={{ marginTop: 'var(--s4)' }}>
+    <div className="qc-panel" style={{ marginTop: 0 }}>
       <h3 style={{ borderBottom: '1px solid var(--line)', paddingBottom: 'var(--s2)' }}>Quality Control</h3>
       
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s2)' }}>

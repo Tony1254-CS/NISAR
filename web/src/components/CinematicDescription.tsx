@@ -54,7 +54,7 @@ export function CinematicDescription() {
       style={{ 
         position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, 
         background: 'radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.8) 70%, rgba(0,0,0,0.95) 100%)', 
-        zIndex: 40, 
+        zIndex: 3000, 
         pointerEvents: 'none',
         display: 'flex',
         flexDirection: 'column',
@@ -65,13 +65,13 @@ export function CinematicDescription() {
     >
       <div 
         style={{
-          background: 'rgba(0, 0, 0, 0.6)',
-          border: '1px solid rgba(57, 196, 217, 0.3)',
-          backdropFilter: 'blur(8px)',
-          padding: '32px',
-          borderRadius: '12px',
-          boxShadow: '0 0 40px rgba(57, 196, 217, 0.1)',
-          maxWidth: '600px',
+          background: 'rgba(0, 0, 0, 0.75)',
+          border: '1px solid rgba(57, 196, 217, 0.4)',
+          backdropFilter: 'blur(12px)',
+          padding: '40px',
+          borderRadius: '16px',
+          boxShadow: '0 0 50px rgba(57, 196, 217, 0.15)',
+          maxWidth: '700px',
           pointerEvents: 'auto',
           animation: 'fade-in 0.5s ease-out'
         }}
@@ -90,21 +90,21 @@ export function CinematicDescription() {
         </div>
 
         {textStage >= 1 && (
-          <h2 className="typewriter-text" style={{ color: 'var(--water)', fontSize: '2rem', marginBottom: 16, textTransform: 'uppercase', textShadow: '0 0 10px var(--water)' }}>
-            Target: {reach?.name ?? 'Jamuna River System'}
+          <h2 className="typewriter-text" style={{ color: 'var(--water)', fontSize: '2.5rem', marginBottom: 16, textTransform: 'uppercase', textShadow: '0 0 10px var(--water)' }}>
+            Target: {reach?.name ?? 'Investigation Area'}
           </h2>
         )}
 
         {textStage >= 2 && (
           <div style={{ animation: 'fade-in 1s ease-out' }}>
-            <p style={{ color: 'var(--text)', fontSize: '1.1rem', lineHeight: 1.8, marginBottom: 16 }}>
-              The Jamuna River is one of the world's most volatile braided river systems. It exhibits rapid morphological changes, shifting its banks by hundreds of meters annually. The <span style={{ color: 'var(--warn)' }}>Chilmari-Roumari reach</span> represents a critical vulnerability zone due to aggressive lateral erosion.
+            <p style={{ color: 'var(--text)', fontSize: '1.2rem', lineHeight: 1.8, marginBottom: 24 }}>
+              The target area is one of the world's most volatile ecosystems. It exhibits rapid morphological changes, shifting its bounds significantly. The <span style={{ color: 'var(--warn)' }}>{reach?.river ?? 'primary'} reach</span> represents a critical vulnerability zone due to aggressive environmental forcing.
             </p>
-            <div style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid var(--fail)', padding: '16px', borderRadius: '8px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 0 20px rgba(239, 68, 68, 0.2)' }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--fail)" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            <div style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid var(--fail)', padding: '20px', borderRadius: '8px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 0 20px rgba(239, 68, 68, 0.2)' }}>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--fail)" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
               <div>
-                <div style={{ color: 'var(--fail)', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.1em', marginBottom: '4px' }}>CRITICAL ALERT</div>
-                <div style={{ color: '#fff', fontSize: '1.4rem', fontWeight: 800, textShadow: '0 0 10px var(--fail)' }}>LAND LOST TO THE RIVER</div>
+                <div style={{ color: 'var(--fail)', fontSize: '0.85rem', fontWeight: 700, letterSpacing: '0.1em', marginBottom: '4px' }}>CRITICAL ALERT</div>
+                <div style={{ color: '#fff', fontSize: '1.6rem', fontWeight: 800, textShadow: '0 0 10px var(--fail)' }}>SIGNIFICANT LAND SURFACE CHANGE</div>
               </div>
             </div>
           </div>

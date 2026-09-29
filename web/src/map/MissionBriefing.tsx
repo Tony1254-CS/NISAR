@@ -3,7 +3,7 @@ import { useStore } from '../state/store';
 import maplibregl from 'maplibre-gl';
 
 export function MissionBriefing({ map }: { map: maplibregl.Map | null }) {
-  const { reach, cinematicMode, setCinematicMode, setLayers, setSelectedDate } = useStore();
+  const { reach, cinematicMode, setCinematicMode, setLayers, setSelectedDate, setCinematicDesc } = useStore();
   const [step, setStep] = useState(-1);
 
   // We are hijacking 'cinematicMode' state for the briefing
@@ -57,6 +57,7 @@ export function MissionBriefing({ map }: { map: maplibregl.Map | null }) {
 
       // End
       setCinematicMode(false);
+      setCinematicDesc(true);
     };
 
     sequence();

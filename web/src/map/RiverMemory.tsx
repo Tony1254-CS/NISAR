@@ -40,32 +40,33 @@ export function RiverMemory() {
   return (
     <div style={{
       position: 'absolute',
-      bottom: '40px',
+      bottom: '30px',
       left: '50%',
       transform: 'translateX(-50%)',
-      width: '600px',
-      maxWidth: '90%',
-      background: 'rgba(7, 9, 10, 0.75)',
-      backdropFilter: 'blur(10px)',
-      border: '1px solid rgba(255, 255, 255, 0.1)',
-      borderRadius: '8px',
-      padding: '16px',
+      width: 'auto',
+      minWidth: '320px',
+      background: 'rgba(8, 12, 16, 0.85)',
+      backdropFilter: 'blur(12px)',
+      border: '1px solid rgba(57, 196, 217, 0.3)',
+      borderRadius: '24px',
+      padding: '8px 16px',
       display: 'flex',
-      flexDirection: 'column',
-      gap: '12px',
-      zIndex: 10,
-      boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: '16px',
+      zIndex: 200,
+      boxShadow: '0 8px 32px rgba(0,0,0,0.6)'
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h4 style={{ margin: 0, color: 'var(--water)', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '1px' }}>
-          River Memory <span style={{ color: '#888', textTransform: 'none', marginLeft: '8px' }}>Temporal Animator</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <h4 style={{ margin: 0, color: 'var(--text)', fontSize: '12px', fontWeight: 600, letterSpacing: '0.05em' }}>
+          TIME LAPSE
         </h4>
-        <div style={{ fontSize: '12px', color: '#fff', fontFamily: 'monospace' }}>
-          {selectedDate} ({okDates.indexOf(selectedDate!) + 1} / {okDates.length})
-        </div>
       </div>
+        <div style={{ fontSize: '11px', color: 'var(--water)', fontFamily: 'monospace', marginLeft: 'auto', marginRight: 16 }}>
+          {selectedDate}
+        </div>
       
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1 }}>
         <button 
           onClick={() => {
             const current = useStore.getState();
