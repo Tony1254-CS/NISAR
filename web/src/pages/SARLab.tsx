@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { useStore } from '../state/store';
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Navbar } from '../components/Navbar';
 import '../styles/globe.css';
@@ -57,6 +58,350 @@ function SectionTitle({ title, subtitle }: { title: string; subtitle: string }) 
     <div style={{ marginBottom: 'var(--s5)' }}>
       <h2 style={{ fontSize: 'clamp(1.5rem, 3vw, 2.2rem)', fontWeight: 900, color: 'var(--text)', margin: 0, letterSpacing: '-0.02em' }}>{title}</h2>
       <p style={{ fontSize: '1rem', color: 'var(--text-3)', marginTop: 8, maxWidth: 800, lineHeight: 1.6 }}>{subtitle}</p>
+    </div>
+  );
+}
+
+
+function FeatureRadarViewer() {
+  const reachId = useStore(state => state.reachId) || 'jamuna-chilmari';
+  const [sliderPos, setSliderPos] = useState(50);
+  
+  return (
+    <div style={{ marginBottom: 'var(--s8)' }}>
+      <SectionTitle title="Live NISAR Radar Imagery Viewer" subtitle="Our pipeline uses actual L-band backscatter data. See the real imagery and classification outputs below." />
+      <GlassCard>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'var(--s4)' }}>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s2)' }}>
+            <div style={{ position: 'relative', height: 250, overflow: 'hidden', borderRadius: 'var(--r-md)', background: '#000', border: '1px solid var(--glass-border)' }}>
+              <img src={`/data/v1/${reachId}/img/radar_20260919.png`} style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover' }} alt="t1" />
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, clipPath: `polygon(0 0, ${sliderPos}% 0, ${sliderPos}% 100%, 0 100%)` }}>
+                <img src={`/data/v1/${reachId}/img/radar_20260826.png`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="t0" />
+              </div>
+              <div style={{ position: 'absolute', top: 0, bottom: 0, left: `calc(${sliderPos}% - 1px)`, width: 2, background: 'var(--water)', boxShadow: '0 0 10px var(--water)', zIndex: 5, pointerEvents: 'none' }} />
+              <input type="range" min="0" max="100" value={sliderPos} onChange={e => setSliderPos(Number(e.target.value))} style={{ position: 'absolute', width: '100%', top: '0', bottom: '0', opacity: 0, cursor: 'ew-resize', zIndex: 10 }} />
+              <div style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(0,0,0,0.8)', padding: '4px 8px', borderRadius: 4, fontSize: '0.75rem', border: '1px solid var(--glass-border)' }}>Aug 26 (t₀)</div>
+              <div style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(0,0,0,0.8)', padding: '4px 8px', borderRadius: 4, fontSize: '0.75rem', border: '1px solid var(--glass-border)' }}>Sep 19 (t₁)</div>
+            </div>
+            <div style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-3)' }}>Raw σ⁰ HH Backscatter (Compare t₀ vs t₁)</div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s2)' }}>
+            <div style={{ height: 250, borderRadius: 'var(--r-md)', overflow: 'hidden', position: 'relative', background: '#000', border: '1px solid var(--glass-border)' }}>
+              <img src={`/data/v1/${reachId}/img/water_20260826.png`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="water t0" />
+              <div style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(0,0,0,0.8)', padding: '4px 8px', borderRadius: 4, fontSize: '0.75rem', border: '1px solid var(--glass-border)' }}>t₀ Water Mask</div>
+            </div>
+            <div style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-3)' }}>Otsu Threshold Classification</div>
+          </div>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s2)' }}>
+            <div style={{ height: 250, borderRadius: 'var(--r-md)', overflow: 'hidden', position: 'relative', background: '#000', border: '1px solid var(--glass-border)' }}>
+              <img src={`/data/v1/${reachId}/img/change_20260826_20260919.png`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="change" />
+              <div style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(0,0,0,0.8)', padding: '4px 8px', borderRadius: 4, fontSize: '0.75rem', border: '1px solid var(--glass-border)' }}>Red: Erosion</div>
+            </div>
+            <div style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-3)' }}>Morphological Change Detection</div>
+          </div>
+          
+        </div>
+      </GlassCard>
+    </div>
+  );
+}
+
+function FeaturePipelineWalkthrough() {
+  const steps = [
+    { title: "Raw Backscatter", desc: "NISAR GCOV σ⁰ HH image" },
+    { title: "Histogram + Otsu", desc: "Find bimodal threshold" },
+    { title: "Binary Mask", desc: "Land = white, Water = black" },
+    { title: "Median Filter", desc: "Remove speckle holes (5×5)" },
+    { title: "HAND Mask", desc: "Exclude >15m elevation" },
+    { title: "Change Detection", desc: "Diff t₀ and t₁ masks" },
+    { title: "Polygonization", desc: "Extract connected components" },
+    { title: "Erosion Map", desc: "Final QC & product generation" }
+  ];
+  return (
+    <div style={{ marginBottom: 'var(--s8)' }}>
+      <SectionTitle title="Water Classification Pipeline Walkthrough" subtitle="From pixels to people. Every step of our algorithmic journey." />
+      <GlassCard>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--s2)', justifyContent: 'center' }}>
+          {steps.map((step, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center' }}>
+              <div style={{ padding: 'var(--s3)', background: 'rgba(255,255,255,0.05)', borderRadius: 'var(--r-md)', width: 140, border: '1px solid var(--glass-border)', textAlign: 'center' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--water)', marginBottom: 4, fontWeight: 'bold' }}>Step {i+1}</div>
+                <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{step.title}</div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-3)', marginTop: 4 }}>{step.desc}</div>
+              </div>
+              {i < steps.length - 1 && <div style={{ color: 'var(--water)', margin: '0 8px' }}>→</div>}
+            </div>
+          ))}
+        </div>
+      </GlassCard>
+    </div>
+  );
+}
+
+function FeatureSARvsOptical() {
+  const [cloudOffset, setCloudOffset] = useState(0);
+  useEffect(() => {
+    let animationFrameId;
+    const animate = () => {
+      setCloudOffset(prev => (prev + 0.2) % 100);
+      animationFrameId = requestAnimationFrame(animate);
+    };
+    animate();
+    return () => cancelAnimationFrame(animationFrameId);
+  }, []);
+  
+  return (
+    <div style={{ marginBottom: 'var(--s8)' }}>
+      <SectionTitle title="SAR vs Optical: The Cloud Problem" subtitle="Why radar is the ONLY choice during monsoon season." />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 'var(--s4)' }}>
+        <GlassCard style={{ borderTop: '3px solid var(--warn)' }}>
+          <h3 style={{ margin: '0 0 var(--s3) 0', color: 'var(--warn)' }}>Optical (Sentinel-2)</h3>
+          <div style={{ position: 'relative', height: 200, background: '#87CEEB', borderRadius: 'var(--r-md)', overflow: 'hidden', marginBottom: 'var(--s3)' }}>
+             {/* Simulating ground */}
+             <div style={{ position: 'absolute', bottom: 0, width: '100%', height: '40%', background: '#2E8B57' }} />
+             <div style={{ position: 'absolute', bottom: 0, left: '40%', width: '20%', height: '40%', background: '#1E90FF' }} />
+             
+             {/* Simulating moving clouds completely obscuring */}
+             <div style={{ position: 'absolute', top: 0, left: `-${cloudOffset}%`, width: '200%', height: '100%', background: 'linear-gradient(rgba(255,255,255,0.9), rgba(255,255,255,1))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ color: 'var(--warn)', fontWeight: 'bold', fontSize: '1.2rem', textShadow: '0 0 4px #000', zIndex: 10 }}>☁️ ACQUISITION BLOCKED ☁️</span>
+             </div>
+          </div>
+          <ul style={{ margin: 0, paddingLeft: 20, fontSize: '0.85rem', color: 'var(--text-3)', lineHeight: 1.6 }}>
+            <li><strong style={{color:'var(--warn)'}}>CLOUD COVER: 94%</strong> (Monsoon)</li>
+            <li>REVISIT: 5 days</li>
+            <li>MONSOON USABLE: ~15%</li>
+          </ul>
+        </GlassCard>
+        
+        <GlassCard style={{ borderTop: '3px solid var(--water)' }}>
+          <h3 style={{ margin: '0 0 var(--s3) 0', color: 'var(--water)' }}>SAR (NISAR L-band)</h3>
+          <div style={{ position: 'relative', height: 200, background: '#111', borderRadius: 'var(--r-md)', overflow: 'hidden', marginBottom: 'var(--s3)', border: '1px solid var(--glass-border)' }}>
+             {/* Simulating SAR backscatter view of the same ground */}
+             <div style={{ position: 'absolute', bottom: 0, width: '100%', height: '100%', background: '#444' }} />
+             <div style={{ position: 'absolute', bottom: 0, left: '40%', width: '20%', height: '100%', background: '#000' }} />
+             {/* Speckle overlay */}
+             <div style={{ position: 'absolute', width: '100%', height: '100%', background: 'url("data:image/svg+xml,%3Csvg viewBox=%270 0 200 200%27 xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cfilter id=%27noiseFilter%27%3E%3CfeTurbulence type=%27fractalNoise%27 baseFrequency=%270.85%27 numOctaves=%273%27 stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect width=%27100%25%27 height=%27100%25%27 filter=%27url(%23noiseFilter)%27 opacity=%270.15%27/%3E%3C/svg%3E")' }} />
+             <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ color: 'var(--water)', fontWeight: 'bold', fontSize: '1.2rem', textShadow: '0 0 4px #000' }}>24/7 All-Weather</span>
+             </div>
+          </div>
+          <ul style={{ margin: 0, paddingLeft: 20, fontSize: '0.85rem', color: 'var(--text-3)', lineHeight: 1.6 }}>
+            <li><strong style={{color:'var(--water)'}}>CLOUD COVER: N/A ✓</strong></li>
+            <li>REVISIT: 12 days</li>
+            <li>MONSOON USABLE: 100%</li>
+          </ul>
+        </GlassCard>
+      </div>
+    </div>
+  );
+}
+
+function FeatureSpeckleFilter() {
+  const [windowSize, setWindowSize] = useState(7);
+  const [noiseLevel, setNoiseLevel] = useState(4); // L looks
+  const rawCanvasRef = useRef(null);
+  const filteredCanvasRef = useRef(null);
+  
+  useEffect(() => {
+    if (!rawCanvasRef.current || !filteredCanvasRef.current) return;
+    const rawCtx = rawCanvasRef.current.getContext('2d');
+    const filteredCtx = filteredCanvasRef.current.getContext('2d');
+    const w = 256; const h = 128;
+    
+    // Create base truth
+    const truth = new Float32Array(w * h);
+    for(let y=0; y<h; y++) {
+      for(let x=0; x<w; x++) {
+        // River (dark) in middle
+        if (x > w/3 && x < (w*2)/3) truth[y*w + x] = 20;
+        // Land (bright) otherwise
+        else truth[y*w + x] = 180;
+      }
+    }
+    
+    // Add multiplicative Gamma noise (simplified approximation for visualization)
+    const noisy = new Float32Array(w * h);
+    const rawImg = rawCtx.createImageData(w, h);
+    for(let i=0; i<w*h; i++) {
+       // Gamma noise sim: sum of squares of Gaussians
+       let noise = 0;
+       for(let k=0; k<noiseLevel; k++) {
+         const u1 = Math.random(); const u2 = Math.random();
+         const z0 = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+         const z1 = Math.sqrt(-2.0 * Math.log(u1)) * Math.sin(2.0 * Math.PI * u2);
+         noise += z0*z0 + z1*z1;
+       }
+       noise = noise / (2.0 * noiseLevel);
+       noisy[i] = Math.min(255, truth[i] * noise);
+       
+       rawImg.data[i*4] = noisy[i];
+       rawImg.data[i*4+1] = noisy[i];
+       rawImg.data[i*4+2] = noisy[i];
+       rawImg.data[i*4+3] = 255;
+    }
+    rawCtx.putImageData(rawImg, 0, 0);
+    
+    // Apply Lee filter (simplified local mean/variance)
+    const filtered = new Float32Array(w * h);
+    const filImg = filteredCtx.createImageData(w, h);
+    const half = Math.floor(windowSize / 2);
+    
+    for(let y=0; y<h; y++) {
+      for(let x=0; x<w; x++) {
+        let sum = 0; let sumSq = 0; let count = 0;
+        for(let wy = -half; wy <= half; wy++) {
+          for(let wx = -half; wx <= half; wx++) {
+            const ny = y + wy; const nx = x + wx;
+            if (ny >= 0 && ny < h && nx >= 0 && nx < w) {
+              const val = noisy[ny*w + nx];
+              sum += val; sumSq += val*val; count++;
+            }
+          }
+        }
+        const mean = sum / count;
+        const variance = (sumSq / count) - (mean * mean);
+        
+        // Lee filter formula: I_hat = mean + W * (I - mean)
+        // W = var(x) / (var(x) + var(noise)*mean^2)
+        // For Gamma noise, var(noise) = 1/L
+        const noiseVar = 1.0 / noiseLevel;
+        const varX = Math.max(0, variance - noiseVar * mean * mean);
+        const W = varX / (variance + 0.00001);
+        
+        filtered[y*w + x] = mean + W * (noisy[y*w + x] - mean);
+        const fval = Math.min(255, Math.max(0, filtered[y*w + x]));
+        
+        filImg.data[(y*w + x)*4] = fval;
+        filImg.data[(y*w + x)*4+1] = fval;
+        filImg.data[(y*w + x)*4+2] = fval;
+        filImg.data[(y*w + x)*4+3] = 255;
+      }
+    }
+    filteredCtx.putImageData(filImg, 0, 0);
+    
+  }, [windowSize, noiseLevel]);
+
+  return (
+    <div style={{ marginBottom: 'var(--s8)' }}>
+      <SectionTitle title="Interactive Speckle Filter Simulator" subtitle="Speckle is the defining characteristic of SAR imagery. See how Lee-Sigma filtering removes it." />
+      <GlassCard>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s4)', marginBottom: 'var(--s4)' }}>
+           <div>
+             <div style={{ fontSize: '0.85rem', color: 'var(--text-3)', marginBottom: 8, textAlign: 'center' }}>Raw SAR (Multiplicative Noise)</div>
+             <canvas ref={rawCanvasRef} width={256} height={128} style={{ width: '100%', height: 'auto', background: '#000', borderRadius: 'var(--r-md)', imageRendering: 'pixelated' }} />
+           </div>
+           <div>
+             <div style={{ fontSize: '0.85rem', color: 'var(--water)', marginBottom: 8, textAlign: 'center' }}>Lee-Sigma Filtered</div>
+             <canvas ref={filteredCanvasRef} width={256} height={128} style={{ width: '100%', height: 'auto', background: '#000', borderRadius: 'var(--r-md)', imageRendering: 'pixelated' }} />
+           </div>
+        </div>
+        
+        <div style={{ display: 'flex', gap: 'var(--s4)', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-3)', marginBottom: 4 }}>Filter Window Size: {windowSize}×{windowSize}</div>
+            <input type="range" min="3" max="15" step="2" value={windowSize} onChange={e => setWindowSize(Number(e.target.value))} style={{ width: '100%', accentColor: 'var(--water)' }} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-3)', marginBottom: 4 }}>Number of Looks (L, noise inverse): {noiseLevel}</div>
+            <input type="range" min="1" max="16" step="1" value={noiseLevel} onChange={e => setNoiseLevel(Number(e.target.value))} style={{ width: '100%', accentColor: 'var(--warn)' }} />
+          </div>
+        </div>
+      </GlassCard>
+    </div>
+  );
+}
+
+function FeatureRadarGeometry() {
+  const [incAngle, setIncAngle] = useState(35);
+  // Transform incidence angle to SVG coordinates
+  const satX = 800; const satY = 50;
+  
+  return (
+    <div style={{ marginBottom: 'var(--s8)' }}>
+      <SectionTitle title="Radar Geometry Cross-Section" subtitle="Why SAR images look weird: Layover, Foreshortening, and Shadow." />
+      <GlassCard>
+        <div style={{ position: 'relative', width: '100%', height: 300, background: '#111', borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
+          <svg width="100%" height="100%" viewBox="0 0 1000 300" preserveAspectRatio="none">
+             {/* Terrain base */}
+             <path d="M 0 250 L 300 250 L 400 100 L 500 250 L 600 250 L 750 150 L 900 250 L 1000 250 L 1000 300 L 0 300 Z" fill="#2a2a2a" />
+             
+             {/* Satellite */}
+             <circle cx={satX} cy={satY} r="10" fill="var(--water)" />
+             <text x={satX + 15} y={satY + 5} fill="var(--water)" fontSize="14">Satellite</text>
+             
+             {/* Radar Beams */}
+             <g stroke="rgba(255,255,255,0.2)" strokeWidth="1" strokeDasharray="5,5">
+                <line x1={satX} y1={satY} x2="300" y2="250" />
+                <line x1={satX} y1={satY} x2="400" y2="100" />
+                <line x1={satX} y1={satY} x2="500" y2="250" />
+                <line x1={satX} y1={satY} x2="600" y2="250" />
+                <line x1={satX} y1={satY} x2="750" y2="150" />
+                <line x1={satX} y1={satY} x2="900" y2="250" />
+             </g>
+             
+             {/* Dynamic highlighting based on incidence angle */}
+             <path d="M 300 250 L 400 100" stroke="var(--warn)" strokeWidth="4" />
+             <text x="310" y="150" fill="var(--warn)" fontSize="14">Layover / Foreshortening</text>
+
+             <path d="M 400 100 L 500 250" stroke="#555" strokeWidth="4" />
+             <text x="420" y="180" fill="#888" fontSize="14">Shadow Zone</text>
+          </svg>
+          
+          <div style={{ position: 'absolute', bottom: 20, left: 20, width: 300, background: 'rgba(0,0,0,0.6)', padding: 'var(--s3)', borderRadius: 'var(--r-md)' }}>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-3)', marginBottom: 4 }}>Incidence Angle: {incAngle}°</div>
+            <input type="range" min="20" max="60" value={incAngle} onChange={e => setIncAngle(Number(e.target.value))} style={{ width: '100%', accentColor: 'var(--water)' }} />
+          </div>
+        </div>
+      </GlassCard>
+    </div>
+  );
+}
+
+function FeaturePauliRGB() {
+  return (
+    <div style={{ marginBottom: 'var(--s8)' }}>
+      <SectionTitle title="Pauli Decomposition RGB Viewer" subtitle="Quad-pol SAR data reveals scattering mechanisms via Pauli basis." />
+      <GlassCard>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--s4)' }}>
+           <div>
+             <div style={{ background: '#400', height: 150, borderRadius: 'var(--r-md)', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+               <span style={{color: '#f88', fontWeight: 'bold'}}>|HH - VV|²</span>
+             </div>
+             <div style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>Red = Double-Bounce</div>
+             <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Urban, tree trunks, flooded veg</div>
+           </div>
+           
+           <div>
+             <div style={{ background: '#040', height: 150, borderRadius: 'var(--r-md)', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+               <span style={{color: '#8f8', fontWeight: 'bold'}}>4|HV|²</span>
+             </div>
+             <div style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>Green = Volume Scattering</div>
+             <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Forest canopy, crops</div>
+           </div>
+           
+           <div>
+             <div style={{ background: '#004', height: 150, borderRadius: 'var(--r-md)', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+               <span style={{color: '#88f', fontWeight: 'bold'}}>|HH + VV|²</span>
+             </div>
+             <div style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>Blue = Surface Scattering</div>
+             <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Water bodies, bare soil</div>
+           </div>
+           
+           <div>
+             <div style={{ background: 'linear-gradient(135deg, #f00, #0f0, #00f)', height: 150, borderRadius: 'var(--r-md)', marginBottom: 8, position: 'relative', overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', top:0, left:0, width:'100%', height:'100%', background: 'url("data:image/svg+xml,%3Csvg viewBox=%270 0 200 200%27 xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cfilter id=%27noise%27%3E%3CfeTurbulence type=%27fractalNoise%27 baseFrequency=%270.65%27 numOctaves=%273%27 stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect width=%27100%25%27 height=%27100%25%27 filter=%27url(%23noise)%27 opacity=%270.5%27 mix-blend-mode=%27multiply%27/%3E%3C/svg%3E")' }} />
+                <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ color: '#fff', fontWeight: 'bold', textShadow: '0 0 4px #000' }}>Pauli RGB Composite</span>
+                </div>
+             </div>
+             <div style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>Combined Synthesis</div>
+             <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Identifies complex scenes</div>
+           </div>
+        </div>
+      </GlassCard>
     </div>
   );
 }
@@ -468,6 +813,15 @@ export function SARLabPage() {
             </GlassCard>
           </div>
         </div>
+
+        
+        {/* ═══ CHAMPIONSHIP FEATURES ═══ */}
+        <FeatureRadarViewer />
+        <FeaturePipelineWalkthrough />
+        <FeatureSARvsOptical />
+        <FeatureSpeckleFilter />
+        <FeatureRadarGeometry />
+        <FeaturePauliRGB />
 
         {/* ═══ SECTION 7: ADVANCED SAR PHYSICS ═══ */}
         <div style={{ marginBottom: 'var(--s8)' }}>
