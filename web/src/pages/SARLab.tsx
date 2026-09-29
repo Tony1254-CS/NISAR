@@ -366,66 +366,97 @@ function FeaturePauliRGB() {
   useEffect(() => {
     if (!canvasRef.current) return;
     const ctx = canvasRef.current.getContext('2d');
-    const w = 400;
-    const h = 150;
+    const w = 800;
+    const h = 200;
     const imgData = ctx.createImageData(w, h);
     
-    // Generate synthetic quad-pol data
-    // Left: Water (high blue/surface), Middle: Forest (high green/volume), Right: Urban (high red/double-bounce)
+    // Create base terrain map
+    const terrain = new Float32Array(w * h);
+    // 0 = water, 1 = forest
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
-        let r = 0, g = 0, b = 0;
-        
-        // Multiplicative noise base
-        const noise = 0.5 + Math.random() * 1.5;
-        
-        if (x < w / 3) {
-          // Water: Specular reflection -> mostly surface scattering (blue)
-          b = 180 * noise;
-          g = 20 * noise;
-          r = 10 * noise;
-        } else if (x < (2 * w) / 3) {
-          // Forest: Volume scattering (green)
-          b = 40 * noise;
-          g = 160 * noise;
-          r = 50 * noise;
-        } else {
-          // Urban: Double bounce (red)
-          b = 60 * noise;
-          g = 40 * noise;
-          r = 200 * noise;
-        }
-        
-        // Add a horizontal transition zone (eroding bank) at the bottom 30px
-        if (y > h - 30) {
-            if (x > w/4 && x < w/2) {
-                // Erosion transition: Mix of water and bare soil (Blue/Red mix)
-                r = 120 * noise;
-                b = 140 * noise;
-                g = 30 * noise;
-            }
-        }
-        
-        const i = (y * w + x) * 4;
-        imgData.data[i] = Math.min(255, r);
-        imgData.data[i+1] = Math.min(255, g);
-        imgData.data[i+2] = Math.min(255, b);
-        imgData.data[i+3] = 255;
+        const riverCenter = w/2 + Math.sin(y/30)*40;
+        if (Math.abs(x - riverCenter) < 60) terrain[y*w + x] = 0; // water
+        else terrain[y*w + x] = 1; // forest
       }
     }
     
-    ctx.putImageData(imgData, 0, 0);
+    let time = 0;
+    let animationFrameId;
+    
+    const animate = () => {
+        time += 0.08;
+        
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            let r = 0, g = 0, b = 0;
+            const noise = 0.4 + Math.random() * 1.6;
+            
+            // Dynamic erosion logic
+            // The river slowly widens on the right bank based on a growing sine wave
+            const erosionWave = Math.max(0, Math.sin(time/2 + y/20) * (15 + Math.min(time, 40)));
+            const riverCenter = w/2 + Math.sin(y/30)*40;
+            const rightBank = riverCenter + 60;
+            
+            let currentTerrain = terrain[y*w + x];
+            
+            // If we are in the erosion zone
+            if (currentTerrain === 1 && x > rightBank && x < rightBank + erosionWave) {
+               currentTerrain = 2; // Active erosion (double bounce from falling trees/steep bank)
+               
+               // Once it erodes far enough, it becomes permanent water
+               if (x < rightBank + erosionWave - 8) {
+                   currentTerrain = 0;
+               }
+            }
+            
+            if (currentTerrain === 0) {
+              // Water: Surface scattering (Blue)
+              b = 180 * noise; g = 20 * noise; r = 10 * noise;
+            } else if (currentTerrain === 1) {
+              // Forest: Volume scattering (Green)
+              b = 20 * noise; g = 170 * noise; r = 30 * noise;
+            } else if (currentTerrain === 2) {
+              // Erosion/Cut-bank: Double bounce (Red)
+              b = 30 * noise; g = 20 * noise; r = 240 * noise;
+            }
+            
+            const i = (y * w + x) * 4;
+            imgData.data[i] = Math.min(255, r);
+            imgData.data[i+1] = Math.min(255, g);
+            imgData.data[i+2] = Math.min(255, b);
+            imgData.data[i+3] = 255;
+          }
+        }
+        ctx.putImageData(imgData, 0, 0);
+        
+        // Draw HUD overlay
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.fillRect(10, 10, 200, 70);
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 12px monospace';
+        ctx.fillText(`▶ LIVE PAULI SIMULATION`, 20, 30);
+        ctx.fillStyle = 'var(--text-3)';
+        ctx.fillText(`T+ ${Math.floor(time * 5)} DAYS`, 20, 50);
+        ctx.fillStyle = 'var(--erosion)';
+        ctx.fillText(`SCATTER MECHANISM SHIFT DETECTED`, 20, 70);
+        
+        animationFrameId = requestAnimationFrame(animate);
+    };
+    
+    animate();
+    return () => cancelAnimationFrame(animationFrameId);
   }, []);
 
   return (
     <div style={{ marginBottom: 'var(--s8)' }}>
-      <SectionTitle title="Pauli Decomposition RGB Viewer" subtitle="Quad-pol SAR data reveals physical scattering mechanisms via the Pauli basis." />
+      <SectionTitle title="Pauli Decomposition Simulator" subtitle="Quad-pol SAR data reveals physical scattering mechanisms. Watch as riverbank erosion triggers a shift from Volume Scattering (forest) to Double-Bounce (cut-bank) and finally Surface Scattering (water)." />
       <GlassCard>
         <div style={{ marginBottom: 'var(--s4)' }}>
           <canvas 
             ref={canvasRef} 
-            width={400} 
-            height={150} 
+            width={800} 
+            height={200} 
             style={{ 
               width: '100%', 
               height: 'auto', 
@@ -440,25 +471,25 @@ function FeaturePauliRGB() {
            <div>
              <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#f88', marginBottom: 4 }}>|HH - VV|² (Red)</div>
              <div style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>Double-Bounce</div>
-             <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Urban, tree trunks, flooded veg</div>
+             <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Active eroding cut-bank</div>
            </div>
            
            <div>
              <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#8f8', marginBottom: 4 }}>4|HV|² (Green)</div>
              <div style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>Volume Scattering</div>
-             <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Forest canopy, crops</div>
+             <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Stable forest canopy</div>
            </div>
            
            <div>
              <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#88f', marginBottom: 4 }}>|HH + VV|² (Blue)</div>
              <div style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>Surface Scattering</div>
-             <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Water bodies, bare soil</div>
+             <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>River water surface</div>
            </div>
            
            <div>
-             <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff', marginBottom: 4 }}>Synthetic Scene</div>
-             <div style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>Left: Water | Mid: Forest | Right: Urban</div>
-             <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Shows how RGB composite identifies features</div>
+             <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff', marginBottom: 4 }}>Dynamic River Bend</div>
+             <div style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>Real-time erosion simulation</div>
+             <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Watch the red rim grow and fall into the river</div>
            </div>
         </div>
       </GlassCard>
