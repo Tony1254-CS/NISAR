@@ -144,3 +144,9 @@ Grounds the technology in real-world human impact.
 The scientific bibliography ensuring the platform's academic validity.
 *   **Scientific Architecture:** Documents the exact open-source stack (React, Vite, Python, GDAL).
 *   **Literature Review:** Explicitly lists and links the NASA JPL and ESA (Sentinel-1) documentation utilized to build the processing algorithms, guaranteeing the project is rooted in peer-reviewed science and physics.
+
+
+## 6. Landing Page (Landing.tsx)
+* **Interactive Pipeline Node UI**: Visualizes the flow from Raw Data to Actionable Insights.
+* **Evidence Trail Matrix**: Explains the exact burden of proof required to declare land as 'eroded'.
+* **Data Source DOIs**: A card grid listing all external NASA datasets (e.g. OPERA RTC) with clickable DOIs.
