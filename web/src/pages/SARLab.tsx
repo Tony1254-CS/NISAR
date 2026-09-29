@@ -154,6 +154,126 @@ function FeatureSARvsOptical() {
       animationFrameId = requestAnimationFrame(animate);
     };
     animate();
+    return () => cancelAnimationFrame(animationFrameId);
+  }, []);
+  
+  return (
+    <div style={{ marginBottom: 'var(--s8)' }}>
+      <SectionTitle title="SAR vs Optical: The Cloud Problem" subtitle="Why NASA NISAR is the ONLY reliable choice for monsoon-season disaster monitoring." />
+      
+      <GlassCard style={{ padding: 'var(--s5)' }}>
+        
+        {/* Interactive Cloud Control */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s4)', marginBottom: 'var(--s5)', background: 'rgba(255,255,255,0.05)', padding: 'var(--s4)', borderRadius: 'var(--r-md)' }}>
+          <div style={{ width: '40px', fontSize: '1.5rem', textAlign: 'center' }}>{cloudDensity > 50 ? '☁️' : '🌤️'}</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span style={{ fontSize: '0.9rem', color: 'var(--text-2)', fontWeight: 'bold' }}>ATMOSPHERIC CLOUD DENSITY (Monsoon Simulation)</span>
+              <span style={{ fontSize: '1rem', color: cloudDensity > 75 ? '#f44' : '#0ff', fontWeight: 'bold', fontFamily: 'var(--font-num)' }}>{cloudDensity}%</span>
+            </div>
+            <input 
+              type="range" 
+              min="0" max="100" 
+              value={cloudDensity} 
+              onChange={e => setCloudDensity(Number(e.target.value))} 
+              style={{ width: '100%', accentColor: cloudDensity > 75 ? '#f44' : '#0ff', cursor: 'ew-resize' }} 
+            />
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s4)' }}>
+          
+          {/* OPTICAL SATELLITE PANE */}
+          <div style={{ borderRadius: 'var(--r-md)', overflow: 'hidden', border: '1px solid rgba(255,100,100,0.3)', position: 'relative', height: '350px' }}>
+            {/* Base Image (Simulated optical via filters on the radar image) */}
+            <div style={{ 
+              position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+              backgroundImage: `url(${radarUrl})`, backgroundSize: 'cover', backgroundPosition: 'center',
+              filter: 'sepia(0.8) hue-rotate(50deg) saturate(2) contrast(1.2)'
+            }} />
+            
+            {/* Procedural Cloud Layer */}
+            <div style={{ 
+              position: 'absolute', top: 0, left: 0, width: '200%', height: '200%',
+              background: 'url("data:image/svg+xml,%3Csvg viewBox=%270 0 400 400%27 xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cfilter id=%27clouds%27%3E%3CfeTurbulence type=%27fractalNoise%27 baseFrequency=%270.01%27 numOctaves=%274%27 seed=%275%27/%3E%3CfeColorMatrix type=%27matrix%27 values=%271 0 0 0 1  0 1 0 0 1  0 0 1 0 1  0 0 0 1 0%27/%3E%3C/filter%3E%3Crect width=%27100%25%27 height=%27100%25%27 filter=%27url(%23clouds)%27 opacity=%271%27/%3E%3C/svg%3E")',
+              opacity: cloudDensity / 100,
+              transform: `translate(-${beamPos / 4}%, -${beamPos / 8}%)`, // slow drift
+              pointerEvents: 'none'
+            }} />
+            
+            {/* UI Overlay */}
+            <div style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(0,0,0,0.7)', padding: '4px 8px', borderRadius: '4px', color: '#f44', fontWeight: 'bold', fontSize: '0.8rem', border: '1px solid #f44' }}>
+              OPTICAL SENSOR (Landsat / Sentinel-2)
+            </div>
+            
+            {cloudDensity > 60 && (
+              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(0,0,0,0.8)', padding: 'var(--s3)', borderRadius: 'var(--r-md)', border: '2px solid #f44', textAlign: 'center', width: '80%' }}>
+                <div style={{ color: '#f44', fontWeight: 'bold', fontSize: '1.2rem', letterSpacing: 2, marginBottom: 8 }}>ACQUISITION BLOCKED</div>
+                <div style={{ color: 'var(--text-3)', fontSize: '0.8rem' }}>Visible/NIR wavelengths cannot penetrate thick monsoon cloud cover. Earth surface is unobservable.</div>
+              </div>
+            )}
+            
+            <div style={{ position: 'absolute', bottom: 10, left: 10, right: 10, background: 'rgba(0,0,0,0.8)', padding: 'var(--s3)', borderRadius: 'var(--r-md)', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-3)', fontSize: '0.75rem', marginBottom: 4 }}>
+                <span>WAVELENGTH:</span><span style={{ color: '#fff' }}>400-900 nm</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-3)', fontSize: '0.75rem', marginBottom: 4 }}>
+                <span>PENETRATION:</span><span style={{ color: '#f44', fontWeight: 'bold' }}>0% (Absorbed by H₂O)</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-3)', fontSize: '0.75rem' }}>
+                <span>USABLE DATA (JUN-SEP):</span><span style={{ color: '#f44', fontWeight: 'bold' }}>~15%</span>
+              </div>
+            </div>
+          </div>
+          
+          {/* SAR RADAR PANE */}
+          <div style={{ borderRadius: 'var(--r-md)', overflow: 'hidden', border: '1px solid rgba(0,255,255,0.3)', position: 'relative', height: '350px' }}>
+            {/* Base Image (Real Radar) */}
+            <div style={{ 
+              position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+              backgroundImage: `url(${radarUrl})`, backgroundSize: 'cover', backgroundPosition: 'center',
+              filter: 'contrast(1.2)'
+            }} />
+            
+            {/* Radar Sweep Effect */}
+            <div style={{
+              position: 'absolute', top: 0, left: `${beamPos}%`, width: '100px', height: '100%',
+              background: 'linear-gradient(90deg, transparent, rgba(0,255,255,0.1) 80%, rgba(0,255,255,0.8) 100%)',
+              borderRight: '2px solid #0ff',
+              boxShadow: '0 0 20px rgba(0,255,255,0.5)',
+              pointerEvents: 'none'
+            }} />
+            
+            {/* Grid Overlay */}
+            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'linear-gradient(rgba(0,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,255,0.1) 1px, transparent 1px)', backgroundSize: '40px 40px', pointerEvents: 'none' }} />
+            
+            {/* UI Overlay */}
+            <div style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(0,0,0,0.7)', padding: '4px 8px', borderRadius: '4px', color: '#0ff', fontWeight: 'bold', fontSize: '0.8rem', border: '1px solid #0ff' }}>
+              L-BAND SAR (NISAR)
+            </div>
+            
+            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', width: '80%', pointerEvents: 'none' }}>
+              <div style={{ color: 'rgba(0,255,255,0.15)', fontWeight: '900', fontSize: '3rem', letterSpacing: 5 }}>ACTIVE</div>
+            </div>
+            
+            <div style={{ position: 'absolute', bottom: 10, left: 10, right: 10, background: 'rgba(0,0,0,0.8)', padding: 'var(--s3)', borderRadius: 'var(--r-md)', border: '1px solid rgba(0,255,255,0.3)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-3)', fontSize: '0.75rem', marginBottom: 4 }}>
+                <span>WAVELENGTH:</span><span style={{ color: '#fff' }}>23.8 cm (L-Band)</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-3)', fontSize: '0.75rem', marginBottom: 4 }}>
+                <span>PENETRATION:</span><span style={{ color: '#0ff', fontWeight: 'bold' }}>100% (Passes through H₂O)</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-3)', fontSize: '0.75rem' }}>
+                <span>USABLE DATA (JUN-SEP):</span><span style={{ color: '#0ff', fontWeight: 'bold' }}>100% Guaranteed</span>
+              </div>
+            </div>
+          </div>
+          
+        </div>
+      </GlassCard>
+    </div>
+  );
+}
 
 function FeatureSpeckleFilter() {
   const [windowSize, setWindowSize] = useState(7);
