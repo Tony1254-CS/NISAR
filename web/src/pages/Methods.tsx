@@ -216,7 +216,7 @@ export function MethodsPage() {
             Methods & Architecture
           </h1>
           <p style={{ color: 'var(--text-2)', fontSize: 'var(--text-lg)', lineHeight: 1.6, maxWidth: '800px', margin: '0 auto' }}>
-            SAME RIVER TWICE compares NISAR L-band radar of the Jamuna at the same river height before and after
+            FLUVISAR compares NISAR L-band radar of the Jamuna at the same river height before and after
             the monsoon peak, so that what changed is land the river took — not a temporary flood.
           </p>
         </div>

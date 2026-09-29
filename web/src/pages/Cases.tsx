@@ -263,7 +263,7 @@ export function CasesPage() {
 
       {/* Footer */}
       <footer className="landing-footer" style={{ marginTop: 'var(--s4)' }}>
-        Same River Twice · NASA Space Apps Challenge 2026 · Dancing with the SARs ·{' '}
+        FluviSAR · NASA Space Apps Challenge 2026 · Dancing with the SARs ·{' '}
         <a href="/methods">Full Methods</a> ·{' '}
         <a href="https://www.earthdata.nasa.gov/learn/earth-observation-data-basics/sar" target="_blank" rel="noopener noreferrer">
           NASA SAR Reference

@@ -227,7 +227,7 @@ export function AboutPage() {
         </div>
         <h1 style={{ marginBottom: 'var(--s3)' }}>Where the Data Comes From</h1>
         <p>
-          Every observation, measurement, and validation check in Same River Twice traces to a
+          Every observation, measurement, and validation check in FluviSAR traces to a
           named, citable dataset. This page documents the complete data provenance — what we use,
           why, and from whom.
         </p>
@@ -337,7 +337,7 @@ export function AboutPage() {
           >
             NASA Earthdata's SAR resource
           </a>{' '}
-          are directly relevant to how Same River Twice processes and interprets NISAR data.
+          are directly relevant to how FluviSAR processes and interprets NISAR data.
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s3)', marginTop: 'var(--s4)' }}>

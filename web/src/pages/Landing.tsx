@@ -400,7 +400,7 @@ export function Landing() {
 
       {/* ════ Footer ════ */}
       <footer className="landing-footer">
-        Same River Twice &middot; NASA Space Apps Challenge 2026 &middot; Dancing with the SARs
+        FluviSAR &middot; NASA Space Apps Challenge 2026 &middot; Dancing with the SARs
         &middot;{' '}
         <a href="/methods">full methods &amp; sources</a> &middot;{' '}
         <a

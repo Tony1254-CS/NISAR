@@ -34,7 +34,7 @@ export function ReportPage() {
             </div>
             <div style={{ textAlign: 'right' }}>
               <strong>Generated:</strong> {currentDate}<br/>
-              <strong>Platform:</strong> Same River Twice v1.0
+              <strong>Platform:</strong> FluviSAR v1.0
             </div>
           </div>
         </div>

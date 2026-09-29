@@ -90,7 +90,7 @@ export function Navbar({
       <nav className={navClass} role="navigation" aria-label="Primary">
         <div className="navbar__left">
           {/* Brand */}
-          <a href="/" className="navbar__brand" aria-label="Same River Twice — Home">
+          <a href="/" className="navbar__brand" aria-label="FluviSAR — Home">
             <span className="navbar__brand-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" stroke="var(--water)" strokeOpacity="0.6" />
@@ -99,7 +99,7 @@ export function Navbar({
                 <path d="M12 9 Q15 12 12 15 Q9 12 12 9" fill="var(--water)" fillOpacity="0.3" />
               </svg>
             </span>
-            <span className="navbar__brand-text">SAME RIVER TWICE</span>
+            <span className="navbar__brand-text">FLUVISAR</span>
           </a>
 
           {/* Nav links (hidden on /app to save space on laptops) */}

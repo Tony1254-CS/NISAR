@@ -41,7 +41,7 @@ export function AuthPage() {
       >
         <div style={{ marginBottom: 'var(--s4)' }}>
           <span className="mono" style={{ letterSpacing: '0.08em', color: 'var(--water)', fontWeight: 600, fontSize: 'var(--text-sm)' }}>
-            SAME RIVER TWICE
+            FLUVISAR
           </span>
         </div>
         <h2 style={{ margin: '0 0 var(--s1)', fontSize: 'var(--text-xl)' }}>Welcome back</h2>

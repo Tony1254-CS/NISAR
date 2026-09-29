@@ -1727,7 +1727,7 @@ export function SARLabPage() {
         {/* Footer */}
         <div style={{ textAlign: 'center', padding: 'var(--s8) 0', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
           <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', maxWidth: 600, margin: '0 auto', lineHeight: 1.6 }}>
-            This educational module is part of <strong>Same River Twice</strong> — built for NASA Space Apps Challenge 2026, "Dancing with the SARs".
+            This educational module is part of <strong>FluviSAR</strong> — built for NASA Space Apps Challenge 2026, "Dancing with the SARs".
             All scientific content is sourced from NASA JPL NISAR documentation, ESA Sentinel-1 User Guide, and peer-reviewed SAR literature.
           </p>
         </div>

@@ -1,9 +1,9 @@
-# Same River Twice: Complete Project Documentation
+# FluviSAR: Complete Project Documentation
 
 **Target Challenge:** NASA Space Apps 2026 — *Dancing with the SARs*
 **Mission:** Utilizing L-band Synthetic Aperture Radar (SAR) from the NASA-ISRO (NISAR) mission to predict, monitor, and mitigate catastrophic riverbank erosion during monsoon seasons when optical satellites are blinded by cloud cover.
 
-This document serves as the comprehensive architectural and functional breakdown of the "Same River Twice" platform. It details every page, feature, and interactive component, explaining *what* it is, *what its purpose* is, and *how it functions*.
+This document serves as the comprehensive architectural and functional breakdown of the "FluviSAR" platform. It details every page, feature, and interactive component, explaining *what* it is, *what its purpose* is, and *how it functions*.
 
 ---
 
@@ -92,4 +92,4 @@ This document serves as the comprehensive architectural and functional breakdown
 ---
 
 ## Conclusion
-"Same River Twice" is not just a dashboard; it is a full-stack scientific platform. It bridges the gap between raw, highly complex orbital physics (handled in the SAR Lab & ML Intelligence center) and life-saving, actionable humanitarian data (delivered via the Impact Dashboard). Every feature has been engineered to be interactive, deterministic, and mathematically sound, ensuring it stands up to rigorous scientific scrutiny.
+"FluviSAR" is not just a dashboard; it is a full-stack scientific platform. It bridges the gap between raw, highly complex orbital physics (handled in the SAR Lab & ML Intelligence center) and life-saving, actionable humanitarian data (delivered via the Impact Dashboard). Every feature has been engineered to be interactive, deterministic, and mathematically sound, ensuring it stands up to rigorous scientific scrutiny.
