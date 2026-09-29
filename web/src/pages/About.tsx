@@ -91,92 +91,129 @@ export function AboutPage() {
       <Navbar />
       <div className="navbar-spacer" />
 
-      {/* ── Stunning About Section ── */}
-      <div className="page-content" style={{ paddingBottom: 'var(--s6)' }}>
-        
-        {/* Header */}
-        <div style={{ textAlign: 'center', margin: 'var(--s6) 0' }}>
-          <h1 style={{ fontSize: '3rem', letterSpacing: '0.1em', textTransform: 'uppercase', background: 'linear-gradient(90deg, var(--water), var(--pass))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: 'var(--s2)' }}>
-            The Mission
-          </h1>
-          <p style={{ fontSize: '1.2rem', color: 'var(--text-2)', maxWidth: '600px', margin: '0 auto', lineHeight: 1.6 }}>
-            Redefining how we monitor morphodynamic river change using cloud-penetrating radar.
-          </p>
-        </div>
+      {/* ── Cinematic Story Section ── */}
+      <div className="cinematic-hero" style={{ position: 'relative', overflow: 'hidden', padding: '6rem 0' }}>
+        {/* Background glow and image */}
+        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'url(/erosion_preview.jpg)', backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.15, mixBlendMode: 'luminosity', filter: 'blur(4px)' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(4,8,10,1) 0%, rgba(4,8,10,0.5) 50%, rgba(4,8,10,1) 100%)' }} />
+        <div style={{ position: 'absolute', top: '20%', left: '50%', transform: 'translate(-50%, -50%)', width: '80vw', height: '40vw', background: 'radial-gradient(ellipse at center, rgba(57,196,217,0.15) 0%, transparent 70%)', filter: 'blur(50px)', pointerEvents: 'none' }} />
 
-        {/* Problem & Solution Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 'var(--s4)', marginBottom: 'var(--s8)' }}>
-          <div style={{ background: 'rgba(255, 60, 60, 0.05)', border: '1px solid rgba(255, 60, 60, 0.2)', padding: 'var(--s5)', borderRadius: 'var(--r-lg)', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: -50, right: -50, width: 150, height: 150, background: 'var(--fail)', filter: 'blur(80px)', opacity: 0.3 }} />
-            <h3 style={{ color: 'var(--fail)', fontSize: '1.5rem', marginBottom: 'var(--s3)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '1.8rem' }}>⚠️</span> The Problem
-            </h3>
-            <p style={{ color: 'var(--text)', lineHeight: 1.7, fontSize: '1.05rem', position: 'relative', zIndex: 1 }}>
-              Rivers shift, erode, and destroy communities overnight. Traditional optical satellites (like Landsat or Sentinel) are blinded by heavy monsoon clouds <strong>exactly when the worst erosion happens</strong>. Manual field surveys are too slow, leaving millions vulnerable to unseen morphological shifts beneath the clouds.
+        <div className="page-content" style={{ position: 'relative', zIndex: 1 }}>
+          <div style={{ textAlign: 'center', margin: 'var(--s6) 0 var(--s8)' }}>
+            <div style={{ display: 'inline-block', padding: '4px 16px', background: 'rgba(57, 196, 217, 0.1)', border: '1px solid var(--water)', color: 'var(--water)', borderRadius: '20px', fontSize: '0.8rem', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '1rem', animation: 'pulse 2s infinite' }}>
+              The Untold Crisis
+            </div>
+            <h1 style={{ fontSize: 'clamp(3rem, 6vw, 5rem)', fontWeight: 900, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#fff', textShadow: '0 0 40px rgba(255,255,255,0.3)', marginBottom: 'var(--s4)', lineHeight: 1.1 }}>
+              The River <br/><span style={{ background: 'linear-gradient(90deg, var(--water), var(--fail))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Takes It All</span>
+            </h1>
+            <p style={{ fontSize: '1.25rem', color: 'var(--text-2)', maxWidth: '800px', margin: '0 auto', lineHeight: 1.8, fontFamily: 'serif', fontStyle: 'italic' }}>
+              In Bangladesh, the Jamuna River doesn't just flood. It migrates. During the monsoon, the riverbank can erode hundreds of meters in a single week, swallowing homes, schools, and entire villages overnight.
             </p>
           </div>
 
-          <div style={{ background: 'rgba(57, 196, 217, 0.05)', border: '1px solid rgba(57, 196, 217, 0.2)', padding: 'var(--s5)', borderRadius: 'var(--r-lg)', position: 'relative', overflow: 'hidden', boxShadow: '0 0 40px rgba(57, 196, 217, 0.05)' }}>
-            <div style={{ position: 'absolute', top: -50, right: -50, width: 150, height: 150, background: 'var(--water)', filter: 'blur(80px)', opacity: 0.3 }} />
-            <h3 style={{ color: 'var(--water)', fontSize: '1.5rem', marginBottom: 'var(--s3)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '1.8rem' }}>🚀</span> The Solution
-            </h3>
-            <p style={{ color: 'var(--text)', lineHeight: 1.7, fontSize: '1.05rem', position: 'relative', zIndex: 1 }}>
-              We utilize <strong>NISAR's L-band Synthetic Aperture Radar (SAR)</strong> to penetrate clouds and measure bank erosion in real-time. By algorithmically aligning radar backscatter with in-situ river gauges, our AI pipeline eliminates false positives from seasonal flooding, delivering high-confidence, actionable data instantly.
-            </p>
-          </div>
-        </div>
-
-        {/* The Team */}
-        <div style={{ textAlign: 'center', marginBottom: 'var(--s8)' }}>
-          <h2 style={{ fontSize: '2rem', marginBottom: 'var(--s5)', color: 'var(--text)' }}>Meet the Crew</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 'var(--s4)' }}>
-            {[
-              { name: 'Sabbir Ahmed', role: 'Mission Commander', desc: 'System Architecture & AI Pipeline', initials: 'SA' },
-              { name: 'Sanjid Talukder', role: 'Data Scientist', desc: 'SAR Processing & Remote Sensing', initials: 'ST' },
-              { name: 'Sakibul Hassan Shovon', role: 'Frontend Engineer', desc: 'Interactive Visualization & UX', initials: 'SH' },
-              { name: 'Yasin Arafat', role: 'Hydro Analyst', desc: 'River Dynamics & Quality Assurance', initials: 'YA' }
-            ].map((member) => (
-              <div key={member.name} style={{
-                background: 'rgba(255, 255, 255, 0.02)',
-                border: '1px solid rgba(255, 255, 255, 0.05)',
-                padding: 'var(--s4)',
-                borderRadius: 'var(--r-md)',
-                transition: 'all 0.3s ease',
-                cursor: 'default',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                boxShadow: 'inset 0 0 20px rgba(0,0,0,0.5)'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-5px)';
-                e.currentTarget.style.borderColor = 'var(--water)';
-                e.currentTarget.style.background = 'rgba(57, 196, 217, 0.05)';
-                e.currentTarget.style.boxShadow = '0 10px 30px rgba(57, 196, 217, 0.1)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.05)';
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
-                e.currentTarget.style.boxShadow = 'inset 0 0 20px rgba(0,0,0,0.5)';
-              }}
-              >
-                <div style={{ 
-                  width: '80px', height: '80px', borderRadius: '50%', 
-                  background: 'linear-gradient(135deg, rgba(57, 196, 217, 0.2), rgba(57, 196, 217, 0.05))',
-                  border: '2px solid rgba(57, 196, 217, 0.5)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '2rem', fontWeight: 900, color: 'var(--water)',
-                  marginBottom: 'var(--s3)', textShadow: '0 0 10px var(--water)'
-                }}>
-                  {member.initials}
-                </div>
-                <h3 style={{ fontSize: '1.2rem', marginBottom: '4px', letterSpacing: '0.05em' }}>{member.name}</h3>
-                <div style={{ color: 'var(--water)', fontSize: '0.8rem', textTransform: 'uppercase', fontWeight: 700, marginBottom: '8px' }}>{member.role}</div>
-                <div style={{ color: 'var(--text-3)', fontSize: '0.85rem' }}>{member.desc}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', marginBottom: '6rem' }}>
+            {/* Story Card 1 */}
+            <div style={{ display: 'flex', gap: '2rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '24px', padding: '2rem', backdropFilter: 'blur(10px)', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ flex: '1 1 300px', minWidth: '300px' }}>
+                <h3 style={{ fontSize: '2rem', color: 'var(--text)', marginBottom: '1rem' }}>Blinded by the Monsoon</h3>
+                <p style={{ color: 'var(--text-2)', lineHeight: 1.7, fontSize: '1.1rem' }}>
+                  Traditional optical satellites (like Landsat or Sentinel-2) are useless when we need them most. Heavy monsoon clouds blanket the region for months, hiding the catastrophic erosion happening on the ground. We are blind to the destruction until the clouds finally clear in autumn—long after the damage is done.
+                </p>
               </div>
-            ))}
+              <div style={{ flex: '1 1 300px', height: '200px', background: 'linear-gradient(45deg, #1a1a1a, #2a2a2a)', borderRadius: '16px', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ position: 'absolute', inset: 0, background: 'url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSIvPjwvc3ZnPg==)', opacity: 0.5 }} />
+                <span style={{ fontSize: '4rem', filter: 'drop-shadow(0 0 20px rgba(255,255,255,0.5))' }}>☁️👁️‍🗨️</span>
+              </div>
+            </div>
+
+            {/* Story Card 2 */}
+            <div style={{ display: 'flex', gap: '2rem', background: 'rgba(57, 196, 217, 0.05)', border: '1px solid rgba(57, 196, 217, 0.2)', borderRadius: '24px', padding: '2rem', backdropFilter: 'blur(10px)', alignItems: 'center', flexWrap: 'wrap', flexDirection: 'row-reverse', boxShadow: '0 20px 50px rgba(57, 196, 217, 0.1)' }}>
+              <div style={{ flex: '1 1 300px', minWidth: '300px' }}>
+                <h3 style={{ fontSize: '2rem', color: 'var(--water)', marginBottom: '1rem', textShadow: '0 0 20px var(--water)' }}>Piercing the Veil with SAR</h3>
+                <p style={{ color: 'var(--text)', lineHeight: 1.7, fontSize: '1.1rem' }}>
+                  Enter <strong>NISAR</strong>. By utilizing L-band Synthetic Aperture Radar (SAR), we emit active microwave pulses that punch straight through the densest clouds and rain. The radar backscatter reveals the precise boundary between land and water. For the first time, we can track morphodynamic river shifts in <strong>real-time</strong>, regardless of weather.
+                </p>
+              </div>
+              <div style={{ flex: '1 1 300px', height: '200px', background: 'rgba(0,0,0,0.5)', borderRadius: '16px', position: 'relative', overflow: 'hidden', border: '1px solid var(--water)' }}>
+                <div style={{ position: 'absolute', top: 0, bottom: 0, width: '4px', background: 'var(--water)', left: '50%', boxShadow: '0 0 20px var(--water)', animation: 'scanline 2s infinite linear' }} />
+                <style>{`@keyframes scanline { 0% { left: 0%; } 100% { left: 100%; } }`}</style>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                   <span style={{ fontSize: '4rem', filter: 'drop-shadow(0 0 20px var(--water))' }}>📡🌊</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Jaw-dropping Crew Section */}
+          <div style={{ textAlign: 'center', marginBottom: 'var(--s8)' }}>
+            <div style={{ display: 'inline-block', padding: '4px 16px', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-3)', borderRadius: '20px', fontSize: '0.8rem', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '2rem' }}>
+              The Architects
+            </div>
+            <h2 style={{ fontSize: '2.5rem', marginBottom: '3rem', color: '#fff', fontWeight: 800 }}>Meet the Crew</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '2rem' }}>
+              {[
+                { name: 'Sabbir Ahmed', role: 'Mission Commander', desc: 'System Architecture & AI Pipeline', initials: 'SA' },
+                { name: 'Sanjid Talukder', role: 'Data Scientist', desc: 'SAR Processing & Remote Sensing', initials: 'ST' },
+                { name: 'Sakibul Hassan Shovon', role: 'Frontend Engineer', desc: 'Interactive Visualization & UX', initials: 'SH' },
+                { name: 'Yasin Arafat', role: 'Hydro Analyst', desc: 'River Dynamics & Quality Assurance', initials: 'YA' }
+              ].map((member, i) => (
+                <div key={member.name} className="crew-card" style={{
+                  position: 'relative',
+                  background: 'linear-gradient(145deg, rgba(20,25,30,0.8), rgba(10,12,15,0.9))',
+                  border: '1px solid rgba(255, 255, 255, 0.05)',
+                  padding: '3rem 2rem',
+                  borderRadius: '24px',
+                  transition: 'all 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
+                  cursor: 'default',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  overflow: 'hidden',
+                  animation: `fade-in-up 0.8s forwards ${i * 0.15}s`,
+                  opacity: 0,
+                  transform: 'translateY(20px)'
+                }}>
+                  <div className="crew-glow" style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', height: '4px', background: 'transparent', transition: 'background 0.5s' }} />
+                  <div style={{ 
+                    width: '90px', height: '90px', borderRadius: '50%', 
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '2px solid rgba(255, 255, 255, 0.1)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '2.2rem', fontWeight: 900, color: '#fff',
+                    marginBottom: '1.5rem',
+                    transition: 'all 0.5s',
+                    position: 'relative',
+                    zIndex: 2
+                  }} className="crew-avatar">
+                    {member.initials}
+                  </div>
+                  <h3 style={{ fontSize: '1.4rem', marginBottom: '8px', letterSpacing: '0.05em', color: '#fff', zIndex: 2 }}>{member.name}</h3>
+                  <div style={{ color: 'var(--water)', fontSize: '0.85rem', textTransform: 'uppercase', fontWeight: 800, marginBottom: '12px', letterSpacing: '1px', zIndex: 2 }}>{member.role}</div>
+                  <div style={{ color: 'var(--text-3)', fontSize: '0.9rem', lineHeight: 1.5, zIndex: 2 }}>{member.desc}</div>
+                </div>
+              ))}
+            </div>
+            <style>{`
+              .crew-card:hover {
+                transform: translateY(-10px) scale(1.02) !important;
+                border-color: rgba(57,196,217,0.3) !important;
+                box-shadow: 0 20px 40px rgba(0,0,0,0.6), 0 0 40px rgba(57,196,217,0.1) !important;
+              }
+              .crew-card:hover .crew-glow {
+                background: var(--water) !important;
+                box-shadow: 0 0 20px var(--water);
+              }
+              .crew-card:hover .crew-avatar {
+                border-color: var(--water) !important;
+                color: var(--water) !important;
+                background: rgba(57,196,217,0.1) !important;
+                text-shadow: 0 0 15px var(--water);
+                transform: scale(1.1);
+              }
+              @keyframes fade-in-up {
+                to { opacity: 1; transform: translateY(0); }
+              }
+            `}</style>
           </div>
         </div>
       </div>
