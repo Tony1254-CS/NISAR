@@ -315,45 +315,153 @@ function FeatureSpeckleFilter() {
 }
 
 function FeatureRadarGeometry() {
-  const [incAngle, setIncAngle] = useState(35);
-  // Transform incidence angle to SVG coordinates
-  const satX = 800; const satY = 50;
+  const [incAngle, setIncAngle] = useState(45); // degrees
   
+  // Convert degrees to radians
+  const theta = (incAngle * Math.PI) / 180;
+  
+  // Satellite Y is fixed
+  const satY = 40;
+  // Center of the scene is X=500, Y=250
+  // incidence angle theta = atan((satX - 500) / (250 - satY))
+  // Therefore satX = 500 + (250 - satY) * tan(theta)
+  const satX = 500 + (250 - satY) * Math.tan(theta);
+  
+  // Mountain coordinates
+  const M_LEFT = 300;
+  const M_PEAK_X = 400;
+  const M_PEAK_Y = 100;
+  const M_RIGHT = 500;
+  const GROUND_Y = 250;
+  
+  // Distance from satellite to Peak
+  const distPeak = Math.sqrt(Math.pow(satX - M_PEAK_X, 2) + Math.pow(satY - M_PEAK_Y, 2));
+  // Distance from satellite to Left Base
+  const distLeft = Math.sqrt(Math.pow(satX - M_LEFT, 2) + Math.pow(satY - GROUND_Y, 2));
+  
+  // Determine if Layover or Foreshortening
+  // Layover occurs when the peak is closer to the radar than the base
+  const isLayover = distPeak < distLeft;
+  
+  // Shadow Calculation
+  // Radar beam passes through satellite and peak. Where does it hit the ground behind the mountain?
+  // Slope of beam (dx/dy to avoid inf)
+  const dx = M_PEAK_X - satX;
+  const dy = M_PEAK_Y - satY;
+  
+  // Find where beam hits Y=250 (GROUND_Y)
+  // (x_intersect - M_PEAK_X) / dx = (GROUND_Y - M_PEAK_Y) / dy
+  const shadowEndX = M_PEAK_X + dx * ((GROUND_Y - M_PEAK_Y) / dy);
+  
+  // Limit shadow end to the left side (it's pointing left)
+  const actualShadowEnd = Math.max(0, Math.min(shadowEndX, M_LEFT));
+
   return (
     <div style={{ marginBottom: 'var(--s8)' }}>
-      <SectionTitle title="Radar Geometry Cross-Section" subtitle="Why SAR images look weird: Layover, Foreshortening, and Shadow." />
-      <GlassCard>
-        <div style={{ position: 'relative', width: '100%', height: 300, background: '#111', borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
-          <svg width="100%" height="100%" viewBox="0 0 1000 300" preserveAspectRatio="none">
-             {/* Terrain base */}
-             <path d="M 0 250 L 300 250 L 400 100 L 500 250 L 600 250 L 750 150 L 900 250 L 1000 250 L 1000 300 L 0 300 Z" fill="#2a2a2a" />
+      <SectionTitle title="Radar Geometry Cross-Section" subtitle="Interactive physics simulation of SAR geometric distortions. Adjust the satellite's incidence angle to see Layover, Foreshortening, and Shadow dynamically change." />
+      <GlassCard style={{ padding: 0, overflow: 'hidden' }}>
+        
+        <div style={{ position: 'relative', width: '100%', height: 350, background: 'linear-gradient(180deg, #050a15 0%, #111 100%)' }}>
+          
+          <svg width="100%" height="100%" viewBox="0 0 1000 350" preserveAspectRatio="xMidYMid slice">
+             {/* Grid */}
+             <g stroke="rgba(255,255,255,0.05)" strokeWidth="1">
+               {Array.from({length: 10}).map((_,i) => <line key={`v${i}`} x1={i*100} y1="0" x2={i*100} y2="350" />)}
+               {Array.from({length: 4}).map((_,i) => <line key={`h${i}`} x1="0" y1={i*100} x2="1000" y2={i*100} />)}
+             </g>
+
+             {/* Background Mountains */}
+             <path d={`M 600 ${GROUND_Y} L 750 150 L 900 ${GROUND_Y} Z`} fill="#1a1a1a" />
              
-             {/* Satellite */}
-             <circle cx={satX} cy={satY} r="10" fill="var(--water)" />
-             <text x={satX + 15} y={satY + 5} fill="var(--water)" fontSize="14">Satellite</text>
+             {/* Main Terrain Base */}
+             <path d={`M 0 ${GROUND_Y} L ${M_LEFT} ${GROUND_Y} L ${M_PEAK_X} ${M_PEAK_Y} L ${M_RIGHT} ${GROUND_Y} L 1000 ${GROUND_Y} L 1000 350 L 0 350 Z`} fill="#2a2a2a" />
              
              {/* Radar Beams */}
-             <g stroke="rgba(255,255,255,0.2)" strokeWidth="1" strokeDasharray="5,5">
-                <line x1={satX} y1={satY} x2="300" y2="250" />
-                <line x1={satX} y1={satY} x2="400" y2="100" />
-                <line x1={satX} y1={satY} x2="500" y2="250" />
-                <line x1={satX} y1={satY} x2="600" y2="250" />
-                <line x1={satX} y1={satY} x2="750" y2="150" />
-                <line x1={satX} y1={satY} x2="900" y2="250" />
+             <g stroke="rgba(0, 255, 255, 0.2)" strokeWidth="1.5" strokeDasharray="5,5">
+                <line x1={satX} y1={satY} x2={M_RIGHT} y2={GROUND_Y} />
+                <line x1={satX} y1={satY} x2={M_PEAK_X} y2={M_PEAK_Y} />
+                <line x1={satX} y1={satY} x2={M_LEFT} y2={GROUND_Y} />
+                <line x1={satX} y1={satY} x2={shadowEndX} y2={GROUND_Y} />
              </g>
              
-             {/* Dynamic highlighting based on incidence angle */}
-             <path d="M 300 250 L 400 100" stroke="var(--warn)" strokeWidth="4" />
-             <text x="310" y="150" fill="var(--warn)" fontSize="14">Layover / Foreshortening</text>
-
-             <path d="M 400 100 L 500 250" stroke="#555" strokeWidth="4" />
-             <text x="420" y="180" fill="#888" fontSize="14">Shadow Zone</text>
+             {/* Dynamic Highlight: Foreshortening/Layover */}
+             <path d={`M ${M_LEFT} ${GROUND_Y} L ${M_PEAK_X} ${M_PEAK_Y}`} stroke={isLayover ? "#f44" : "#fa0"} strokeWidth="5" />
+             
+             {/* Dynamic Highlight: Shadow */}
+             <path 
+                d={shadowEndX < M_LEFT 
+                  ? `M ${M_PEAK_X} ${M_PEAK_Y} L ${M_LEFT} ${GROUND_Y} L ${shadowEndX} ${GROUND_Y}` 
+                  : `M ${M_PEAK_X} ${M_PEAK_Y} L ${shadowEndX} ${GROUND_Y}`} 
+                fill="rgba(0,0,0,0.7)" 
+             />
+             <path 
+                d={shadowEndX < M_LEFT 
+                  ? `M ${M_PEAK_X} ${M_PEAK_Y} L ${M_LEFT} ${GROUND_Y} L ${shadowEndX} ${GROUND_Y}` 
+                  : `M ${M_PEAK_X} ${M_PEAK_Y} L ${shadowEndX} ${GROUND_Y}`} 
+                stroke="#555" strokeWidth="4" fill="none"
+             />
+             
+             {/* Satellite */}
+             <circle cx={satX} cy={satY} r="12" fill="#0ff" />
+             <path d={`M ${satX-15} ${satY-10} L ${satX-25} ${satY-25} L ${satX-15} ${satY-35} L ${satX-5} ${satY-25} Z`} fill="#0aa" />
+             <path d={`M ${satX+15} ${satY+10} L ${satX+25} ${satY+25} L ${satX+15} ${satY+35} L ${satX+5} ${satY+25} Z`} fill="#0aa" />
+             
+             {/* Labels */}
+             <text x={satX} y={satY - 25} fill="#0ff" fontSize="14" fontWeight="bold" textAnchor="middle">SATELLITE</text>
+             
+             {/* Distance Rings (arcs) from satellite */}
+             <g stroke="rgba(0,255,255,0.1)" strokeWidth="2" fill="none">
+               <circle cx={satX} cy={satY} r={distPeak} />
+               <circle cx={satX} cy={satY} r={distLeft} />
+             </g>
           </svg>
           
-          <div style={{ position: 'absolute', bottom: 20, left: 20, width: 300, background: 'rgba(0,0,0,0.6)', padding: 'var(--s3)', borderRadius: 'var(--r-md)' }}>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-3)', marginBottom: 4 }}>Incidence Angle: {incAngle}°</div>
-            <input type="range" min="20" max="60" value={incAngle} onChange={e => setIncAngle(Number(e.target.value))} style={{ width: '100%', accentColor: 'var(--water)' }} />
+          {/* Dynamic HUD Overlays */}
+          <div style={{ position: 'absolute', top: 120, left: M_PEAK_X - 180, pointerEvents: 'none' }}>
+            <div style={{ background: isLayover ? 'rgba(255,0,0,0.2)' : 'rgba(255,170,0,0.2)', border: `1px solid ${isLayover ? '#f44' : '#fa0'}`, padding: '4px 8px', borderRadius: 4, color: isLayover ? '#f44' : '#fa0', fontWeight: 'bold', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+              {isLayover ? "LAYOVER (Fold-over)" : "FORESHORTENING"}
+            </div>
+            {isLayover && (
+              <div style={{ fontSize: '0.65rem', color: '#f44', marginTop: 4, background: 'rgba(0,0,0,0.8)', padding: 4, borderRadius: 4, width: 150 }}>
+                Mountain peak is closer to radar ({Math.round(distPeak)}m) than the base ({Math.round(distLeft)}m). Top is mapped BEFORE bottom!
+              </div>
+            )}
+            {!isLayover && (
+              <div style={{ fontSize: '0.65rem', color: '#fa0', marginTop: 4, background: 'rgba(0,0,0,0.8)', padding: 4, borderRadius: 4, width: 150 }}>
+                Slope is compressed in radar imagery.
+              </div>
+            )}
           </div>
+          
+          <div style={{ position: 'absolute', top: Math.max(120, M_PEAK_Y + 50), left: M_PEAK_X + 20, pointerEvents: 'none' }}>
+            <div style={{ background: 'rgba(0,0,0,0.8)', border: '1px solid #555', padding: '4px 8px', borderRadius: 4, color: '#aaa', fontWeight: 'bold', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+              RADAR SHADOW
+            </div>
+            <div style={{ fontSize: '0.65rem', color: '#888', marginTop: 4, background: 'rgba(0,0,0,0.8)', padding: 4, borderRadius: 4, width: 130 }}>
+              No radar signal reaches here. Blank pixels.
+            </div>
+          </div>
+          
+          {/* User Controls HUD */}
+          <div style={{ position: 'absolute', bottom: 20, right: 20, width: 350, background: 'rgba(0,10,20,0.85)', padding: 'var(--s4)', borderRadius: 'var(--r-md)', border: '1px solid rgba(0,255,255,0.3)', backdropFilter: 'blur(10px)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 'var(--s3)' }}>
+              <div style={{ fontSize: '0.8rem', color: '#0ff', fontWeight: 'bold', letterSpacing: 1 }}>INCIDENCE ANGLE (θ)</div>
+              <div style={{ fontSize: '1.5rem', color: '#fff', fontWeight: 'bold', fontFamily: 'var(--font-num)' }}>{incAngle}°</div>
+            </div>
+            <input 
+              type="range" 
+              min="15" 
+              max="65" 
+              step="1"
+              value={incAngle} 
+              onChange={e => setIncAngle(Number(e.target.value))} 
+              style={{ width: '100%', accentColor: '#0ff', cursor: 'ew-resize', marginBottom: 'var(--s3)' }} 
+            />
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-3)', lineHeight: 1.5 }}>
+              Drag to adjust satellite orbit. Shallower angles (larger θ) increase shadow. Steeper angles (smaller θ) cause severe layover.
+            </div>
+          </div>
+          
         </div>
       </GlassCard>
     </div>
