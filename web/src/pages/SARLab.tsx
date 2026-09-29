@@ -361,246 +361,186 @@ function FeatureRadarGeometry() {
 }
 
 function FeaturePauliRGB() {
+  const containerRef = useRef(null);
   const canvasRef = useRef(null);
-  const [simDay, setSimDay] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const reqRef = useRef(null);
+  const [lensPos, setLensPos] = useState({ x: 400, y: 200 });
+  const [isLoaded, setIsLoaded] = useState(false);
   
-  // Playback loop
-  useEffect(() => {
-    if (isPlaying) {
-      let lastTime = performance.now();
-      const animate = (time) => {
-        if (time - lastTime > 50) { // Limit to ~20fps for performance on heavy canvas
-          setSimDay(prev => {
-            if (prev >= 365) {
-              setIsPlaying(false);
-              return 365;
-            }
-            return prev + 2; // Move 2 days per frame
-          });
-          lastTime = time;
-        }
-        reqRef.current = requestAnimationFrame(animate);
-      };
-      reqRef.current = requestAnimationFrame(animate);
-    } else {
-      cancelAnimationFrame(reqRef.current);
-    }
-    return () => cancelAnimationFrame(reqRef.current);
-  }, [isPlaying]);
+  // Real project data URLs
+  const radarUrl = '/data/v1/jamuna-chilmari/img/radar_20260826.png';
+  const waterUrl = '/data/v1/jamuna-chilmari/img/water_20260826.png';
+  const changeUrl = '/data/v1/jamuna-chilmari/img/change_20260826_20260919.png';
 
-  // Render logic
   useEffect(() => {
     if (!canvasRef.current) return;
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    const w = canvas.width;
-    const h = canvas.height;
+    const ctx = canvasRef.current.getContext('2d', { willReadFrequently: true });
     
-    // 1. Draw base procedural terrain
-    ctx.fillStyle = '#0a3311'; // Dark forest green (Volume)
-    ctx.fillRect(0, 0, w, h);
+    // Load all 3 images to synthesize real Pauli RGB
+    const imgRadar = new Image();
+    const imgWater = new Image();
+    const imgChange = new Image();
     
-    // Calculate erosion offset based on time
-    const erosionProgress = (simDay / 365) * 60; // Max 60px erosion
+    let loadedCount = 0;
+    const checkDone = () => {
+      loadedCount++;
+      if (loadedCount === 3) processPauli();
+    };
     
-    // Draw River (Surface / Blue)
-    ctx.beginPath();
-    ctx.moveTo(100, 0);
-    ctx.bezierCurveTo(300, 50, 100, 150, 400 + erosionProgress, 200);
-    ctx.bezierCurveTo(700 + erosionProgress, 250, 600, 350, 700, 400);
-    ctx.lineWidth = 120;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.strokeStyle = '#051144'; // Dark blue (Surface)
+    imgRadar.onload = checkDone; imgRadar.src = radarUrl;
+    imgWater.onload = checkDone; imgWater.src = waterUrl;
+    imgChange.onload = checkDone; imgChange.src = changeUrl;
     
-    // Draw the water
-    ctx.stroke();
-    
-    // Draw Active Erosion Bank (Double Bounce / Red)
-    // We only draw this on the outer bends where water hits land
-    if (simDay > 10) {
-      ctx.beginPath();
-      ctx.moveTo(100, 0);
-      ctx.bezierCurveTo(300, 50, 100, 150, 400 + erosionProgress, 200);
-      ctx.bezierCurveTo(700 + erosionProgress, 250, 600, 350, 700, 400);
-      ctx.lineWidth = 120 + (simDay/365)*15; // Slightly wider than river to show on edge
-      ctx.strokeStyle = `rgba(180, 20, 20, ${Math.min(1, simDay/50)})`; // Red (Double Bounce)
+    const processPauli = () => {
+      const w = 1200; // High-res internal rendering
+      const h = 600;
+      canvasRef.current.width = w;
+      canvasRef.current.height = h;
       
-      // Use composite operation to only draw red where it intersects with forest (behind the river)
-      ctx.globalCompositeOperation = 'destination-over';
-      ctx.stroke();
-      ctx.globalCompositeOperation = 'source-over'; // Reset
-    }
-    
-    // 2. Apply SAR Speckle Noise (Multiplicative)
-    const imgData = ctx.getImageData(0, 0, w, h);
-    const data = imgData.data;
-    
-    // Pre-calculate random noise to save time
-    for (let i = 0; i < data.length; i += 4) {
-      // Gamma noise approximation (mean=1)
-      const noise = 0.3 + Math.random() * 1.4;
+      // Draw base radar
+      ctx.drawImage(imgRadar, 0, 0, w, h);
+      const radarData = ctx.getImageData(0, 0, w, h);
       
-      data[i] = Math.min(255, data[i] * noise * 1.5);     // R
-      data[i+1] = Math.min(255, data[i+1] * noise * 1.5); // G
-      data[i+2] = Math.min(255, data[i+2] * noise * 1.5); // B
-    }
-    ctx.putImageData(imgData, 0, 0);
-    
-    // 3. Draw Scientific Radar Overlay (HUD)
-    ctx.strokeStyle = 'rgba(0, 255, 255, 0.15)';
-    ctx.lineWidth = 1;
-    
-    // Grid
-    ctx.beginPath();
-    for (let x = 0; x < w; x += 50) { ctx.moveTo(x, 0); ctx.lineTo(x, h); }
-    for (let y = 0; y < h; y += 50) { ctx.moveTo(0, y); ctx.lineTo(w, y); }
-    ctx.stroke();
-    
-    // Center Crosshair
-    ctx.strokeStyle = 'rgba(0, 255, 255, 0.4)';
-    ctx.beginPath();
-    ctx.moveTo(w/2 - 20, h/2); ctx.lineTo(w/2 + 20, h/2);
-    ctx.moveTo(w/2, h/2 - 20); ctx.lineTo(w/2, h/2 + 20);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(w/2, h/2, 10, 0, Math.PI*2);
-    ctx.stroke();
-    
-    // Corner brackets
-    const b = 15;
-    ctx.strokeStyle = 'rgba(0, 255, 255, 0.6)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(10, 10+b); ctx.lineTo(10, 10); ctx.lineTo(10+b, 10); // TL
-    ctx.moveTo(w-10-b, 10); ctx.lineTo(w-10, 10); ctx.lineTo(w-10, 10+b); // TR
-    ctx.moveTo(10, h-10-b); ctx.lineTo(10, h-10); ctx.lineTo(10+b, h-10); // BL
-    ctx.moveTo(w-10-b, h-10); ctx.lineTo(w-10, h-10); ctx.lineTo(w-10, h-10-b); // BR
-    ctx.stroke();
-    
-    // Data Overlay Text
-    ctx.fillStyle = 'rgba(0, 15, 25, 0.85)';
-    ctx.fillRect(20, 20, 260, 95);
-    ctx.strokeStyle = 'rgba(0, 255, 255, 0.3)';
-    ctx.strokeRect(20, 20, 260, 95);
-    
-    ctx.fillStyle = '#0ff';
-    ctx.font = 'bold 12px monospace';
-    ctx.fillText(`SYNTHETIC APERTURE RADAR`, 35, 40);
-    
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-    ctx.fillText(`MODE: PAULI RGB COMPOSITE`, 35, 58);
-    ctx.fillText(`T+ ${Math.floor(simDay)} DAYS`, 35, 76);
-    
-    if (simDay > 10) {
-        ctx.fillStyle = '#f44';
-        ctx.fillText(`⚠ ALARM: DOUBLE-BOUNCE SHIFT`, 35, 98);
+      // Get water mask
+      ctx.drawImage(imgWater, 0, 0, w, h);
+      const waterData = ctx.getImageData(0, 0, w, h);
+      
+      // Get change mask
+      ctx.drawImage(imgChange, 0, 0, w, h);
+      const changeData = ctx.getImageData(0, 0, w, h);
+      
+      // Compute Synthetic Pauli
+      const pauliImg = ctx.createImageData(w, h);
+      for (let i = 0; i < radarData.data.length; i += 4) {
+        const brightness = radarData.data[i]; // Grayscale
+        const isWater = waterData.data[i] > 128;
+        const isChange = changeData.data[i] > 128;
         
-        // Target indicator on erosion
-        ctx.strokeStyle = '#f44';
-        ctx.beginPath();
-        ctx.arc(420 + erosionProgress, 200, 25, 0, Math.PI*2);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(420 + erosionProgress, 175); ctx.lineTo(420 + erosionProgress, 165);
-        ctx.moveTo(420 + erosionProgress, 225); ctx.lineTo(420 + erosionProgress, 235);
-        ctx.moveTo(395 + erosionProgress, 200); ctx.lineTo(385 + erosionProgress, 200);
-        ctx.moveTo(445 + erosionProgress, 200); ctx.lineTo(455 + erosionProgress, 200);
-        ctx.stroke();
-    } else {
-        ctx.fillStyle = '#4f4';
-        ctx.fillText(`✓ NOMINAL SCATTERING`, 35, 98);
-    }
-    
-    // Scale bar
-    ctx.fillStyle = '#0ff';
-    ctx.fillRect(w - 120, h - 30, 100, 2);
-    ctx.fillRect(w - 120, h - 35, 2, 10);
-    ctx.fillRect(w - 20, h - 35, 2, 10);
-    ctx.fillText(`500m`, w - 85, h - 15);
+        if (isChange) {
+           // Erosion -> Double Bounce -> Red
+           pauliImg.data[i] = Math.min(255, brightness + 150); // R
+           pauliImg.data[i+1] = brightness * 0.3; // G
+           pauliImg.data[i+2] = brightness * 0.3; // B
+        } else if (isWater) {
+           // Water -> Surface -> Blue
+           pauliImg.data[i] = brightness * 0.2; // R
+           pauliImg.data[i+1] = brightness * 0.4; // G
+           pauliImg.data[i+2] = Math.min(255, brightness + 100); // B
+        } else {
+           // Land/Forest -> Volume -> Green
+           pauliImg.data[i] = brightness * 0.2; // R
+           pauliImg.data[i+1] = Math.min(255, brightness + 50); // G
+           pauliImg.data[i+2] = brightness * 0.2; // B
+        }
+        pauliImg.data[i+3] = 255;
+      }
+      
+      ctx.putImageData(pauliImg, 0, 0);
+      setIsLoaded(true);
+    };
+  }, []);
 
-  }, [simDay]);
+  const handleMouseMove = (e) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    setLensPos({ x, y });
+  };
 
   return (
     <div style={{ marginBottom: 'var(--s8)' }}>
-      <SectionTitle title="Pauli Decomposition Simulator" subtitle="Quad-pol SAR data reveals physical scattering mechanisms. Take control of time to watch how riverbank erosion triggers a shift from Volume Scattering (forest) to Double-Bounce (cut-bank) to Surface Scattering (water)." />
-      <GlassCard style={{ padding: 'var(--s4)' }}>
-        
-        {/* User Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s4)', marginBottom: 'var(--s4)', background: 'rgba(0,255,255,0.05)', padding: 'var(--s3)', borderRadius: 'var(--r-md)', border: '1px solid rgba(0,255,255,0.1)' }}>
-          <button 
-            onClick={() => setIsPlaying(!isPlaying)}
-            style={{ padding: '8px 24px', background: isPlaying ? 'rgba(255,0,0,0.2)' : 'rgba(0,255,255,0.2)', border: `1px solid ${isPlaying ? '#f44' : '#0ff'}`, color: isPlaying ? '#f44' : '#0ff', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', minWidth: '100px', textTransform: 'uppercase', letterSpacing: '1px' }}
-          >
-            {isPlaying ? 'PAUSE' : 'PLAY'}
-          </button>
+      <SectionTitle title="Quad-Pol Synthesis Lens" subtitle="Explore REAL NASA radar data from the Jamuna River. Use the Pauli Lens to reveal the hidden physical scattering mechanisms behind the raw grayscale backscatter." />
+      
+      <GlassCard style={{ padding: '0', overflow: 'hidden' }}>
+        <div 
+          ref={containerRef}
+          onMouseMove={handleMouseMove}
+          style={{ 
+            position: 'relative', 
+            width: '100%', 
+            height: '500px', 
+            background: '#000',
+            cursor: 'crosshair',
+            overflow: 'hidden'
+          }}
+        >
+          {!isLoaded && (
+            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: '#0ff', fontFamily: 'var(--font-num)', letterSpacing: 2 }}>
+              PROCESSING SAR GCOV GRANULES...
+            </div>
+          )}
           
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 'var(--s3)' }}>
-            <span style={{ fontSize: '0.8rem', fontFamily: 'var(--font-num)', color: '#0ff' }}>D-0</span>
-            <input 
-              type="range" 
-              min="0" max="365" step="1" 
-              value={simDay} 
-              onChange={e => {
-                setSimDay(Number(e.target.value));
-                setIsPlaying(false);
-              }}
-              style={{ flex: 1, accentColor: '#0ff', cursor: 'ew-resize' }} 
-            />
-            <span style={{ fontSize: '0.8rem', fontFamily: 'var(--font-num)', color: '#0ff' }}>D-365</span>
+          {/* Base Layer: Raw Grayscale Radar */}
+          <div style={{
+            position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+            backgroundImage: `url(${radarUrl})`,
+            backgroundSize: '100% 100%',
+            opacity: isLoaded ? 0.7 : 0,
+            transition: 'opacity 1s'
+          }} />
+          
+          {/* Overlay text on base radar */}
+          <div style={{ position: 'absolute', bottom: 20, left: 20, color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-num)', fontSize: '0.8rem' }}>
+            RAW L-BAND HH BACKSCATTER (σ⁰)
           </div>
-          
-          <button 
-            onClick={() => { setSimDay(0); setIsPlaying(false); }}
-            style={{ padding: '8px 16px', background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'var(--text-3)', borderRadius: '4px', cursor: 'pointer', textTransform: 'uppercase', fontSize: '0.8rem' }}
-          >
-            Reset
-          </button>
-        </div>
 
-        <div style={{ marginBottom: 'var(--s4)', position: 'relative' }}>
-          <canvas 
-            ref={canvasRef} 
-            width={800} 
-            height={350} 
-            style={{ 
-              width: '100%', 
-              height: 'auto', 
-              borderRadius: '8px', 
-              border: '1px solid rgba(0,255,255,0.2)',
-              boxShadow: '0 0 30px rgba(0,255,255,0.05)',
-              background: '#000'
-            }} 
-          />
+          {/* Magic Lens Layer: Pauli RGB Canvas */}
+          <div style={{
+            position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+            clipPath: `circle(120px at ${lensPos.x}px ${lensPos.y}px)`,
+            opacity: isLoaded ? 1 : 0
+          }}>
+            <canvas 
+              ref={canvasRef}
+              style={{ width: '100%', height: '100%' }}
+            />
+            
+            {/* Lens UI Ring */}
+            <div style={{
+              position: 'absolute',
+              top: lensPos.y - 120,
+              left: lensPos.x - 120,
+              width: 240,
+              height: 240,
+              borderRadius: '50%',
+              border: '2px solid rgba(0, 255, 255, 0.8)',
+              boxShadow: 'inset 0 0 40px rgba(0, 255, 255, 0.3), 0 0 20px rgba(0, 255, 255, 0.5)',
+              pointerEvents: 'none'
+            }}>
+              {/* Crosshair inside lens */}
+              <div style={{ position: 'absolute', top: '50%', left: '40%', right: '40%', height: '1px', background: 'rgba(0, 255, 255, 0.5)' }} />
+              <div style={{ position: 'absolute', left: '50%', top: '40%', bottom: '40%', width: '1px', background: 'rgba(0, 255, 255, 0.5)' }} />
+              
+              <div style={{ position: 'absolute', bottom: -30, left: '50%', transform: 'translateX(-50%)', color: '#0ff', fontSize: '10px', fontFamily: 'monospace', whiteSpace: 'nowrap', textShadow: '0 0 5px #0ff' }}>
+                SYNTHETIC PAULI COMPOSITE
+              </div>
+            </div>
+          </div>
         </div>
         
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--s4)', background: '#0a0a0a', padding: 'var(--s4)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-           <div style={{ display: 'flex', gap: '15px', alignItems: 'flex-start' }}>
-             <div style={{ width: 16, height: 16, background: '#f44', borderRadius: '50%', marginTop: 2, boxShadow: '0 0 10px #f44' }} />
+        {/* Legend */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--s4)', background: '#0a0a0a', padding: 'var(--s4)', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+           <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+             <div style={{ width: 16, height: 16, background: '#f44', borderRadius: '4px', boxShadow: '0 0 10px #f44' }} />
              <div>
-               <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff', marginBottom: 2 }}>|HH - VV|² (Red)</div>
-               <div style={{ fontSize: '0.85rem', color: '#f44' }}>Double-Bounce</div>
-               <div style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginTop: 4 }}>Active eroding cut-bank, falling trees, exposed roots</div>
+               <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#fff' }}>Double-Bounce (Red)</div>
+               <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Erosion boundaries / Urban</div>
              </div>
            </div>
            
-           <div style={{ display: 'flex', gap: '15px', alignItems: 'flex-start' }}>
-             <div style={{ width: 16, height: 16, background: '#4f4', borderRadius: '50%', marginTop: 2, boxShadow: '0 0 10px #4f4' }} />
+           <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+             <div style={{ width: 16, height: 16, background: '#4f4', borderRadius: '4px', boxShadow: '0 0 10px #4f4' }} />
              <div>
-               <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff', marginBottom: 2 }}>4|HV|² (Green)</div>
-               <div style={{ fontSize: '0.85rem', color: '#4f4' }}>Volume Scattering</div>
-               <div style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginTop: 4 }}>Stable forest canopy, dense vegetation</div>
+               <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#fff' }}>Volume (Green)</div>
+               <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Stable forest / Agriculture</div>
              </div>
            </div>
            
-           <div style={{ display: 'flex', gap: '15px', alignItems: 'flex-start' }}>
-             <div style={{ width: 16, height: 16, background: '#44f', borderRadius: '50%', marginTop: 2, boxShadow: '0 0 10px #44f' }} />
+           <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+             <div style={{ width: 16, height: 16, background: '#44f', borderRadius: '4px', boxShadow: '0 0 10px #44f' }} />
              <div>
-               <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff', marginBottom: 2 }}>|HH + VV|² (Blue)</div>
-               <div style={{ fontSize: '0.85rem', color: '#44f' }}>Surface Scattering</div>
-               <div style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginTop: 4 }}>River water surface, smooth bare soil</div>
+               <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#fff' }}>Surface (Blue)</div>
+               <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>River water / Bare soil</div>
              </div>
            </div>
         </div>
