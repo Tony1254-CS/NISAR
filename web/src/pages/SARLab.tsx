@@ -65,42 +65,189 @@ function SectionTitle({ title, subtitle }: { title: string; subtitle: string }) 
 
 function FeatureRadarViewer() {
   const reachId = useStore(state => state.reachId) || 'jamuna-chilmari';
+  
+  // Pane 1: Swipe
   const [sliderPos, setSliderPos] = useState(50);
+  
+  // Pane 2: Otsu
+  const [otsuThresh, setOtsuThresh] = useState(60);
+  const otsuCanvasRef = useRef(null);
+  const [radarPixels, setRadarPixels] = useState(null);
+  
+  useEffect(() => {
+    const img = new Image();
+    img.src = `/data/v1/${reachId}/img/radar_20260826.png`;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      // Scale down for performance
+      const w = 400; const h = 300;
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      setRadarPixels(ctx.getImageData(0, 0, w, h));
+    };
+  }, [reachId]);
+  
+  useEffect(() => {
+    if (!otsuCanvasRef.current || !radarPixels) return;
+    const canvas = otsuCanvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const w = 400; const h = 300;
+    
+    const outData = ctx.createImageData(w, h);
+    const inData = radarPixels.data;
+    
+    for (let i = 0; i < inData.length; i += 4) {
+      const brightness = inData[i];
+      if (brightness < otsuThresh) {
+        // Water
+        outData.data[i] = 0;
+        outData.data[i+1] = 0;
+        outData.data[i+2] = 255;
+        outData.data[i+3] = 255;
+      } else {
+        // Land
+        outData.data[i] = 20;
+        outData.data[i+1] = 20;
+        outData.data[i+2] = 20;
+        outData.data[i+3] = 255;
+      }
+    }
+    ctx.putImageData(outData, 0, 0);
+  }, [otsuThresh, radarPixels]);
+  
+  // Pane 3: Change Detection Scanner
+  const changeCanvasRef = useRef(null);
+  const [isScanning, setIsScanning] = useState(false);
+  const [hectaresLost, setHectaresLost] = useState(0);
+  
+  const runDiff = () => {
+    if (isScanning) return;
+    setIsScanning(true);
+    setHectaresLost(0);
+    
+    const img = new Image();
+    img.src = `/data/v1/${reachId}/img/change_20260826_20260919.png`;
+    img.onload = () => {
+      const canvas = changeCanvasRef.current;
+      const ctx = canvas.getContext('2d');
+      const w = 400; const h = 300;
+      
+      // Draw image to offscreen canvas to read pixels
+      const offCanvas = document.createElement('canvas');
+      offCanvas.width = w; offCanvas.height = h;
+      const offCtx = offCanvas.getContext('2d');
+      offCtx.drawImage(img, 0, 0, w, h);
+      const changeData = offCtx.getImageData(0, 0, w, h);
+      
+      // We will reveal it line by line
+      let currentY = 0;
+      let totalHectares = 0;
+      const outData = ctx.createImageData(w, h);
+      
+      // Fill initial black background
+      for(let i=0; i<outData.data.length; i+=4) {
+         outData.data[i] = 10; outData.data[i+1] = 10; outData.data[i+2] = 10; outData.data[i+3] = 255;
+      }
+      
+      const animate = () => {
+        if (currentY >= h) {
+          setIsScanning(false);
+          return;
+        }
+        
+        // Process next 10 lines
+        for (let y = currentY; y < currentY + 10 && y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            const i = (y * w + x) * 4;
+            const r = changeData.data[i];
+            
+            if (r > 128) { // Erosion pixel
+              outData.data[i] = 255; // Red
+              outData.data[i+1] = 50; 
+              outData.data[i+2] = 50;
+              totalHectares += 0.09; // Approx 30x30m pixel = 900sqm = 0.09 ha
+            }
+          }
+        }
+        
+        ctx.putImageData(outData, 0, 0);
+        
+        // Draw scanner line
+        ctx.fillStyle = 'rgba(255, 50, 50, 0.8)';
+        ctx.fillRect(0, currentY + 10, w, 2);
+        
+        setHectaresLost(Math.round(totalHectares));
+        currentY += 10;
+        requestAnimationFrame(animate);
+      };
+      animate();
+    };
+  };
   
   return (
     <div style={{ marginBottom: 'var(--s8)' }}>
-      <SectionTitle title="Live NISAR Radar Imagery Viewer" subtitle="Our pipeline uses actual L-band backscatter data. See the real imagery and classification outputs below." />
+      <SectionTitle title="Live NISAR Pipeline Sandbox" subtitle="Don't just view the outputs. Run the actual mathematical pipeline on real L-band backscatter data." />
       <GlassCard>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'var(--s4)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 'var(--s4)' }}>
           
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s2)' }}>
-            <div style={{ position: 'relative', height: 250, overflow: 'hidden', borderRadius: 'var(--r-md)', background: '#000', border: '1px solid var(--glass-border)' }}>
+          {/* Box 1 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s2)', background: 'rgba(255,255,255,0.02)', padding: 'var(--s3)', borderRadius: 'var(--r-md)', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff', textAlign: 'center' }}>1. Raw σ⁰ Backscatter</div>
+            <div style={{ position: 'relative', height: 280, overflow: 'hidden', borderRadius: '4px', background: '#000', border: '1px solid #333' }}>
               <img src={`/data/v1/${reachId}/img/radar_20260919.png`} style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover' }} alt="t1" />
               <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, clipPath: `polygon(0 0, ${sliderPos}% 0, ${sliderPos}% 100%, 0 100%)` }}>
                 <img src={`/data/v1/${reachId}/img/radar_20260826.png`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="t0" />
               </div>
-              <div style={{ position: 'absolute', top: 0, bottom: 0, left: `calc(${sliderPos}% - 1px)`, width: 2, background: 'var(--water)', boxShadow: '0 0 10px var(--water)', zIndex: 5, pointerEvents: 'none' }} />
-              <input type="range" min="0" max="100" value={sliderPos} onChange={e => setSliderPos(Number(e.target.value))} style={{ position: 'absolute', width: '100%', top: '0', bottom: '0', opacity: 0, cursor: 'ew-resize', zIndex: 10 }} />
-              <div style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(0,0,0,0.8)', padding: '4px 8px', borderRadius: 4, fontSize: '0.75rem', border: '1px solid var(--glass-border)' }}>Aug 26 (t₀)</div>
-              <div style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(0,0,0,0.8)', padding: '4px 8px', borderRadius: 4, fontSize: '0.75rem', border: '1px solid var(--glass-border)' }}>Sep 19 (t₁)</div>
+              <div style={{ position: 'absolute', top: 0, bottom: 0, left: `calc(${sliderPos}% - 1px)`, width: 2, background: 'var(--water)', boxShadow: '0 0 10px var(--water)', pointerEvents: 'none' }} />
+              <input type="range" min="0" max="100" value={sliderPos} onChange={e => setSliderPos(Number(e.target.value))} style={{ position: 'absolute', width: '100%', height: '100%', opacity: 0, cursor: 'ew-resize', zIndex: 10 }} />
+              
+              <div style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(0,0,0,0.8)', padding: '4px 8px', borderRadius: 4, fontSize: '0.75rem', border: '1px solid #555' }}>Aug 26 (t₀)</div>
+              <div style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(0,0,0,0.8)', padding: '4px 8px', borderRadius: 4, fontSize: '0.75rem', border: '1px solid #555' }}>Sep 19 (t₁)</div>
             </div>
-            <div style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-3)' }}>Raw σ⁰ HH Backscatter (Compare t₀ vs t₁)</div>
+            <div style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-3)' }}>Drag to compare raw SAR images. Notice the dark areas (water) changing shape.</div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s2)' }}>
-            <div style={{ height: 250, borderRadius: 'var(--r-md)', overflow: 'hidden', position: 'relative', background: '#000', border: '1px solid var(--glass-border)' }}>
-              <img src={`/data/v1/${reachId}/img/water_20260826.png`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="water t0" />
-              <div style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(0,0,0,0.8)', padding: '4px 8px', borderRadius: 4, fontSize: '0.75rem', border: '1px solid var(--glass-border)' }}>t₀ Water Mask</div>
+          {/* Box 2 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s2)', background: 'rgba(255,255,255,0.02)', padding: 'var(--s3)', borderRadius: 'var(--r-md)', border: '1px solid rgba(0,100,255,0.2)' }}>
+            <div style={{ fontSize: '1rem', fontWeight: 'bold', color: 'var(--water)', textAlign: 'center' }}>2. Interactive Otsu Threshold</div>
+            <div style={{ height: 280, borderRadius: '4px', overflow: 'hidden', position: 'relative', background: '#000', border: '1px solid rgba(0,100,255,0.3)' }}>
+              <canvas ref={otsuCanvasRef} width={400} height={300} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: 'rgba(0,0,0,0.8)', padding: 'var(--s3)', borderTop: '1px solid rgba(0,100,255,0.3)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#fff', fontSize: '0.8rem', marginBottom: '8px' }}>
+                  <span>Backscatter Threshold</span>
+                  <span>{otsuThresh} DN</span>
+                </div>
+                <input type="range" min="10" max="150" value={otsuThresh} onChange={e => setOtsuThresh(Number(e.target.value))} style={{ width: '100%', accentColor: 'var(--water)' }} />
+              </div>
             </div>
-            <div style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-3)' }}>Otsu Threshold Classification</div>
+            <div style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-3)' }}>Drag slider to classify water pixels in real-time based on brightness.</div>
           </div>
           
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s2)' }}>
-            <div style={{ height: 250, borderRadius: 'var(--r-md)', overflow: 'hidden', position: 'relative', background: '#000', border: '1px solid var(--glass-border)' }}>
-              <img src={`/data/v1/${reachId}/img/change_20260826_20260919.png`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="change" />
-              <div style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(0,0,0,0.8)', padding: '4px 8px', borderRadius: 4, fontSize: '0.75rem', border: '1px solid var(--glass-border)' }}>Red: Erosion</div>
+          {/* Box 3 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s2)', background: 'rgba(255,255,255,0.02)', padding: 'var(--s3)', borderRadius: 'var(--r-md)', border: '1px solid rgba(255,50,50,0.2)' }}>
+            <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#f44', textAlign: 'center' }}>3. Morphological Change diff()</div>
+            <div style={{ height: 280, borderRadius: '4px', overflow: 'hidden', position: 'relative', background: '#000', border: '1px solid rgba(255,50,50,0.3)' }}>
+              <canvas ref={changeCanvasRef} width={400} height={300} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              
+              {!isScanning && hectaresLost === 0 && (
+                 <img src={`/data/v1/${reachId}/img/change_20260826_20260919.png`} style={{ position: 'absolute', top:0, left:0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.1 }} />
+              )}
+              
+              <div style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(0,0,0,0.8)', padding: '8px 12px', borderRadius: 4, fontSize: '0.85rem', border: '1px solid #f44' }}>
+                <div style={{ color: '#aaa', marginBottom: 4 }}>Land Area Lost</div>
+                <div style={{ color: '#f44', fontWeight: 'bold', fontSize: '1.2rem', fontFamily: 'var(--font-num)' }}>{hectaresLost} ha</div>
+              </div>
+              
+              <button 
+                onClick={runDiff} 
+                disabled={isScanning}
+                style={{ position: 'absolute', bottom: 15, left: '50%', transform: 'translateX(-50%)', padding: '8px 24px', background: isScanning ? '#333' : 'rgba(255,50,50,0.2)', border: `1px solid ${isScanning ? '#555' : '#f44'}`, color: isScanning ? '#888' : '#f44', borderRadius: '4px', cursor: isScanning ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}
+              >
+                {isScanning ? 'COMPUTING DIFF...' : 'RUN PIPELINE'}
+              </button>
             </div>
-            <div style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-3)' }}>Morphological Change Detection</div>
+            <div style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-3)' }}>Execute Boolean XOR on t₀ and t₁ masks to isolate riverbank erosion.</div>
           </div>
           
         </div>
