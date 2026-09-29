@@ -366,17 +366,21 @@ function FeaturePauliRGB() {
   const [isPlaying, setIsPlaying] = useState(false);
   const reqRef = useRef(null);
   
-  // Play/Pause logic
+  // Playback loop
   useEffect(() => {
     if (isPlaying) {
-      const animate = () => {
-        setSimDay(prev => {
-          if (prev >= 365) {
-            setIsPlaying(false);
-            return 365;
-          }
-          return prev + 1;
-        });
+      let lastTime = performance.now();
+      const animate = (time) => {
+        if (time - lastTime > 50) { // Limit to ~20fps for performance on heavy canvas
+          setSimDay(prev => {
+            if (prev >= 365) {
+              setIsPlaying(false);
+              return 365;
+            }
+            return prev + 2; // Move 2 days per frame
+          });
+          lastTime = time;
+        }
         reqRef.current = requestAnimationFrame(animate);
       };
       reqRef.current = requestAnimationFrame(animate);
@@ -389,146 +393,215 @@ function FeaturePauliRGB() {
   // Render logic
   useEffect(() => {
     if (!canvasRef.current) return;
-    const ctx = canvasRef.current.getContext('2d');
-    const w = 800;
-    const h = 200;
-    const imgData = ctx.createImageData(w, h);
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const w = canvas.width;
+    const h = canvas.height;
     
-    // Create base terrain map (constant across renders to avoid recalculating)
-    const terrain = new Float32Array(w * h);
-    // 0 = water, 1 = forest
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const riverCenter = w/2 + Math.sin(y/30)*40;
-        if (Math.abs(x - riverCenter) < 60) terrain[y*w + x] = 0;
-        else terrain[y*w + x] = 1;
-      }
+    // 1. Draw base procedural terrain
+    ctx.fillStyle = '#0a3311'; // Dark forest green (Volume)
+    ctx.fillRect(0, 0, w, h);
+    
+    // Calculate erosion offset based on time
+    const erosionProgress = (simDay / 365) * 60; // Max 60px erosion
+    
+    // Draw River (Surface / Blue)
+    ctx.beginPath();
+    ctx.moveTo(100, 0);
+    ctx.bezierCurveTo(300, 50, 100, 150, 400 + erosionProgress, 200);
+    ctx.bezierCurveTo(700 + erosionProgress, 250, 600, 350, 700, 400);
+    ctx.lineWidth = 120;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#051144'; // Dark blue (Surface)
+    
+    // Draw the water
+    ctx.stroke();
+    
+    // Draw Active Erosion Bank (Double Bounce / Red)
+    // We only draw this on the outer bends where water hits land
+    if (simDay > 10) {
+      ctx.beginPath();
+      ctx.moveTo(100, 0);
+      ctx.bezierCurveTo(300, 50, 100, 150, 400 + erosionProgress, 200);
+      ctx.bezierCurveTo(700 + erosionProgress, 250, 600, 350, 700, 400);
+      ctx.lineWidth = 120 + (simDay/365)*15; // Slightly wider than river to show on edge
+      ctx.strokeStyle = `rgba(180, 20, 20, ${Math.min(1, simDay/50)})`; // Red (Double Bounce)
+      
+      // Use composite operation to only draw red where it intersects with forest (behind the river)
+      ctx.globalCompositeOperation = 'destination-over';
+      ctx.stroke();
+      ctx.globalCompositeOperation = 'source-over'; // Reset
     }
     
-    const time = simDay / 10; // Scale day to the previous math time constant
+    // 2. Apply SAR Speckle Noise (Multiplicative)
+    const imgData = ctx.getImageData(0, 0, w, h);
+    const data = imgData.data;
     
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        let r = 0, g = 0, b = 0;
-        const noise = 0.4 + Math.random() * 1.6;
-        
-        const erosionWave = Math.max(0, Math.sin(time/2 + y/20) * (15 + Math.min(time, 60)));
-        const riverCenter = w/2 + Math.sin(y/30)*40;
-        const rightBank = riverCenter + 60;
-        
-        let currentTerrain = terrain[y*w + x];
-        
-        if (currentTerrain === 1 && x > rightBank && x < rightBank + erosionWave) {
-           currentTerrain = 2; // Active erosion
-           if (x < rightBank + erosionWave - 8) {
-               currentTerrain = 0; // Fully eroded to water
-           }
-        }
-        
-        if (currentTerrain === 0) {
-          b = 180 * noise; g = 20 * noise; r = 10 * noise;
-        } else if (currentTerrain === 1) {
-          b = 20 * noise; g = 170 * noise; r = 30 * noise;
-        } else if (currentTerrain === 2) {
-          b = 30 * noise; g = 20 * noise; r = 240 * noise;
-        }
-        
-        const i = (y * w + x) * 4;
-        imgData.data[i] = Math.min(255, r);
-        imgData.data[i+1] = Math.min(255, g);
-        imgData.data[i+2] = Math.min(255, b);
-        imgData.data[i+3] = 255;
-      }
+    // Pre-calculate random noise to save time
+    for (let i = 0; i < data.length; i += 4) {
+      // Gamma noise approximation (mean=1)
+      const noise = 0.3 + Math.random() * 1.4;
+      
+      data[i] = Math.min(255, data[i] * noise * 1.5);     // R
+      data[i+1] = Math.min(255, data[i+1] * noise * 1.5); // G
+      data[i+2] = Math.min(255, data[i+2] * noise * 1.5); // B
     }
     ctx.putImageData(imgData, 0, 0);
     
-    // Draw HUD
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(10, 10, 280, 80);
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 12px monospace';
-    ctx.fillText(`▶ INTERACTIVE PAULI SIMULATOR`, 20, 30);
-    ctx.fillStyle = 'var(--text-2)';
-    ctx.fillText(`ELAPSED TIME: DAY ${Math.floor(simDay)} OF 365`, 20, 50);
+    // 3. Draw Scientific Radar Overlay (HUD)
+    ctx.strokeStyle = 'rgba(0, 255, 255, 0.15)';
+    ctx.lineWidth = 1;
     
-    if (simDay > 20) {
-        ctx.fillStyle = 'var(--erosion)';
-        ctx.fillText(`⚠ SCATTER MECHANISM SHIFT: EROSION`, 20, 75);
+    // Grid
+    ctx.beginPath();
+    for (let x = 0; x < w; x += 50) { ctx.moveTo(x, 0); ctx.lineTo(x, h); }
+    for (let y = 0; y < h; y += 50) { ctx.moveTo(0, y); ctx.lineTo(w, y); }
+    ctx.stroke();
+    
+    // Center Crosshair
+    ctx.strokeStyle = 'rgba(0, 255, 255, 0.4)';
+    ctx.beginPath();
+    ctx.moveTo(w/2 - 20, h/2); ctx.lineTo(w/2 + 20, h/2);
+    ctx.moveTo(w/2, h/2 - 20); ctx.lineTo(w/2, h/2 + 20);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(w/2, h/2, 10, 0, Math.PI*2);
+    ctx.stroke();
+    
+    // Corner brackets
+    const b = 15;
+    ctx.strokeStyle = 'rgba(0, 255, 255, 0.6)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(10, 10+b); ctx.lineTo(10, 10); ctx.lineTo(10+b, 10); // TL
+    ctx.moveTo(w-10-b, 10); ctx.lineTo(w-10, 10); ctx.lineTo(w-10, 10+b); // TR
+    ctx.moveTo(10, h-10-b); ctx.lineTo(10, h-10); ctx.lineTo(10+b, h-10); // BL
+    ctx.moveTo(w-10-b, h-10); ctx.lineTo(w-10, h-10); ctx.lineTo(w-10, h-10-b); // BR
+    ctx.stroke();
+    
+    // Data Overlay Text
+    ctx.fillStyle = 'rgba(0, 15, 25, 0.85)';
+    ctx.fillRect(20, 20, 260, 95);
+    ctx.strokeStyle = 'rgba(0, 255, 255, 0.3)';
+    ctx.strokeRect(20, 20, 260, 95);
+    
+    ctx.fillStyle = '#0ff';
+    ctx.font = 'bold 12px monospace';
+    ctx.fillText(`SYNTHETIC APERTURE RADAR`, 35, 40);
+    
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.fillText(`MODE: PAULI RGB COMPOSITE`, 35, 58);
+    ctx.fillText(`T+ ${Math.floor(simDay)} DAYS`, 35, 76);
+    
+    if (simDay > 10) {
+        ctx.fillStyle = '#f44';
+        ctx.fillText(`⚠ ALARM: DOUBLE-BOUNCE SHIFT`, 35, 98);
+        
+        // Target indicator on erosion
+        ctx.strokeStyle = '#f44';
+        ctx.beginPath();
+        ctx.arc(420 + erosionProgress, 200, 25, 0, Math.PI*2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(420 + erosionProgress, 175); ctx.lineTo(420 + erosionProgress, 165);
+        ctx.moveTo(420 + erosionProgress, 225); ctx.lineTo(420 + erosionProgress, 235);
+        ctx.moveTo(395 + erosionProgress, 200); ctx.lineTo(385 + erosionProgress, 200);
+        ctx.moveTo(445 + erosionProgress, 200); ctx.lineTo(455 + erosionProgress, 200);
+        ctx.stroke();
     } else {
-        ctx.fillStyle = 'var(--pass)';
-        ctx.fillText(`✓ STABLE SCATTERING PROFILE`, 20, 75);
+        ctx.fillStyle = '#4f4';
+        ctx.fillText(`✓ NOMINAL SCATTERING`, 35, 98);
     }
+    
+    // Scale bar
+    ctx.fillStyle = '#0ff';
+    ctx.fillRect(w - 120, h - 30, 100, 2);
+    ctx.fillRect(w - 120, h - 35, 2, 10);
+    ctx.fillRect(w - 20, h - 35, 2, 10);
+    ctx.fillText(`500m`, w - 85, h - 15);
+
   }, [simDay]);
 
   return (
     <div style={{ marginBottom: 'var(--s8)' }}>
       <SectionTitle title="Pauli Decomposition Simulator" subtitle="Quad-pol SAR data reveals physical scattering mechanisms. Take control of time to watch how riverbank erosion triggers a shift from Volume Scattering (forest) to Double-Bounce (cut-bank) to Surface Scattering (water)." />
-      <GlassCard>
+      <GlassCard style={{ padding: 'var(--s4)' }}>
         
         {/* User Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s4)', marginBottom: 'var(--s4)', background: 'rgba(0,0,0,0.2)', padding: 'var(--s3)', borderRadius: 'var(--r-md)', border: '1px solid rgba(255,255,255,0.05)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s4)', marginBottom: 'var(--s4)', background: 'rgba(0,255,255,0.05)', padding: 'var(--s3)', borderRadius: 'var(--r-md)', border: '1px solid rgba(0,255,255,0.1)' }}>
           <button 
             onClick={() => setIsPlaying(!isPlaying)}
-            style={{ padding: '8px 24px', background: isPlaying ? 'rgba(228,87,46,0.2)' : 'var(--water)', border: `1px solid ${isPlaying ? 'var(--erosion)' : 'transparent'}`, color: isPlaying ? 'var(--erosion)' : '#000', borderRadius: 'var(--r-full)', cursor: 'pointer', fontWeight: 'bold', minWidth: '100px' }}
+            style={{ padding: '8px 24px', background: isPlaying ? 'rgba(255,0,0,0.2)' : 'rgba(0,255,255,0.2)', border: `1px solid ${isPlaying ? '#f44' : '#0ff'}`, color: isPlaying ? '#f44' : '#0ff', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', minWidth: '100px', textTransform: 'uppercase', letterSpacing: '1px' }}
           >
             {isPlaying ? 'PAUSE' : 'PLAY'}
           </button>
           
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 'var(--s3)' }}>
-            <span style={{ fontSize: '0.8rem', fontFamily: 'var(--font-num)' }}>Day 0</span>
+            <span style={{ fontSize: '0.8rem', fontFamily: 'var(--font-num)', color: '#0ff' }}>D-0</span>
             <input 
               type="range" 
               min="0" max="365" step="1" 
               value={simDay} 
               onChange={e => {
                 setSimDay(Number(e.target.value));
-                setIsPlaying(false); // Pause if user manually scrubs
+                setIsPlaying(false);
               }}
-              style={{ flex: 1, accentColor: 'var(--water)' }} 
+              style={{ flex: 1, accentColor: '#0ff', cursor: 'ew-resize' }} 
             />
-            <span style={{ fontSize: '0.8rem', fontFamily: 'var(--font-num)' }}>Day 365</span>
+            <span style={{ fontSize: '0.8rem', fontFamily: 'var(--font-num)', color: '#0ff' }}>D-365</span>
           </div>
           
           <button 
             onClick={() => { setSimDay(0); setIsPlaying(false); }}
-            style={{ padding: '8px 16px', background: 'transparent', border: '1px solid var(--glass-border)', color: 'var(--text-3)', borderRadius: 'var(--r-full)', cursor: 'pointer' }}
+            style={{ padding: '8px 16px', background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'var(--text-3)', borderRadius: '4px', cursor: 'pointer', textTransform: 'uppercase', fontSize: '0.8rem' }}
           >
             Reset
           </button>
         </div>
 
-        <div style={{ marginBottom: 'var(--s4)' }}>
+        <div style={{ marginBottom: 'var(--s4)', position: 'relative' }}>
           <canvas 
             ref={canvasRef} 
             width={800} 
-            height={200} 
+            height={350} 
             style={{ 
               width: '100%', 
               height: 'auto', 
-              borderRadius: 'var(--r-md)', 
-              imageRendering: 'pixelated',
-              border: '1px solid rgba(255,255,255,0.1)'
+              borderRadius: '8px', 
+              border: '1px solid rgba(0,255,255,0.2)',
+              boxShadow: '0 0 30px rgba(0,255,255,0.05)',
+              background: '#000'
             }} 
           />
         </div>
         
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--s4)' }}>
-           <div>
-             <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#f88', marginBottom: 4 }}>|HH - VV|² (Red)</div>
-             <div style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>Double-Bounce</div>
-             <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Active eroding cut-bank</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--s4)', background: '#0a0a0a', padding: 'var(--s4)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+           <div style={{ display: 'flex', gap: '15px', alignItems: 'flex-start' }}>
+             <div style={{ width: 16, height: 16, background: '#f44', borderRadius: '50%', marginTop: 2, boxShadow: '0 0 10px #f44' }} />
+             <div>
+               <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff', marginBottom: 2 }}>|HH - VV|² (Red)</div>
+               <div style={{ fontSize: '0.85rem', color: '#f44' }}>Double-Bounce</div>
+               <div style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginTop: 4 }}>Active eroding cut-bank, falling trees, exposed roots</div>
+             </div>
            </div>
            
-           <div>
-             <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#8f8', marginBottom: 4 }}>4|HV|² (Green)</div>
-             <div style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>Volume Scattering</div>
-             <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Stable forest canopy</div>
+           <div style={{ display: 'flex', gap: '15px', alignItems: 'flex-start' }}>
+             <div style={{ width: 16, height: 16, background: '#4f4', borderRadius: '50%', marginTop: 2, boxShadow: '0 0 10px #4f4' }} />
+             <div>
+               <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff', marginBottom: 2 }}>4|HV|² (Green)</div>
+               <div style={{ fontSize: '0.85rem', color: '#4f4' }}>Volume Scattering</div>
+               <div style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginTop: 4 }}>Stable forest canopy, dense vegetation</div>
+             </div>
            </div>
            
-           <div>
-             <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#88f', marginBottom: 4 }}>|HH + VV|² (Blue)</div>
-             <div style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>Surface Scattering</div>
-             <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>River water surface</div>
+           <div style={{ display: 'flex', gap: '15px', alignItems: 'flex-start' }}>
+             <div style={{ width: 16, height: 16, background: '#44f', borderRadius: '50%', marginTop: 2, boxShadow: '0 0 10px #44f' }} />
+             <div>
+               <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff', marginBottom: 2 }}>|HH + VV|² (Blue)</div>
+               <div style={{ fontSize: '0.85rem', color: '#44f' }}>Surface Scattering</div>
+               <div style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginTop: 4 }}>River water surface, smooth bare soil</div>
+             </div>
            </div>
         </div>
       </GlassCard>
