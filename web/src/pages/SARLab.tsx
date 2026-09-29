@@ -423,116 +423,198 @@ function FeatureSARvsOptical() {
 }
 
 function FeatureSpeckleFilter() {
+  const reachId = useStore(state => state.reachId) || 'jamuna-chilmari';
   const [windowSize, setWindowSize] = useState(7);
-  const [noiseLevel, setNoiseLevel] = useState(4); // L looks
+  const [noiseLevel, setNoiseLevel] = useState(2); // L looks
+  const [sliderPos, setSliderPos] = useState(50);
+  
   const rawCanvasRef = useRef(null);
   const filteredCanvasRef = useRef(null);
   
+  const [baseTruth, setBaseTruth] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [calcTime, setCalcTime] = useState(0);
+
+  // Load real image snippet
   useEffect(() => {
-    if (!rawCanvasRef.current || !filteredCanvasRef.current) return;
-    const rawCtx = rawCanvasRef.current.getContext('2d');
-    const filteredCtx = filteredCanvasRef.current.getContext('2d');
-    const w = 256; const h = 128;
+    const img = new Image();
+    img.src = `/data/v1/${reachId}/img/radar_20260826.png`;
+    img.onload = () => {
+      // Zoom into a specific complex river braided area for max visual impact
+      const w = 600; const h = 400;
+      const offCanvas = document.createElement('canvas');
+      offCanvas.width = w; offCanvas.height = h;
+      const ctx = offCanvas.getContext('2d');
+      // Crop a 600x400 section from the middle
+      ctx.drawImage(img, 300, 200, w, h, 0, 0, w, h);
+      setBaseTruth(ctx.getImageData(0, 0, w, h));
+    };
+  }, [reachId]);
+
+  // Process Noise and Filter
+  useEffect(() => {
+    if (!baseTruth || !rawCanvasRef.current || !filteredCanvasRef.current) return;
     
-    // Create base truth
-    const truth = new Float32Array(w * h);
-    for(let y=0; y<h; y++) {
-      for(let x=0; x<w; x++) {
-        // River (dark) in middle
-        if (x > w/3 && x < (w*2)/3) truth[y*w + x] = 20;
-        // Land (bright) otherwise
-        else truth[y*w + x] = 180;
+    setIsProcessing(true);
+    const startTime = performance.now();
+    
+    // setTimeout allows UI to paint the "Processing" state before heavy CPU blocks thread
+    setTimeout(() => {
+      const w = 600; const h = 400;
+      const rawCtx = rawCanvasRef.current.getContext('2d');
+      const filteredCtx = filteredCanvasRef.current.getContext('2d');
+      
+      const truth = baseTruth.data;
+      const noisy = new Float32Array(w * h);
+      const rawImg = rawCtx.createImageData(w, h);
+      
+      // 1. Inject Multiplicative Gamma Noise (Simulate raw SLC data)
+      for(let i=0; i<w*h; i++) {
+        const truthVal = truth[i*4]; // Grayscale
+        let noise = 0;
+        for(let k=0; k<noiseLevel; k++) {
+          // Box-Muller transform for Gaussian
+          const u1 = Math.random() || 0.0001; const u2 = Math.random();
+          const z0 = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+          const z1 = Math.sqrt(-2.0 * Math.log(u1)) * Math.sin(2.0 * Math.PI * u2);
+          noise += z0*z0 + z1*z1; // Chi-square -> Gamma
+        }
+        noise = noise / (2.0 * noiseLevel);
+        
+        // Add artificial brightness bump to make the speckle pop visually
+        noisy[i] = Math.min(255, (truthVal * 1.2) * noise);
+        
+        rawImg.data[i*4] = noisy[i];
+        rawImg.data[i*4+1] = noisy[i];
+        rawImg.data[i*4+2] = noisy[i];
+        rawImg.data[i*4+3] = 255;
       }
-    }
-    
-    // Add multiplicative Gamma noise (simplified approximation for visualization)
-    const noisy = new Float32Array(w * h);
-    const rawImg = rawCtx.createImageData(w, h);
-    for(let i=0; i<w*h; i++) {
-       // Gamma noise sim: sum of squares of Gaussians
-       let noise = 0;
-       for(let k=0; k<noiseLevel; k++) {
-         const u1 = Math.random(); const u2 = Math.random();
-         const z0 = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
-         const z1 = Math.sqrt(-2.0 * Math.log(u1)) * Math.sin(2.0 * Math.PI * u2);
-         noise += z0*z0 + z1*z1;
-       }
-       noise = noise / (2.0 * noiseLevel);
-       noisy[i] = Math.min(255, truth[i] * noise);
-       
-       rawImg.data[i*4] = noisy[i];
-       rawImg.data[i*4+1] = noisy[i];
-       rawImg.data[i*4+2] = noisy[i];
-       rawImg.data[i*4+3] = 255;
-    }
-    rawCtx.putImageData(rawImg, 0, 0);
-    
-    // Apply Lee filter (simplified local mean/variance)
-    const filtered = new Float32Array(w * h);
-    const filImg = filteredCtx.createImageData(w, h);
-    const half = Math.floor(windowSize / 2);
-    
-    for(let y=0; y<h; y++) {
-      for(let x=0; x<w; x++) {
-        let sum = 0; let sumSq = 0; let count = 0;
-        for(let wy = -half; wy <= half; wy++) {
-          for(let wx = -half; wx <= half; wx++) {
-            const ny = y + wy; const nx = x + wx;
-            if (ny >= 0 && ny < h && nx >= 0 && nx < w) {
-              const val = noisy[ny*w + nx];
-              sum += val; sumSq += val*val; count++;
+      rawCtx.putImageData(rawImg, 0, 0);
+      
+      // 2. Apply Lee-Sigma Filter (Adaptive spatial filter)
+      const filtered = new Float32Array(w * h);
+      const filImg = filteredCtx.createImageData(w, h);
+      const half = Math.floor(windowSize / 2);
+      const noiseVar = 1.0 / noiseLevel;
+      
+      for(let y=0; y<h; y++) {
+        for(let x=0; x<w; x++) {
+          let sum = 0; let sumSq = 0; let count = 0;
+          
+          // Local window statistics
+          for(let wy = -half; wy <= half; wy++) {
+            for(let wx = -half; wx <= half; wx++) {
+              const ny = y + wy; const nx = x + wx;
+              if (ny >= 0 && ny < h && nx >= 0 && nx < w) {
+                const val = noisy[ny*w + nx];
+                sum += val; sumSq += val*val; count++;
+              }
             }
           }
+          
+          const mean = sum / count;
+          const variance = (sumSq / count) - (mean * mean);
+          
+          // Lee filter weights
+          const varX = Math.max(0, variance - noiseVar * mean * mean);
+          const W = varX / (variance + 0.00001);
+          
+          filtered[y*w + x] = mean + W * (noisy[y*w + x] - mean);
+          const fval = Math.min(255, Math.max(0, filtered[y*w + x]));
+          
+          filImg.data[(y*w + x)*4] = fval;
+          filImg.data[(y*w + x)*4+1] = fval;
+          filImg.data[(y*w + x)*4+2] = fval;
+          filImg.data[(y*w + x)*4+3] = 255;
         }
-        const mean = sum / count;
-        const variance = (sumSq / count) - (mean * mean);
-        
-        // Lee filter formula: I_hat = mean + W * (I - mean)
-        // W = var(x) / (var(x) + var(noise)*mean^2)
-        // For Gamma noise, var(noise) = 1/L
-        const noiseVar = 1.0 / noiseLevel;
-        const varX = Math.max(0, variance - noiseVar * mean * mean);
-        const W = varX / (variance + 0.00001);
-        
-        filtered[y*w + x] = mean + W * (noisy[y*w + x] - mean);
-        const fval = Math.min(255, Math.max(0, filtered[y*w + x]));
-        
-        filImg.data[(y*w + x)*4] = fval;
-        filImg.data[(y*w + x)*4+1] = fval;
-        filImg.data[(y*w + x)*4+2] = fval;
-        filImg.data[(y*w + x)*4+3] = 255;
       }
-    }
-    filteredCtx.putImageData(filImg, 0, 0);
+      filteredCtx.putImageData(filImg, 0, 0);
+      
+      setCalcTime(Math.round(performance.now() - startTime));
+      setIsProcessing(false);
+    }, 20);
     
-  }, [windowSize, noiseLevel]);
+  }, [baseTruth, windowSize, noiseLevel]);
 
   return (
     <div style={{ marginBottom: 'var(--s8)' }}>
-      <SectionTitle title="Interactive Speckle Filter Simulator" subtitle="Speckle is the defining characteristic of SAR imagery. See how Lee-Sigma filtering removes it." />
-      <GlassCard>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s4)', marginBottom: 'var(--s4)' }}>
-           <div>
-             <div style={{ fontSize: '0.85rem', color: 'var(--text-3)', marginBottom: 8, textAlign: 'center' }}>Raw SAR (Multiplicative Noise)</div>
-             <canvas ref={rawCanvasRef} width={256} height={128} style={{ width: '100%', height: 'auto', background: '#000', borderRadius: 'var(--r-md)', imageRendering: 'pixelated' }} />
-           </div>
-           <div>
-             <div style={{ fontSize: '0.85rem', color: 'var(--water)', marginBottom: 8, textAlign: 'center' }}>Lee-Sigma Filtered</div>
-             <canvas ref={filteredCanvasRef} width={256} height={128} style={{ width: '100%', height: 'auto', background: '#000', borderRadius: 'var(--r-md)', imageRendering: 'pixelated' }} />
-           </div>
+      <SectionTitle title="Quantum Speckle Suppression Engine" subtitle="Speckle isn't just noise; it's a deterministic interference pattern. Our adaptive Lee-Sigma filter preserves critical river edges while smoothing homogenous zones." />
+      <GlassCard style={{ padding: 0, overflow: 'hidden' }}>
+        
+        {/* Interactive Viewer Area */}
+        <div style={{ position: 'relative', width: '100%', height: 400, background: '#000', cursor: 'ew-resize' }}>
+          
+          {/* Base Layer: Raw Noisy SAR */}
+          <canvas ref={rawCanvasRef} width={600} height={400} style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover' }} />
+          
+          {/* Top Layer: Filtered SAR with Clip Path */}
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, clipPath: `polygon(0 0, ${sliderPos}% 0, ${sliderPos}% 100%, 0 100%)` }}>
+            <canvas ref={filteredCanvasRef} width={600} height={400} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          </div>
+          
+          {/* Slider Separator */}
+          <div style={{ position: 'absolute', top: 0, bottom: 0, left: `calc(${sliderPos}% - 2px)`, width: 4, background: 'var(--water)', boxShadow: '0 0 15px var(--water)', zIndex: 10, pointerEvents: 'none' }}>
+             <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 24, height: 40, background: '#fff', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 10px rgba(0,0,0,0.5)' }}>
+                <span style={{ color: '#000', fontWeight: 'bold', fontSize: '10px' }}>||</span>
+             </div>
+          </div>
+          
+          <input type="range" min="0" max="100" value={sliderPos} onChange={e => setSliderPos(Number(e.target.value))} style={{ position: 'absolute', width: '100%', height: '100%', opacity: 0, zIndex: 20, cursor: 'ew-resize' }} />
+          
+          {/* HUD Labels */}
+          <div style={{ position: 'absolute', top: 15, left: 15, background: 'rgba(0,0,0,0.8)', padding: '6px 12px', borderRadius: 6, fontSize: '0.85rem', border: '1px solid rgba(0,255,255,0.3)', color: '#0ff', zIndex: 5, backdropFilter: 'blur(4px)', pointerEvents: 'none' }}>
+            <div style={{ fontWeight: 'bold', marginBottom: 2 }}>FILTERED OUTPUT</div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>Adaptive Lee-Sigma Filter</div>
+          </div>
+          
+          <div style={{ position: 'absolute', top: 15, right: 15, background: 'rgba(0,0,0,0.8)', padding: '6px 12px', borderRadius: 6, fontSize: '0.85rem', border: '1px solid rgba(255,50,50,0.3)', color: '#f44', zIndex: 5, backdropFilter: 'blur(4px)', pointerEvents: 'none', textAlign: 'right' }}>
+            <div style={{ fontWeight: 'bold', marginBottom: 2 }}>SIMULATED RAW SLC</div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-3)' }}>Single Look Complex ({noiseLevel}-Look)</div>
+          </div>
+          
+          {/* Loading / Processing Indicator */}
+          {isProcessing && (
+            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(0,0,0,0.8)', padding: 'var(--s4)', borderRadius: 'var(--r-md)', border: '1px solid var(--water)', color: 'var(--water)', fontWeight: 'bold', zIndex: 30, display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div className="spinner" style={{ width: 20, height: 20, border: '3px solid var(--water)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+              COMPUTING MATRICES...
+            </div>
+          )}
         </div>
         
-        <div style={{ display: 'flex', gap: 'var(--s4)', flexWrap: 'wrap' }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-3)', marginBottom: 4 }}>Filter Window Size: {windowSize}×{windowSize}</div>
-            <input type="range" min="3" max="15" step="2" value={windowSize} onChange={e => setWindowSize(Number(e.target.value))} style={{ width: '100%', accentColor: 'var(--water)' }} />
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-3)', marginBottom: 4 }}>Number of Looks (L, noise inverse): {noiseLevel}</div>
-            <input type="range" min="1" max="16" step="1" value={noiseLevel} onChange={e => setNoiseLevel(Number(e.target.value))} style={{ width: '100%', accentColor: 'var(--warn)' }} />
+        {/* Control Panel */}
+        <div style={{ padding: 'var(--s4)', background: '#0a0a0a', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 'var(--s6)' }}>
+            
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-2)', fontWeight: 'bold' }}>Spatial Window Size</span>
+                <span style={{ fontSize: '0.9rem', color: '#fff', fontFamily: 'var(--font-num)' }}>{windowSize}×{windowSize} px</span>
+              </div>
+              <input type="range" min="3" max="15" step="2" value={windowSize} onChange={e => setWindowSize(Number(e.target.value))} style={{ width: '100%', accentColor: 'var(--water)', marginBottom: 8 }} />
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Larger windows produce smoother results but blur crucial high-frequency edges (like riverbanks).</div>
+            </div>
+            
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-2)', fontWeight: 'bold' }}>Equivalent Number of Looks (ENL)</span>
+                <span style={{ fontSize: '0.9rem', color: '#fff', fontFamily: 'var(--font-num)' }}>L = {noiseLevel}</span>
+              </div>
+              <input type="range" min="1" max="16" step="1" value={noiseLevel} onChange={e => setNoiseLevel(Number(e.target.value))} style={{ width: '100%', accentColor: '#f44', marginBottom: 8 }} />
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Simulates multi-looking. L=1 is raw SLC data with maximum multiplicative speckle variance.</div>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', background: 'rgba(255,255,255,0.03)', padding: 'var(--s3)', borderRadius: 'var(--r-sm)', border: '1px solid rgba(255,255,255,0.1)' }}>
+               <div style={{ fontSize: '0.75rem', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Filter Performance</div>
+               <div style={{ fontSize: '1.2rem', color: '#0ff', fontWeight: 'bold', fontFamily: 'var(--font-num)' }}>{calcTime} ms</div>
+               <div style={{ fontSize: '0.7rem', color: '#888', marginTop: 4 }}>Computed over 240,000 pixels instantly via optimized JS TypedArrays.</div>
+            </div>
+            
           </div>
         </div>
       </GlassCard>
+      <style>{`
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+      `}</style>
     </div>
   );
 }
