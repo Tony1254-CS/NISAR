@@ -132,10 +132,10 @@ export function AboutPage() {
           <h2 style={{ fontSize: '2rem', marginBottom: 'var(--s5)', color: 'var(--text)' }}>Meet the Crew</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 'var(--s4)' }}>
             {[
-              { name: 'Sakibul', role: 'Mission Commander', desc: 'System Architecture & AI Pipeline', initials: 'SS' },
-              { name: 'Ahsan', role: 'Data Scientist', desc: 'SAR Processing & Remote Sensing', initials: 'AH' },
-              { name: 'Raihan', role: 'Frontend Engineer', desc: 'Interactive Visualization & UX', initials: 'RK' },
-              { name: 'Nafis', role: 'Hydro Analyst', desc: 'River Dynamics & Quality Assurance', initials: 'NI' }
+              { name: 'Sabbir Ahmed', role: 'Mission Commander', desc: 'System Architecture & AI Pipeline', initials: 'SA' },
+              { name: 'Sanjid Talukder', role: 'Data Scientist', desc: 'SAR Processing & Remote Sensing', initials: 'ST' },
+              { name: 'Sakibul Hassan Shovon', role: 'Frontend Engineer', desc: 'Interactive Visualization & UX', initials: 'SH' },
+              { name: 'Yasin Arafat', role: 'Hydro Analyst', desc: 'River Dynamics & Quality Assurance', initials: 'YA' }
             ].map((member) => (
               <div key={member.name} style={{
                 background: 'rgba(255, 255, 255, 0.02)',

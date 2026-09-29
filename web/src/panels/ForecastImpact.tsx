@@ -147,7 +147,7 @@ export function ForecastPanel() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--s2)' }}>
         <div>
           <div style={{ fontSize: 'var(--text-xs)', fontFamily: 'var(--font-num)', color: 'var(--water)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>
-            ⚡ Predictive Risk Model
+            ⚡ NISAR L2 PREDICTIVE MODEL
           </div>
           <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-2)' }}>
             {forecast.model}
