@@ -27,8 +27,43 @@ function useCounter(end: number, duration = 2000, start = 0) {
 
 export function ImpactPage() {
   const reachId = useStore(s => s.reachId) || 'jamuna-chilmari';
+  const setReachId = useStore(s => s.setReachId);
   const forecast = FORECAST_DATA[reachId] || FORECAST_DATA['jamuna-chilmari'];
   const impact = IMPACT_DATA[reachId] || IMPACT_DATA['jamuna-chilmari'];
+
+  const [manifest, setManifest] = useState<any>(null);
+  const [qc, setQc] = useState<any>(null);
+  const [showEmergencyModal, setShowEmergencyModal] = useState(false);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const manRes = await fetch(`/data/v1/${reachId}/manifest.json`);
+        if (manRes.ok) {
+          const manData = await manRes.json();
+          setManifest(manData);
+        } else {
+          setManifest(null);
+        }
+      } catch (e) {
+        console.error("Failed to fetch manifest", e);
+        setManifest(null);
+      }
+      try {
+        const qcRes = await fetch(`/data/v1/${reachId}/qc.json`);
+        if (qcRes.ok) {
+          const qcData = await qcRes.json();
+          setQc(qcData);
+        } else {
+          setQc(null);
+        }
+      } catch (e) {
+        console.error("Failed to fetch qc", e);
+        setQc(null);
+      }
+    }
+    fetchData();
+  }, [reachId]);
 
   // Counters for KPIs
   const popCount = useCounter(impact.populationAtRisk);
@@ -40,6 +75,33 @@ export function ImpactPage() {
   const totalDamage = impact.economicLossUSD * 0.65;
   const totalLoss = impact.economicLossUSD * 0.35;
   
+  // Real or fallback values
+  const t0Granule = manifest?.inputs?.t0 || 'NISAR_L2_PR_GCOV_029_019_D_076_2005...';
+  const t1Granule = manifest?.inputs?.t1 || 'NISAR_L2_PR_GCOV_031_019_D_076_2005...';
+  const otsuThreshold = qc?.otsu_threshold ? `${qc.otsu_threshold.toFixed(2)} dB` : '-15.06 dB → -14.53 dB';
+  
+  const qcChecks = qc?.checks || {};
+  const renderQcLight = (name: string, status: string | undefined) => {
+    let className = 'qc-light';
+    if (status === 'PASS') className += ' pass';
+    else if (status === 'WARN') className += ' warn';
+    else if (status === 'FAIL') className += ' fail';
+    return <div key={name} className={className} title={`${name}: ${status || 'NOT EVALUATED'}`}></div>;
+  };
+  
+  const handleCopyBriefing = () => {
+    const text = `EMERGENCY BRIEFING: ${reachId.toUpperCase()}
+Population at Risk: ${impact.populationAtRisk.toLocaleString()}
+Economic Loss: $${(impact.economicLossUSD / 1000000).toFixed(1)}M USD
+QC Confidence: ${qc?.pipeline_passed ? 'HIGH CONFIDENCE (Pipeline checks passed)' : 'LOWER CONFIDENCE (Review pipeline flags)'}
+
+Top Emergency Actions:
+${impact.emergencyActions.map((a: string, i: number) => `${i + 1}. ${a}`).join('\n')}
+`;
+    navigator.clipboard.writeText(text);
+    alert('Briefing copied to clipboard');
+  };
+
   return (
     <div className="page-container impact-dashboard-root scrollable">
       <Navbar transparent={false} />
@@ -51,6 +113,19 @@ export function ImpactPage() {
         <div className="status-item text-bright flex-1 text-center">REACH: {reachId.toUpperCase()}</div>
         <div className="status-item text-warn">Δh = 0.039m (WARN)</div>
         <div className="status-item badge-inconclusive">INCONCLUSIVE</div>
+      </div>
+
+      {/* Reach Selector */}
+      <div className="reach-selector-bar fade-in">
+        {['jamuna-chilmari', 'glacier-bay-alaska', 'norcal-wildfire', 'sundarbans-mangrove'].map(id => (
+          <button 
+            key={id}
+            className={`reach-btn ${reachId === id ? 'active' : ''}`}
+            onClick={() => setReachId(id)}
+          >
+            {id.replace(/-/g, ' ')}
+          </button>
+        ))}
       </div>
 
       <div className="dashboard-content fade-in" style={{ animationDelay: '0.1s' }}>
@@ -168,6 +243,12 @@ export function ImpactPage() {
                 </div>
               ))}
             </div>
+            <button 
+              className="emergency-alert-btn" 
+              onClick={() => setShowEmergencyModal(true)}
+            >
+              ⚠ GENERATE EMERGENCY BRIEFING
+            </button>
           </div>
         </div>
 
@@ -235,19 +316,26 @@ export function ImpactPage() {
           <div className="prov-grid">
             <div className="prov-item">
               <div className="prov-label">NISAR t0 Granule (Pre)</div>
-              <div className="prov-val">NISAR_L2_PR_GCOV_029_019_D_076_2005...</div>
+              <div className="prov-val">{t0Granule}</div>
             </div>
             <div className="prov-item">
               <div className="prov-label">NISAR t1 Granule (Post)</div>
-              <div className="prov-val">NISAR_L2_PR_GCOV_031_019_D_076_2005...</div>
+              <div className="prov-val">{t1Granule}</div>
             </div>
             <div className="prov-item">
               <div className="prov-label">Otsu Thresholds</div>
-              <div className="prov-val">-15.06 dB → -14.53 dB</div>
+              <div className="prov-val">{otsuThreshold}</div>
             </div>
             <div className="prov-item">
               <div className="prov-label">Pipeline QC Flags</div>
-              <div className="prov-val text-fail">3 WARN, 1 FAIL (Plausibility)</div>
+              <div className="prov-val text-fail">
+                {qc ? (qc.pipeline_passed ? 'ALL CHECKS PASSED' : 'FLAGGED FOR REVIEW') : '3 WARN, 1 FAIL (Plausibility)'}
+              </div>
+              {qc && (
+                <div className="qc-grid">
+                  {Object.keys(qcChecks).map(k => renderQcLight(k, qcChecks[k]))}
+                </div>
+              )}
             </div>
             <div className="prov-item">
               <div className="prov-label">Resolution / MMU</div>
@@ -261,6 +349,37 @@ export function ImpactPage() {
         </div>
 
       </div>
+
+      {showEmergencyModal && (
+        <div className="emergency-modal-overlay">
+          <div className="emergency-modal">
+            <h2>⚠ EMERGENCY BRIEFING</h2>
+            <p><strong>Reach:</strong> {reachId.toUpperCase().replace(/-/g, ' ')}</p>
+            <p><strong>Population at Risk:</strong> {impact.populationAtRisk.toLocaleString()} people</p>
+            <p><strong>Est. Economic Impact:</strong> ${(impact.economicLossUSD / 1000000).toFixed(1)}M USD</p>
+            
+            <h3>Required Actions:</h3>
+            <ul>
+              {impact.emergencyActions.map((action, i) => (
+                <li key={i}>{action}</li>
+              ))}
+            </ul>
+
+            <h3>Data Confidence Assessment:</h3>
+            <p style={{ color: qc?.pipeline_passed ? 'var(--pass)' : 'var(--warn)' }}>
+              {qc?.pipeline_passed 
+                ? 'High Confidence: SAR pipeline reported no anomalies. Plausibility checks passed.' 
+                : 'Warning: SAR pipeline flagged potential anomalies or inconclusive checks.'}
+            </p>
+
+            <div className="emergency-modal-actions">
+              <button className="btn-copy" onClick={handleCopyBriefing}>Copy to Clipboard</button>
+              <button className="btn-close" onClick={() => setShowEmergencyModal(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
