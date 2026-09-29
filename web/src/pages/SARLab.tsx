@@ -1618,13 +1618,14 @@ export function SARLabPage() {
         </div>
 
         
-        {/* ═══ CHAMPIONSHIP FEATURES ═══ */}
-        <FeatureRadarViewer />
-        <FeaturePipelineWalkthrough />
+        {/* ═══ THE SAR PIPELINE: FROM PHOTONS TO PIXELS ═══ */}
         <FeatureSARvsOptical />
-        <FeatureSpeckleFilter />
-        <FeatureRadarGeometry />
-        <FeaturePauliRGB />
+          <FeatureRadarGeometry />
+          <FeatureSpeckleFilter />
+          <FeaturePauliRGB />
+          <FeatureCloudePottier />
+          <FeaturePipelineWalkthrough />
+          <FeatureRadarViewer />
 
         {/* ═══ SECTION 7: ADVANCED SAR PHYSICS ═══ */}
         <div style={{ marginBottom: 'var(--s8)' }}>
@@ -1719,8 +1720,7 @@ export function SARLabPage() {
               </div>
             </GlassCard>
 
-            {/* Interactive H/Alpha Engine replacing static plot */}
-            <FeatureCloudePottier />
+            
 </div>
         </div>
 
