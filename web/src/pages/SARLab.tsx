@@ -962,6 +962,254 @@ function FeaturePauliRGB() {
   );
 }
 
+
+function FeatureCloudePottier() {
+  const reachId = useStore(state => state.reachId) || 'jamuna-chilmari';
+  const canvasRef = useRef(null);
+  const [particles, setParticles] = useState([]);
+  
+  // Offscreen canvas to read pixel data
+  const offCanvasRef = useRef(null);
+  const [isLoaded, setIsLoaded] = useState(false);
+  
+  useEffect(() => {
+    const w = 400; const h = 400;
+    const offCanvas = document.createElement('canvas');
+    offCanvas.width = w; offCanvas.height = h;
+    const ctx = offCanvas.getContext('2d', { willReadFrequently: true });
+    offCanvasRef.current = { canvas: offCanvas, ctx };
+    
+    const imgRadar = new Image();
+    const imgChange = new Image();
+    
+    let loaded = 0;
+    const checkDone = () => {
+      loaded++;
+      if (loaded === 2) {
+        // Draw radar first
+        ctx.drawImage(imgRadar, 0, 0, w, h);
+        // Draw change overlay
+        ctx.globalCompositeOperation = 'screen';
+        ctx.drawImage(imgChange, 0, 0, w, h);
+        ctx.globalCompositeOperation = 'source-over';
+        setIsLoaded(true);
+      }
+    };
+    
+    imgRadar.src = `/data/v1/${reachId}/img/radar_20260826.png`;
+    imgRadar.onload = checkDone;
+    
+    imgChange.src = `/data/v1/${reachId}/img/change_20260826_20260919.png`;
+    imgChange.onload = checkDone;
+  }, [reachId]);
+
+  useEffect(() => {
+    if (!isLoaded || !canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    let animationId;
+    
+    let activeParticles = [];
+    
+    const animate = () => {
+      // Clear canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw H/Alpha Grid on the right side
+      const planeX = 450; const planeY = 20;
+      const planeW = 350; const planeH = 350;
+      
+      ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+      ctx.lineWidth = 1;
+      
+      // Box
+      ctx.strokeRect(planeX, planeY, planeW, planeH);
+      // H = 0.5 line
+      ctx.beginPath(); ctx.moveTo(planeX + planeW/2, planeY); ctx.lineTo(planeX + planeW/2, planeY + planeH); ctx.stroke();
+      // H = 0.9 line
+      ctx.beginPath(); ctx.moveTo(planeX + planeW*0.9, planeY); ctx.lineTo(planeX + planeW*0.9, planeY + planeH); ctx.stroke();
+      // Alpha = 40 deg (approx 44%)
+      ctx.beginPath(); ctx.moveTo(planeX, planeY + planeH - planeH*(40/90)); ctx.lineTo(planeX + planeW, planeY + planeH - planeH*(40/90)); ctx.stroke();
+      // Alpha = 50 deg (approx 55%)
+      ctx.beginPath(); ctx.moveTo(planeX, planeY + planeH - planeH*(50/90)); ctx.lineTo(planeX + planeW, planeY + planeH - planeH*(50/90)); ctx.stroke();
+      
+      // Labels
+      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      ctx.font = '10px monospace';
+      ctx.fillText("Entropy (H) 0 -> 1", planeX + planeW/2 - 40, planeY + planeH + 15);
+      
+      ctx.save();
+      ctx.translate(planeX - 10, planeY + planeH/2 + 40);
+      ctx.rotate(-Math.PI/2);
+      ctx.fillText("Alpha (α) 0° -> 90°", 0, 0);
+      ctx.restore();
+      
+      // Zones
+      ctx.font = 'bold 12px sans-serif';
+      ctx.fillStyle = 'rgba(57, 196, 217, 0.3)'; // Water/Surface
+      ctx.fillText("Z9: Surface", planeX + 10, planeY + planeH - 10);
+      ctx.fillStyle = 'rgba(127, 191, 142, 0.3)'; // Forest/Volume
+      ctx.fillText("Z5: Volume", planeX + planeW/2 + 10, planeY + planeH/2);
+      ctx.fillStyle = 'rgba(228, 87, 46, 0.3)'; // Urban/Double-bounce
+      ctx.fillText("Z7: Double-Bounce", planeX + 10, planeY + 20);
+
+      // Draw map on left side
+      ctx.drawImage(offCanvasRef.current.canvas, 0, 20, 400, 400);
+      
+      // Scanline overlay for aesthetic
+      ctx.fillStyle = 'rgba(0,255,255,0.03)';
+      ctx.fillRect(0, 20, 400, 400);
+
+      // Update and draw particles
+      for (let i = activeParticles.length - 1; i >= 0; i--) {
+        const p = activeParticles[i];
+        
+        // Move towards target
+        const dx = p.tx - p.x;
+        const dy = p.ty - p.y;
+        p.x += dx * p.speed;
+        p.y += dy * p.speed;
+        
+        // Draw trail
+        ctx.beginPath();
+        ctx.moveTo(p.x - dx*p.speed*2, p.y - dy*p.speed*2);
+        ctx.lineTo(p.x, p.y);
+        ctx.strokeStyle = p.color;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        // Draw head
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 2, 0, Math.PI*2);
+        ctx.fillStyle = '#fff';
+        ctx.fill();
+        
+        // If close to target, jitter and fade
+        if (Math.abs(dx) < 1 && Math.abs(dy) < 1) {
+          p.life--;
+          p.x += (Math.random() - 0.5) * 2;
+          p.y += (Math.random() - 0.5) * 2;
+          
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 4, 0, Math.PI*2);
+          ctx.fillStyle = p.color;
+          ctx.globalAlpha = p.life / 50;
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+        
+        if (p.life <= 0) {
+          activeParticles.splice(i, 1);
+        }
+      }
+      
+      setParticles(activeParticles);
+      animationId = requestAnimationFrame(animate);
+    };
+    
+    animate();
+    
+    // Mouse interaction
+    const handleMouseMove = (e) => {
+      if (!offCanvasRef.current) return;
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      
+      // Only process if hovering over the map (left side)
+      if (mx >= 0 && mx <= 400 && my >= 20 && my <= 420) {
+        const imgX = mx;
+        const imgY = my - 20;
+        
+        // Read 5x5 block around mouse to generate multiple particles
+        const pixelData = offCanvasRef.current.ctx.getImageData(imgX - 5, imgY - 5, 10, 10).data;
+        
+        for (let i = 0; i < 3; i++) {
+          // Pick a random pixel from the 10x10 block
+          const px = Math.floor(Math.random() * 10);
+          const py = Math.floor(Math.random() * 10);
+          const idx = (py * 10 + px) * 4;
+          
+          const r = pixelData[idx];
+          const g = pixelData[idx+1];
+          const b = pixelData[idx+2];
+          
+          let targetH = 0;
+          let targetAlpha = 0;
+          let color = '#fff';
+          
+          // Determine scattering type based on color
+          if (r > 150 && g < 100 && b < 100) {
+            // Erosion -> Double Bounce (High Alpha, Low/Med Entropy) Z7
+            targetH = 0.2 + Math.random() * 0.3;
+            targetAlpha = 60 + Math.random() * 20;
+            color = '#f44';
+          } else if (r < 80 && g < 80 && b < 80) {
+            // Water -> Surface Scatter (Low Alpha, Low Entropy) Z9
+            targetH = 0.1 + Math.random() * 0.2;
+            targetAlpha = 10 + Math.random() * 20;
+            color = '#0ff';
+          } else {
+            // Land/Forest -> Volume Scatter (Med Alpha, High Entropy) Z5
+            targetH = 0.6 + Math.random() * 0.3;
+            targetAlpha = 40 + Math.random() * 15;
+            color = '#4f4';
+          }
+          
+          // Map to right side coordinates
+          const planeX = 450; const planeY = 20;
+          const planeW = 350; const planeH = 350;
+          
+          const tx = planeX + targetH * planeW;
+          const ty = planeY + planeH - (targetAlpha / 90) * planeH;
+          
+          activeParticles.push({
+            x: imgX + (Math.random()-0.5)*10,
+            y: imgY + 20 + (Math.random()-0.5)*10,
+            tx,
+            ty,
+            color,
+            speed: 0.05 + Math.random() * 0.05,
+            life: 50 + Math.random() * 50
+          });
+        }
+      }
+    };
+    
+    canvas.addEventListener('mousemove', handleMouseMove);
+    return () => {
+      cancelAnimationFrame(animationId);
+      canvas.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, [isLoaded]);
+
+  return (
+    <div style={{ marginBottom: 'var(--s8)' }}>
+      <SectionTitle title="Live Quad-Pol Scattering Engine (H/α Plane)" subtitle="Hover over the map to mathematically deconstruct pixels into their physical scattering mechanisms using Cloude-Pottier decomposition." />
+      <GlassCard style={{ padding: 0, overflow: 'hidden', background: '#050a15' }}>
+        
+        <div style={{ position: 'relative', width: '100%', height: 440 }}>
+           {!isLoaded && (
+              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: '#0ff', fontWeight: 'bold' }}>
+                 INITIALIZING POLARIMETRIC ENGINE...
+              </div>
+           )}
+           <canvas ref={canvasRef} width={820} height={440} style={{ width: '100%', height: '100%', display: 'block' }} />
+           
+           <div style={{ position: 'absolute', top: 5, left: 10, background: 'rgba(0,0,0,0.8)', padding: '4px 8px', borderRadius: 4, color: '#fff', fontSize: '0.8rem', pointerEvents: 'none' }}>
+             1. Hover to extract signatures
+           </div>
+           
+           <div style={{ position: 'absolute', top: 5, right: 10, background: 'rgba(0,0,0,0.8)', padding: '4px 8px', borderRadius: 4, color: '#fff', fontSize: '0.8rem', pointerEvents: 'none' }}>
+             2. Polarimetric Phase Space
+           </div>
+        </div>
+        
+      </GlassCard>
+    </div>
+  );
+}
+
 export function SARLabPage() {
     const [activeBand, setActiveBand] = useState(2); // Default to L-band
   const [activePol, setActivePol] = useState(0);
@@ -1472,58 +1720,8 @@ export function SARLabPage() {
               </div>
             </GlassCard>
 
-            {/* H-Alpha Scatter Plot */}
-            <GlassCard>
-               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--s3)' }}>
-                <div>
-                  <h3 style={{ margin: '0 0 var(--s2) 0', color: 'var(--accretion)', fontSize: '1.2rem' }}>H/α Cloude-Pottier Classification</h3>
-                  <p style={{ color: 'var(--text-3)', fontSize: '0.9rem', margin: 0 }}>2D polarimetric decomposition space.</p>
-                </div>
-                <button 
-                  onClick={() => setShowErosionZone(!showErosionZone)}
-                  style={{ padding: '8px 16px', background: showErosionZone ? 'rgba(228,87,46,0.2)' : 'transparent', border: `1px solid ${showErosionZone ? 'var(--erosion)' : 'var(--glass-border)'}`, color: showErosionZone ? 'var(--erosion)' : 'var(--text)', borderRadius: 'var(--r-full)', cursor: 'pointer', transition: 'all 0.3s' }}
-                >
-                  {showErosionZone ? 'Hide Erosion Zone' : 'Show River Erosion Zone'}
-                </button>
-              </div>
-
-              <div style={{ position: 'relative', height: '400px', width: '100%', background: 'rgba(0,0,0,0.3)', borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
-                <svg width="100%" height="100%" viewBox="0 0 100 90" preserveAspectRatio="none">
-                  {/* Grid / Zones */}
-                  <line x1="50" y1="0" x2="50" y2="90" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" />
-                  <line x1="90" y1="0" x2="90" y2="90" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" />
-                  <line x1="0" y1="40" x2="100" y2="40" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" />
-                  <line x1="0" y1="50" x2="100" y2="50" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" />
-                  
-                  {/* Labels */}
-                  <text x="2" y="88" fill="rgba(255,255,255,0.4)" fontSize="3">Surface (Z9)</text>
-                  <text x="2" y="4" fill="rgba(255,255,255,0.4)" fontSize="3">Double-Bounce (Z7)</text>
-                  <text x="52" y="45" fill="rgba(255,255,255,0.4)" fontSize="3">Volume (Z5)</text>
-
-                  {/* Scatter points */}
-                  {currentHAlphaPoints.map((p, i) => (
-                    <circle 
-                      key={i} 
-                      cx={p.H * 100} 
-                      cy={90 - p.alpha} 
-                      r="1.5" 
-                      fill={p.type === 'water' ? '#39C4D9' : p.type === 'forest' ? '#7FBF8E' : p.type === 'urban' ? '#E4572E' : 'var(--erosion)'} 
-                      opacity={0.8}
-                    >
-                      <title>{`H: ${p.H.toFixed(2)}, Alpha: ${p.alpha.toFixed(1)}° (${p.type})`}</title>
-                    </circle>
-                  ))}
-                  
-                  {/* Erosion Zone Highlight */}
-                  {showErosionZone && (
-                    <ellipse cx="30" cy="50" rx="15" ry="10" fill="none" stroke="var(--erosion)" strokeWidth="1" strokeDasharray="2,2" />
-                  )}
-                </svg>
-                {/* Axes labels */}
-                <div style={{ position: 'absolute', bottom: '5px', left: '50%', transform: 'translateX(-50%)', fontSize: '0.8rem', color: 'var(--text-3)' }}>Entropy (H) 0 → 1</div>
-                <div style={{ position: 'absolute', left: '-20px', top: '50%', transform: 'translateY(-50%) rotate(-90deg)', fontSize: '0.8rem', color: 'var(--text-3)' }}>Alpha (α) 0° → 90°</div>
-              </div>
-            </GlassCard>
+            {/* Interactive H/Alpha Engine replacing static plot */}
+            <FeatureCloudePottier />
 </div>
         </div>
 
