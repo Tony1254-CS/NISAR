@@ -364,33 +364,28 @@ export function SARLabPage() {
           <SectionTitle title="InSAR Processing Pipeline" subtitle="Interferometric SAR (InSAR) combines two radar acquisitions to measure ground displacement with millimeter-precision. Here's how our pipeline works, step by step." />
           
           <GlassCard>
-            <div style={{ display: 'flex', gap: 'var(--s4)', overflowX: 'auto', paddingBottom: 'var(--s3)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 'var(--s4)' }}>
               {INSAR_STEPS.map((step, i) => (
                 <div
                   key={i}
                   onClick={() => setActiveStep(i)}
                   style={{
-                    minWidth: 200,
-                    padding: 'var(--s4)',
+                    padding: 'var(--s5) var(--s4) var(--s4) var(--s4)',
                     background: activeStep === i ? 'rgba(57,196,217,0.08)' : 'rgba(255,255,255,0.02)',
                     border: `1px solid ${activeStep === i ? 'var(--water)' : 'rgba(255,255,255,0.05)'}`,
                     borderRadius: 'var(--r-md)',
                     cursor: 'pointer',
                     transition: 'all 0.3s',
-                    position: 'relative',
-                    flexShrink: 0
+                    position: 'relative'
                   }}
                 >
                   {/* Step number */}
                   <div style={{ position: 'absolute', top: -12, left: 16, background: activeStep === i ? 'var(--water)' : 'var(--surface-2, #1a1d21)', padding: '2px 10px', borderRadius: 'var(--r-full)', fontSize: '0.65rem', fontWeight: 700, color: activeStep === i ? '#000' : 'var(--text-3)', border: `1px solid ${activeStep === i ? 'var(--water)' : 'rgba(255,255,255,0.1)'}` }}>
                     STEP {i + 1}
                   </div>
-                  <div style={{ fontSize: '2rem', marginBottom: 'var(--s2)', marginTop: 'var(--s2)' }}>{step.icon}</div>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: activeStep === i ? 'var(--water)' : 'var(--text)', marginBottom: 8 }}>{step.title}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-3)', lineHeight: 1.6 }}>{step.desc}</div>
-                  {i < INSAR_STEPS.length - 1 && (
-                    <div style={{ position: 'absolute', right: -20, top: '50%', transform: 'translateY(-50%)', color: 'var(--water)', fontSize: '1.2rem', opacity: 0.5 }}>→</div>
-                  )}
+                  <div style={{ fontSize: '2rem', marginBottom: 'var(--s2)' }}>{step.icon}</div>
+                  <div style={{ fontSize: '0.9rem', fontWeight: 700, color: activeStep === i ? 'var(--water)' : 'var(--text)', marginBottom: 8 }}>{step.title}</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-3)', lineHeight: 1.6 }}>{step.desc}</div>
                 </div>
               ))}
             </div>
