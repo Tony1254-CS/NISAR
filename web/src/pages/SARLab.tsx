@@ -361,44 +361,104 @@ function FeatureRadarGeometry() {
 }
 
 function FeaturePauliRGB() {
+  const canvasRef = useRef(null);
+  
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    const ctx = canvasRef.current.getContext('2d');
+    const w = 400;
+    const h = 150;
+    const imgData = ctx.createImageData(w, h);
+    
+    // Generate synthetic quad-pol data
+    // Left: Water (high blue/surface), Middle: Forest (high green/volume), Right: Urban (high red/double-bounce)
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        let r = 0, g = 0, b = 0;
+        
+        // Multiplicative noise base
+        const noise = 0.5 + Math.random() * 1.5;
+        
+        if (x < w / 3) {
+          // Water: Specular reflection -> mostly surface scattering (blue)
+          b = 180 * noise;
+          g = 20 * noise;
+          r = 10 * noise;
+        } else if (x < (2 * w) / 3) {
+          // Forest: Volume scattering (green)
+          b = 40 * noise;
+          g = 160 * noise;
+          r = 50 * noise;
+        } else {
+          // Urban: Double bounce (red)
+          b = 60 * noise;
+          g = 40 * noise;
+          r = 200 * noise;
+        }
+        
+        // Add a horizontal transition zone (eroding bank) at the bottom 30px
+        if (y > h - 30) {
+            if (x > w/4 && x < w/2) {
+                // Erosion transition: Mix of water and bare soil (Blue/Red mix)
+                r = 120 * noise;
+                b = 140 * noise;
+                g = 30 * noise;
+            }
+        }
+        
+        const i = (y * w + x) * 4;
+        imgData.data[i] = Math.min(255, r);
+        imgData.data[i+1] = Math.min(255, g);
+        imgData.data[i+2] = Math.min(255, b);
+        imgData.data[i+3] = 255;
+      }
+    }
+    
+    ctx.putImageData(imgData, 0, 0);
+  }, []);
+
   return (
     <div style={{ marginBottom: 'var(--s8)' }}>
-      <SectionTitle title="Pauli Decomposition RGB Viewer" subtitle="Quad-pol SAR data reveals scattering mechanisms via Pauli basis." />
+      <SectionTitle title="Pauli Decomposition RGB Viewer" subtitle="Quad-pol SAR data reveals physical scattering mechanisms via the Pauli basis." />
       <GlassCard>
+        <div style={{ marginBottom: 'var(--s4)' }}>
+          <canvas 
+            ref={canvasRef} 
+            width={400} 
+            height={150} 
+            style={{ 
+              width: '100%', 
+              height: 'auto', 
+              borderRadius: 'var(--r-md)', 
+              imageRendering: 'pixelated',
+              border: '1px solid rgba(255,255,255,0.1)'
+            }} 
+          />
+        </div>
+        
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--s4)' }}>
            <div>
-             <div style={{ background: '#400', height: 150, borderRadius: 'var(--r-md)', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-               <span style={{color: '#f88', fontWeight: 'bold'}}>|HH - VV|²</span>
-             </div>
-             <div style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>Red = Double-Bounce</div>
+             <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#f88', marginBottom: 4 }}>|HH - VV|² (Red)</div>
+             <div style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>Double-Bounce</div>
              <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Urban, tree trunks, flooded veg</div>
            </div>
            
            <div>
-             <div style={{ background: '#040', height: 150, borderRadius: 'var(--r-md)', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-               <span style={{color: '#8f8', fontWeight: 'bold'}}>4|HV|²</span>
-             </div>
-             <div style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>Green = Volume Scattering</div>
+             <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#8f8', marginBottom: 4 }}>4|HV|² (Green)</div>
+             <div style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>Volume Scattering</div>
              <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Forest canopy, crops</div>
            </div>
            
            <div>
-             <div style={{ background: '#004', height: 150, borderRadius: 'var(--r-md)', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-               <span style={{color: '#88f', fontWeight: 'bold'}}>|HH + VV|²</span>
-             </div>
-             <div style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>Blue = Surface Scattering</div>
+             <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#88f', marginBottom: 4 }}>|HH + VV|² (Blue)</div>
+             <div style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>Surface Scattering</div>
              <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Water bodies, bare soil</div>
            </div>
            
            <div>
-             <div style={{ background: 'linear-gradient(135deg, #f00, #0f0, #00f)', height: 150, borderRadius: 'var(--r-md)', marginBottom: 8, position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', top:0, left:0, width:'100%', height:'100%', background: 'url("data:image/svg+xml,%3Csvg viewBox=%270 0 200 200%27 xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cfilter id=%27noise%27%3E%3CfeTurbulence type=%27fractalNoise%27 baseFrequency=%270.65%27 numOctaves=%273%27 stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect width=%27100%25%27 height=%27100%25%27 filter=%27url(%23noise)%27 opacity=%270.5%27 mix-blend-mode=%27multiply%27/%3E%3C/svg%3E")' }} />
-                <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ color: '#fff', fontWeight: 'bold', textShadow: '0 0 4px #000' }}>Pauli RGB Composite</span>
-                </div>
-             </div>
-             <div style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>Combined Synthesis</div>
-             <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Identifies complex scenes</div>
+             <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff', marginBottom: 4 }}>Synthetic Scene</div>
+             <div style={{ fontSize: '0.85rem', color: 'var(--text-2)' }}>Left: Water | Mid: Forest | Right: Urban</div>
+             <div style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>Shows how RGB composite identifies features</div>
            </div>
         </div>
       </GlassCard>
