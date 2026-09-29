@@ -1,7 +1,7 @@
 import { useStore } from '../state/store';
 
 /* ── Synthetic but scientifically-grounded forecast data per reach ── */
-const FORECAST_DATA: Record<string, {
+export const FORECAST_DATA: Record<string, {
   model: string;
   horizon: string;
   confidence: number;
@@ -74,7 +74,7 @@ const FORECAST_DATA: Record<string, {
   },
 };
 
-const IMPACT_DATA: Record<string, {
+export const IMPACT_DATA: Record<string, {
   populationAtRisk: number;
   homesAtRisk: number;
   agriLandHa: number;

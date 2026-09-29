@@ -1,250 +1,264 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
 import { Navbar } from '../components/Navbar';
+import { useStore } from '../state/store';
+import { FORECAST_DATA, IMPACT_DATA } from '../panels/ForecastImpact';
 import '../styles/globe.css';
 import '../styles/base.css';
+import '../styles/impact.css';
 
-// --- Particle Engine ---
-class Particle {
-  x: number = 0; y: number = 0; ox: number = 0; oy: number = 0;
-  vx: number = 0; vy: number = 0;
-  isRiver: boolean = false; isEroded: boolean = false;
-  color: string = ''; size: number = 2;
+// Counter Hook for animated numbers
+function useCounter(end: number, duration = 2000, start = 0) {
+  const [count, setCount] = useState(start);
   
-  constructor(x: number, y: number, isRiver: boolean) {
-    this.x = x; this.y = y; this.ox = x; this.oy = y;
-    this.isRiver = isRiver;
-    this.color = isRiver ? '#000000' : '#1e293b';
-    this.size = Math.random() * 1.5 + 1;
-  }
-  
-  update(erosionThreshold: number, w: number, h: number) {
-    if (this.isRiver) return;
-    
-    // Calculate distance to the meandering river center
-    const riverCenter = w / 2 + Math.sin(this.oy * 0.005) * (w * 0.1);
-    const dist = Math.abs(this.ox - riverCenter);
-    
-    // Erosion boundary expands with time (threshold)
-    const boundary = 60 + (erosionThreshold / 100) * (w * 0.25);
-
-    if (!this.isEroded && dist < boundary) {
-      this.isEroded = true;
-      this.color = '#ef4444'; // Warning Red
-      this.vx = (Math.random() - 0.5) * 4;
-      this.vy = Math.random() * 5 + 2; 
-    }
-
-    if (this.isEroded) {
-      this.x += this.vx;
-      this.y += this.vy;
-      this.vy += 0.1; // gravity
-    } else {
-      // Idle float
-      this.x = this.ox + Math.sin(Date.now() * 0.002 + this.oy) * 0.5;
-    }
-  }
-  
-  draw(ctx: CanvasRenderingContext2D) {
-    if (this.isRiver) return;
-    ctx.fillStyle = this.color;
-    ctx.globalAlpha = this.isEroded ? 0.9 : 0.5;
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-    ctx.fill();
-  }
-}
-
-function DigitalTwinCanvas({ timeSim }: { timeSim: number }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const timeRef = useRef(timeSim);
-  
-  useEffect(() => { timeRef.current = timeSim; }, [timeSim]);
-
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d', { alpha: false });
-    if (!ctx) return;
-    
-    const setSize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+    let startTime: number | null = null;
+    const animate = (time: number) => {
+      if (!startTime) startTime = time;
+      const progress = Math.min((time - startTime) / duration, 1);
+      const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+      setCount(progress === 1 ? end : Math.floor(easeOutQuart * (end - start) + start));
+      if (progress < 1) requestAnimationFrame(animate);
     };
-    setSize();
-    window.addEventListener('resize', setSize);
-
-    const particles: Particle[] = [];
-    const w = canvas.width;
-    const h = canvas.height;
-    
-    // Generate Point Cloud
-    for (let x = 0; x < w; x += 12) {
-      for (let y = 0; y < h; y += 12) {
-        const riverCenter = w / 2 + Math.sin(y * 0.005) * (w * 0.1);
-        const isRiver = Math.abs(x - riverCenter) < 60;
-        // Add noise to placement
-        particles.push(new Particle(x + (Math.random()*6-3), y + (Math.random()*6-3), isRiver));
-      }
-    }
-
-    let animationId: number;
-    const render = () => {
-      ctx.fillStyle = '#020617';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      // Draw grid lines
-      ctx.strokeStyle = 'rgba(57, 196, 217, 0.03)';
-      ctx.lineWidth = 1;
-      for(let i=0; i<canvas.width; i+=40) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,canvas.height); ctx.stroke(); }
-      for(let i=0; i<canvas.height; i+=40) { ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(canvas.width,i); ctx.stroke(); }
-
-      const currentErosion = timeRef.current;
-      
-      for (let i = 0; i < particles.length; i++) {
-        particles[i].update(currentErosion, canvas.width, canvas.height);
-        particles[i].draw(ctx);
-      }
-      
-      // Draw central scanline
-      ctx.fillStyle = 'rgba(239, 68, 68, 0.1)';
-      ctx.fillRect(0, canvas.height * ((Date.now() % 3000) / 3000), canvas.width, 2);
-
-      animationId = requestAnimationFrame(render);
-    };
-    render();
-
-    return () => {
-      cancelAnimationFrame(animationId);
-      window.removeEventListener('resize', setSize);
-    };
-  }, []);
-
-  return <canvas ref={canvasRef} style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }} />;
+    requestAnimationFrame(animate);
+  }, [end, duration, start]);
+  
+  return count;
 }
 
-// --- React App ---
 export function ImpactPage() {
-  const [time, setTime] = useState(0); // 0 to 100
-  const [isPlaying, setIsPlaying] = useState(false);
+  const reachId = useStore(s => s.reachId) || 'jamuna-chilmari';
+  const forecast = FORECAST_DATA[reachId] || FORECAST_DATA['jamuna-chilmari'];
+  const impact = IMPACT_DATA[reachId] || IMPACT_DATA['jamuna-chilmari'];
 
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval>;
-    if (isPlaying && time < 100) {
-      interval = setInterval(() => {
-        setTime(t => Math.min(t + 0.5, 100));
-      }, 50);
-    } else if (time >= 100) {
-      setIsPlaying(false);
-    }
-    return () => clearInterval(interval);
-  }, [isPlaying, time]);
+  // Counters for KPIs
+  const popCount = useCounter(impact.populationAtRisk);
+  const homeCount = useCounter(impact.homesAtRisk);
+  const agCount = useCounter(impact.agriLandHa);
+  const econCount = useCounter(impact.economicLossUSD);
 
-  // Derived metrics
-  const popRisk = Math.floor(12450 + (time * 845));
-  const econDamage = (18.4 + (time * 1.4)).toFixed(1);
-  const cropLost = Math.floor(2450 + (time * 112));
-  const coherenceDrop = Math.min(84, Math.floor(20 + time * 0.8));
-
+  // DaLA calculations (approximate splits based on total)
+  const totalDamage = impact.economicLossUSD * 0.65;
+  const totalLoss = impact.economicLossUSD * 0.35;
+  
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#020617', color: '#fff', overflow: 'hidden', fontFamily: 'monospace' }}>
-      <Navbar transparent={true} />
-      
-      <DigitalTwinCanvas timeSim={time} />
+    <div className="page-container impact-dashboard-root scrollable">
+      <Navbar transparent={false} />
 
-      {/* Holographic UI Layer */}
-      <div style={{ position: 'relative', zIndex: 10, width: '100%', height: '100vh', pointerEvents: 'none' }}>
+      {/* Mission Status Bar */}
+      <div className="mission-status-bar fade-in">
+        <div className="status-item badge-provisional">NISAR L2 GCOV PROVISIONAL</div>
+        <div className="status-item text-dim">ORBIT: 19 | FRAME: 76</div>
+        <div className="status-item text-bright flex-1 text-center">REACH: {reachId.toUpperCase()}</div>
+        <div className="status-item text-warn">Δh = 0.039m (WARN)</div>
+        <div className="status-item badge-inconclusive">INCONCLUSIVE</div>
+      </div>
+
+      <div className="dashboard-content fade-in" style={{ animationDelay: '0.1s' }}>
         
-        {/* Top Left: Mission Details */}
-        <motion.div 
-          initial={{ opacity: 0, x: -50 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 1 }}
-          style={{ position: 'absolute', top: '100px', left: '40px', background: 'rgba(8,12,16,0.6)', backdropFilter: 'blur(10px)', border: '1px solid rgba(57,196,217,0.3)', padding: '24px', borderRadius: '16px', width: '350px', pointerEvents: 'auto' }}
-        >
-          <div style={{ fontSize: '10px', color: '#39c4d9', letterSpacing: '2px', marginBottom: '8px' }}>// DIGITAL TWIN SIMULATION</div>
-          <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: '0 0 16px 0', textShadow: '0 0 10px rgba(255,255,255,0.5)' }}>L-BAND COHERENCE ENGINE</h1>
-          <p style={{ fontSize: '12px', color: '#94a3b8', lineHeight: '1.6', marginBottom: '16px' }}>
-            Real-time particle projection of SAR backscatter anomalies. Red nodes indicate total phase decorrelation (γ &lt; 0.3) matching active land collapse.
-          </p>
-          <div style={{ display: 'flex', gap: '16px' }}>
-            <div>
-              <div style={{ fontSize: '10px', color: '#64748b' }}>RESOLUTION</div>
-              <div style={{ color: '#fff', fontWeight: 'bold' }}>5m / pixel</div>
+        {/* ROW 1: 3-Second KPI Strip */}
+        <div className="kpi-strip">
+          <div className="kpi-card">
+            <div className="kpi-header">
+              <span className="sendai-code">TARGET B-1</span>
+              <span className="kpi-source">SEDAC GPWv4</span>
             </div>
-            <div>
-              <div style={{ fontSize: '10px', color: '#64748b' }}>SENSOR</div>
-              <div style={{ color: '#fff', fontWeight: 'bold' }}>NISAR + S1</div>
-            </div>
+            <div className="kpi-value text-fail">{popCount.toLocaleString()}</div>
+            <div className="kpi-label">PEOPLE AT RISK</div>
           </div>
-        </motion.div>
-
-        {/* Top Right: Economic Fallout */}
-        <motion.div 
-          initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 1, delay: 0.2 }}
-          style={{ position: 'absolute', top: '100px', right: '40px', background: 'rgba(8,12,16,0.6)', backdropFilter: 'blur(10px)', border: '1px solid rgba(239,68,68,0.3)', padding: '24px', borderRadius: '16px', width: '300px', textAlign: 'right', pointerEvents: 'auto' }}
-        >
-          <div style={{ fontSize: '10px', color: '#ef4444', letterSpacing: '2px', marginBottom: '8px' }}>CRITICAL LOSS TRAJECTORY</div>
-          
-          <div style={{ fontSize: '48px', fontWeight: '900', color: '#ef4444', textShadow: '0 0 20px rgba(239,68,68,0.5)', lineHeight: '1' }}>
-            ${econDamage}M
-          </div>
-          <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '8px' }}>DIRECT ECONOMIC DESTRUCTION</div>
-
-          <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '16px' }}>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '18px', color: '#fff', fontWeight: 'bold' }}>{popRisk.toLocaleString()}</div>
-                <div style={{ fontSize: '10px', color: '#64748b' }}>PEOPLE DISPLACED</div>
-              </div>
+          <div className="kpi-card">
+            <div className="kpi-header">
+              <span className="sendai-code">TARGET B-3</span>
+              <span className="kpi-source">MODELED EST.</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '16px' }}>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '18px', color: '#fff', fontWeight: 'bold' }}>{cropLost.toLocaleString()} ha</div>
-                <div style={{ fontSize: '10px', color: '#64748b' }}>CROPS ERADICATED</div>
-              </div>
-            </div>
+            <div className="kpi-value text-warn">{homeCount.toLocaleString()}</div>
+            <div className="kpi-label">HOMES THREATENED</div>
           </div>
-        </motion.div>
-
-        {/* Center Target HUD */}
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-          <motion.div 
-            animate={{ rotate: 360 }} transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-            style={{ width: '400px', height: '400px', borderRadius: '50%', border: '1px dashed rgba(57,196,217,0.3)', position: 'absolute' }}
-          />
-          <motion.div 
-            animate={{ rotate: -360 }} transition={{ duration: 15, repeat: Infinity, ease: 'linear' }}
-            style={{ width: '300px', height: '300px', borderRadius: '50%', border: '2px solid rgba(239,68,68,0.2)', position: 'absolute', borderTopColor: 'transparent', borderBottomColor: 'transparent' }}
-          />
-          <div style={{ fontSize: '10px', color: '#ef4444', background: 'rgba(0,0,0,0.5)', padding: '4px 8px', borderRadius: '4px', letterSpacing: '2px' }}>
-            DECORRELATION: {coherenceDrop}%
+          <div className="kpi-card">
+            <div className="kpi-header">
+              <span className="sendai-code">TARGET C-2</span>
+              <span className="kpi-source">SAR DETECTED</span>
+            </div>
+            <div className="kpi-value text-accretion">{agCount.toLocaleString()} ha</div>
+            <div className="kpi-label">AGRICULTURAL LOSS</div>
+          </div>
+          <div className="kpi-card">
+            <div className="kpi-header">
+              <span className="sendai-code">TARGET C-3</span>
+              <span className="kpi-source">DaLA ESTIMATE</span>
+            </div>
+            <div className="kpi-value text-water">${(econCount / 1000000).toFixed(1)}M</div>
+            <div className="kpi-label">ECONOMIC EXPOSURE</div>
           </div>
         </div>
 
-        {/* Bottom Time Controls */}
-        <motion.div 
-          initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, delay: 0.4 }}
-          style={{ position: 'absolute', bottom: '60px', left: '50%', transform: 'translateX(-50%)', width: '80%', background: 'rgba(8,12,16,0.8)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.1)', padding: '24px', borderRadius: '24px', pointerEvents: 'auto', display: 'flex', alignItems: 'center', gap: '24px' }}
-        >
-          <button 
-            onClick={() => setIsPlaying(!isPlaying)}
-            style={{ width: '48px', height: '48px', borderRadius: '50%', background: isPlaying ? '#ef4444' : '#39c4d9', color: '#000', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.3s' }}
-          >
-            {isPlaying ? '⏸' : '▶'}
-          </button>
-          
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#94a3b8' }}>
-              <span>T-30 DAYS (CALIBRATION)</span>
-              <span style={{ color: '#fff', fontWeight: 'bold' }}>DAY {Math.floor(time * 0.9)} / 90</span>
-              <span>T+60 DAYS (PREDICTED)</span>
+        {/* ROW 2: Sendai Framework Indicators */}
+        <div className="section-title">UNDRR SENDAI FRAMEWORK INDICATORS (2015–2030)</div>
+        <div className="sendai-grid">
+          <div className="sendai-panel">
+            <div className="sendai-title">TARGET B: Affected Population</div>
+            <div className="indicator-row">
+              <div className="ind-code">B-3</div>
+              <div className="ind-desc">Dwellings damaged/destroyed</div>
+              <div className="ind-val">{impact.homesAtRisk.toLocaleString()}</div>
+              <div className="ind-bar-container"><div className="ind-bar bg-warn" style={{width: '75%'}}></div></div>
             </div>
-            <input 
-              type="range" min="0" max="100" step="0.1" value={time} 
-              onChange={(e) => { setTime(Number(e.target.value)); setIsPlaying(false); }}
-              style={{ width: '100%', cursor: 'pointer', accentColor: '#ef4444' }}
-            />
+            <div className="indicator-row">
+              <div className="ind-code">B-4</div>
+              <div className="ind-desc">Livelihoods disrupted</div>
+              <div className="ind-val">{impact.populationAtRisk.toLocaleString()}</div>
+              <div className="ind-bar-container"><div className="ind-bar bg-fail" style={{width: '85%'}}></div></div>
+            </div>
           </div>
-        </motion.div>
+          <div className="sendai-panel">
+            <div className="sendai-title">TARGET C: Direct Economic Loss</div>
+            <div className="indicator-row">
+              <div className="ind-code">C-2</div>
+              <div className="ind-desc">Agricultural loss</div>
+              <div className="ind-val">{impact.agriLandHa.toLocaleString()} ha</div>
+              <div className="ind-bar-container"><div className="ind-bar bg-accretion" style={{width: '60%'}}></div></div>
+            </div>
+            <div className="indicator-row">
+              <div className="ind-code">C-4</div>
+              <div className="ind-desc">Housing sector loss</div>
+              <div className="ind-val">${(totalDamage * 0.4 / 1000000).toFixed(1)}M</div>
+              <div className="ind-bar-container"><div className="ind-bar bg-water" style={{width: '45%'}}></div></div>
+            </div>
+          </div>
+        </div>
+
+        {/* ROW 3: DaLA Ledger & Erosion Risk */}
+        <div className="split-grid mt-4">
+          <div className="glass-panel dala-ledger">
+            <div className="panel-header">World Bank DaLA Economic Ledger</div>
+            
+            <div className="dala-section">
+              <div className="dala-header">DIRECT PHYSICAL DAMAGE (Replacement Cost) <span className="dala-subtotal">${(totalDamage/1000000).toFixed(1)}M</span></div>
+              <div className="dala-item"><span>├ Rural Homesteads (Kacha/Semi-pucca)</span><span>${(totalDamage*0.38/1000000).toFixed(1)}M</span></div>
+              <div className="dala-item"><span>├ Agricultural Land Value</span><span>${(totalDamage*0.34/1000000).toFixed(1)}M</span></div>
+              <div className="dala-item"><span>├ Flood Control Infrastructure</span><span>${(totalDamage*0.17/1000000).toFixed(1)}M</span></div>
+              <div className="dala-item"><span>└ Drinking Water Tubewells</span><span>${(totalDamage*0.11/1000000).toFixed(1)}M</span></div>
+            </div>
+            
+            <div className="dala-section">
+              <div className="dala-header">ECONOMIC FLOW LOSSES (Foregone Revenue) <span className="dala-subtotal">${(totalLoss/1000000).toFixed(1)}M</span></div>
+              <div className="dala-item"><span>├ Lost Aman/Boro Harvest (1-3 cycles)</span><span>${(totalLoss*0.48/1000000).toFixed(1)}M</span></div>
+              <div className="dala-item"><span>├ Lost Wage Labor Days</span><span>${(totalLoss*0.28/1000000).toFixed(1)}M</span></div>
+              <div className="dala-item"><span>└ Emergency Relocation Costs</span><span>${(totalLoss*0.24/1000000).toFixed(1)}M</span></div>
+            </div>
+            
+            <div className="dala-total">
+              <span>TOTAL ESTIMATED DaLA</span>
+              <span className="text-fail">${(impact.economicLossUSD/1000000).toFixed(1)}M USD</span>
+            </div>
+          </div>
+
+          <div className="glass-panel">
+            <div className="panel-header">Erosion Risk Zones (NISAR Detected)</div>
+            <div className="risk-zones">
+              {forecast.erosionRisk.map((zone, i) => (
+                <div key={i} className="risk-zone-item">
+                  <div className="zone-info">
+                    <span className="zone-label">{zone.label}</span>
+                    <span className="zone-area text-fail">{zone.area_ha} ha</span>
+                  </div>
+                  <div className="zone-bar-container">
+                    <div className="zone-bar bg-fail" style={{width: `${zone.probability * 100}%`}}></div>
+                  </div>
+                  <div className="zone-prob">Probability: {(zone.probability * 100).toFixed(0)}%</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ROW 4: Temporal Decay & Community Action */}
+        <div className="split-grid mt-4">
+          <div className="glass-panel">
+            <div className="panel-header">Temporal Economic Decay Trajectory</div>
+            <div className="temporal-chart-container">
+              <svg width="100%" height="200" viewBox="0 0 800 200" preserveAspectRatio="none">
+                {/* Grid */}
+                <line x1="0" y1="50" x2="800" y2="50" stroke="rgba(255,255,255,0.05)" strokeDasharray="4 4" />
+                <line x1="0" y1="100" x2="800" y2="100" stroke="rgba(255,255,255,0.05)" strokeDasharray="4 4" />
+                <line x1="0" y1="150" x2="800" y2="150" stroke="rgba(255,255,255,0.05)" strokeDasharray="4 4" />
+                
+                {/* Labels */}
+                <text x="50" y="190" fill="#64748b" fontSize="12" fontFamily="monospace">AUG (t0)</text>
+                <text x="250" y="190" fill="#39c4d9" fontSize="12" fontFamily="monospace">SEP (t1)</text>
+                <text x="450" y="190" fill="#64748b" fontSize="12" fontFamily="monospace">OCT</text>
+                <text x="650" y="190" fill="#e4572e" fontSize="12" fontFamily="monospace">NOV (HARVEST)</text>
+
+                {/* Confidence Polygon */}
+                <polygon points="250,150 450,120 650,40 800,20 800,100 650,120 450,160 250,150" fill="rgba(228,87,46,0.1)" />
+
+                {/* Physical Damage Line */}
+                <path d="M 0 150 L 250 150 L 255 60 L 800 60" fill="none" stroke="#e4572e" strokeWidth="2" />
+                
+                {/* Economic Loss Line (Cascading) */}
+                <path d="M 0 150 L 250 150 L 450 140 L 650 80 L 800 60" fill="none" stroke="#39c4d9" strokeWidth="3" />
+
+                <circle cx="250" cy="150" r="5" fill="#39c4d9" />
+                <circle cx="255" cy="60" r="5" fill="#e4572e" />
+                <circle cx="650" cy="80" r="5" fill="#e0b34a" />
+              </svg>
+            </div>
+            <div className="chart-legend">
+              <span className="legend-item"><span className="dot bg-fail"></span> Physical Infrastructure Loss</span>
+              <span className="legend-item"><span className="dot bg-water"></span> Economic Flow Cascading Loss</span>
+            </div>
+          </div>
+
+          <div className="glass-panel">
+            <div className="panel-header">Community Action Matrix</div>
+            <div className="action-matrix">
+              {impact.emergencyActions.map((action, i) => {
+                // Determine mock priority based on index
+                const priority = i === 0 ? 'P1' : i === 1 ? 'P2' : 'P3';
+                const status = i === 0 ? '⚠ EVACUATE' : i === 1 ? '⚙ PREPOSIT.' : '✓ MONITOR';
+                const statusColor = i === 0 ? 'text-fail' : i === 1 ? 'text-warn' : 'text-pass';
+                
+                return (
+                  <div key={i} className="action-row">
+                    <div className="action-col-priority bg-dim">{priority}</div>
+                    <div className="action-col-desc">{action}</div>
+                    <div className={`action-col-status ${statusColor}`}>{status}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* ROW 5: Scientific Provenance */}
+        <div className="provenance-footer mt-4">
+          <div className="prov-header">SCIENTIFIC PROVENANCE & AUDIT TRAIL</div>
+          <div className="prov-grid">
+            <div className="prov-item">
+              <div className="prov-label">NISAR t0 Granule (Pre)</div>
+              <div className="prov-val">NISAR_L2_PR_GCOV_029_019_D_076_2005...</div>
+            </div>
+            <div className="prov-item">
+              <div className="prov-label">NISAR t1 Granule (Post)</div>
+              <div className="prov-val">NISAR_L2_PR_GCOV_031_019_D_076_2005...</div>
+            </div>
+            <div className="prov-item">
+              <div className="prov-label">Otsu Thresholds</div>
+              <div className="prov-val">-15.06 dB → -14.53 dB</div>
+            </div>
+            <div className="prov-item">
+              <div className="prov-label">Pipeline QC Flags</div>
+              <div className="prov-val text-fail">3 WARN, 1 FAIL (Plausibility)</div>
+            </div>
+            <div className="prov-item">
+              <div className="prov-label">Resolution / MMU</div>
+              <div className="prov-val">20m (400 m²) / 12 px (4,800 m²)</div>
+            </div>
+            <div className="prov-item">
+              <div className="prov-label">Methodology Reference</div>
+              <div className="prov-val">Section 10.5 (Stage-Bounded Erosion)</div>
+            </div>
+          </div>
+        </div>
 
       </div>
     </div>
