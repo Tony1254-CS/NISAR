@@ -1,12 +1,14 @@
+import { Image, Mountain, Flame, Leaf, Radio, Microscope } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { fetchReaches, DataLoadError } from '../data/load';
 import type { ReachListItem } from '../data/types';
 import { Navbar } from '../components/Navbar';
 import '../styles/globe.css';
+import { InteractiveGlobe } from '../components/InteractiveGlobe';
 
 /* ── Location metadata for the world map ── */
 const LOCATION_META: Record<string, {
-  icon: string;
+  icon: React.ReactNode;
   changeType: string;
   changeClass: string;
   region: string;
@@ -15,7 +17,7 @@ const LOCATION_META: Record<string, {
   mapY: number; // % from top
 }> = {
   'jamuna-chilmari': {
-    icon: '🏞️',
+    icon: <Image size={18} />,
     changeType: 'River Erosion',
     changeClass: 'erosion',
     region: 'South Asia',
@@ -23,7 +25,7 @@ const LOCATION_META: Record<string, {
     mapX: 74.9, mapY: 28.5,
   },
   'glacier-bay-alaska': {
-    icon: '🏔️',
+    icon: <Mountain size={18} />,
     changeType: 'Glacier Retreat',
     changeClass: 'glacier',
     region: 'North America',
@@ -31,7 +33,7 @@ const LOCATION_META: Record<string, {
     mapX: 12.2, mapY: 17.0,
   },
   'norcal-wildfire': {
-    icon: '🔥',
+    icon: <Flame size={18} />,
     changeType: 'Wildfire Burn Scar',
     changeClass: 'wildfire',
     region: 'North America',
@@ -39,7 +41,7 @@ const LOCATION_META: Record<string, {
     mapX: 16.2, mapY: 27.8,
   },
   'sundarbans-mangrove': {
-    icon: '🌿',
+    icon: <Leaf size={18} />,
     changeType: 'Wetland Loss',
     changeClass: 'wetland',
     region: 'South Asia',
@@ -49,9 +51,9 @@ const LOCATION_META: Record<string, {
 };
 
 const VERDICT_COLOR: Record<string, string> = {
-  SUPPORTED: 'var(--pass)',
-  LIMITED: 'var(--warn)',
-  INCONCLUSIVE: 'var(--fail)',
+  SUPPORTED: '#7FBF8E',
+  LIMITED: '#E0B34A',
+  INCONCLUSIVE: '#E4572E',
 };
 
 const VERDICT_ICON: Record<string, string> = {
@@ -78,7 +80,30 @@ export function CasesPage() {
       <div className="navbar-spacer" />
 
       {/* ════ Hero ════ */}
-      <section className="globe-hero">
+      <section className="globe-hero" data-theme="dark">
+        {/* The globe is the background of the hero; the text floats on top of it */}
+        <div className="globe-hero__bg">
+          <InteractiveGlobe fill night 
+            points={activeReaches.map(r => {
+              const meta = LOCATION_META[r.reach_id];
+              if (!meta) return null;
+              // Convert mapX (0-100 % of equirectangular) to lng (-180 to 180)
+              const lng = (meta.mapX / 100) * 360 - 180;
+              // Convert mapY (0-100 % from top) to lat (90 to -90)
+              const lat = 90 - (meta.mapY / 100) * 180;
+              return {
+                lat,
+                lng,
+                label: `<div class="globe-tip"><strong>${r.name}</strong><br/>${meta.changeType} · ${meta.region}<br/>Verdict: <span style="color:${VERDICT_COLOR[r.verdict] ?? '#6F7880'}">${r.verdict}</span></div>`,
+                color: VERDICT_COLOR[r.verdict] ?? '#6F7880',
+                size: 1.5,
+              };
+            }).filter(Boolean) as any}
+          />
+        </div>
+        <div className="globe-hero__scrim" />
+
+        <div className="globe-hero__content">
         <div className="globe-hero__badge">
           <span className="globe-hero__badge-dot" />
           GLOBAL SURFACE CHANGE MONITORING · NISAR L-BAND SAR
@@ -93,7 +118,8 @@ export function CasesPage() {
           that sees through clouds, darkness, and weather.
         </p>
 
-        {/* Stats */}
+        {/* Stats + legend */}
+        <div className="globe-stats-row">
         <div className="globe-stats">
           <div className="globe-stat">
             <div className="globe-stat__value">{activeReaches.length || 4}</div>
@@ -112,62 +138,20 @@ export function CasesPage() {
             <div className="globe-stat__label">Pipeline Steps</div>
           </div>
         </div>
-      </section>
-
-      {/* ════ World Map ════ */}
-      <div className="world-map">
-        <div className="world-map__container">
-          {/* SVG World Map — simplified equirectangular */}
-          <svg className="world-map__svg" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid meet">
-            {/* Grid lines */}
-            <g className="world-map__grid">
-              {/* Latitude lines */}
-              {[100, 150, 200, 250, 300, 350, 400].map(y => (
-                <line key={`lat-${y}`} x1="0" y1={y} x2="1000" y2={y} />
-              ))}
-              {/* Longitude lines */}
-              {[100, 200, 300, 400, 500, 600, 700, 800, 900].map(x => (
-                <line key={`lng-${x}`} x1={x} y1="0" x2={x} y2="500" />
-              ))}
-            </g>
-
-            {/* Simplified continent outlines */}
-            <g className="world-map__land">
-              {/* North America */}
-              <path d="M80,80 L200,60 L260,80 L280,120 L290,160 L270,200 L230,220 L200,240 L160,260 L140,240 L120,200 L100,180 L80,140 Z" />
-              {/* South America */}
-              <path d="M200,260 L240,250 L260,280 L280,320 L290,380 L270,420 L240,440 L210,420 L190,380 L180,320 L190,280 Z" />
-              {/* Europe */}
-              <path d="M460,80 L520,70 L560,90 L540,120 L520,140 L500,130 L480,140 L460,120 L440,100 Z" />
-              {/* Africa */}
-              <path d="M460,160 L520,150 L560,180 L570,240 L560,300 L540,360 L510,380 L480,360 L460,300 L450,240 L440,200 Z" />
-              {/* Asia */}
-              <path d="M560,60 L650,50 L740,60 L800,80 L840,120 L830,160 L800,180 L760,200 L720,180 L680,200 L650,180 L620,160 L580,140 L560,100 Z" />
-              {/* South/Southeast Asia */}
-              <path d="M680,200 L720,190 L760,210 L770,240 L750,260 L720,250 L700,260 L690,240 L680,220 Z" />
-              {/* Australia */}
-              <path d="M780,320 L840,310 L880,330 L890,370 L870,400 L830,410 L790,390 L780,360 Z" />
-            </g>
-
-            {/* Connection lines from pins */}
-            {activeReaches.map(r => {
-              const meta = LOCATION_META[r.reach_id];
-              if (!meta) return null;
-              const cx = meta.mapX * 10;
-              const cy = meta.mapY * 10;
-              return (
-                <g key={`conn-${r.reach_id}`}>
-                  <circle cx={cx} cy={cy} r="4" fill={VERDICT_COLOR[r.verdict] ?? '#6F7880'} opacity="0.9">
-                    <animate attributeName="r" values="4;8;4" dur="3s" repeatCount="indefinite" />
-                    <animate attributeName="opacity" values="0.9;0.3;0.9" dur="3s" repeatCount="indefinite" />
-                  </circle>
-                  <circle cx={cx} cy={cy} r="3" fill={VERDICT_COLOR[r.verdict] ?? '#6F7880'} />
-                </g>
-              );
-            })}
-          </svg>
+          {/* Legend: dot colour = verdict (sits level with the stat cards) */}
+          <div className="globe-legend">
+            <div className="globe-legend__title">Dot colour</div>
+            {Object.entries(VERDICT_COLOR).map(([verdict, c]) => (
+              <div key={verdict} className="globe-legend__row">
+                <span className="globe-legend__dot" style={{ background: c, color: c }} />
+                <span className="globe-legend__name">{verdict[0] + verdict.slice(1).toLowerCase()}</span>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+        </div>
+
+      </section>
 
       {/* ════ Error State ════ */}
       {error && (
@@ -185,62 +169,218 @@ export function CasesPage() {
         </div>
       )}
 
-      {/* ════ Case Study Cards ════ */}
+      {/* ════ Case Study Cards (own section, separated from the globe hero) ════ */}
+      <div className="cases-head">
+        <div className="section-label">Active investigations</div>
+        <h2>Pick a site to open</h2>
+        <p>Hover or tap a card to flip it and see the details.</p>
+      </div>
+
+            {/* Inline styles for 3D Flip and 2x2 Grid */}
+      <style>{`
+        .cases-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 2rem;
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 0 var(--s5);
+        }
+        @media (min-width: 768px) {
+          .cases-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+        @media (max-width: 767px) {
+          .cases-grid { padding: 0 var(--s4); gap: 1.25rem; }
+          .flip-card-container { height: 340px; }
+          .case-title { font-size: 1.5rem; }
+          .back-desc { font-size: 0.92rem; }
+        }
+        /* touch screens have no hover: tapping a card (focus) flips it */
+        .flip-card-container:focus-within .flip-card-inner { transform: rotateY(180deg); }
+        
+        .flip-card-container {
+          background-color: transparent;
+          width: 100%;
+          height: 310px;
+          perspective: 1500px;
+          cursor: pointer;
+        }
+        
+        .flip-card-inner {
+          position: relative;
+          width: 100%;
+          height: 100%;
+          text-align: left;
+          transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+          transform-style: preserve-3d;
+        }
+        
+        .flip-card-container:hover .flip-card-inner {
+          transform: rotateY(180deg);
+        }
+        
+        .flip-card-front, .flip-card-back {
+          position: absolute;
+          width: 100%;
+          height: 100%;
+          -webkit-backface-visibility: hidden;
+          backface-visibility: hidden;
+          border-radius: var(--r-lg);
+          padding: 1.25rem;
+          display: flex;
+          flex-direction: column;
+          border: 1px solid var(--line);
+        }
+        
+        .flip-card-front {
+          background: rgba(var(--panel-rgb), 0.7);
+          backdrop-filter: blur(16px);
+          z-index: 2;
+          box-shadow: 0 4px 16px rgba(var(--shadow-rgb), 0.2);
+        }
+        
+        .flip-card-back {
+          background: rgba(var(--panel-rgb), 0.95);
+          backdrop-filter: blur(24px);
+          transform: rotateY(180deg);
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          gap: 0.5rem;
+        }
+        
+        .flip-card-container:hover .flip-card-front {
+           box-shadow: 0 12px 40px rgba(var(--shadow-rgb), 0.5);
+        }
+        
+        .case-front-content {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+        }
+        
+        .case-title {
+          font-size: 1.8rem;
+          font-weight: 700;
+          color: var(--text);
+          margin-bottom: 0.5rem;
+          line-height: 1.2;
+        }
+        
+        .case-subtitle {
+          font-size: 1.1rem;
+          color: var(--text-2);
+          margin-bottom: auto;
+        }
+        
+        .front-verdict {
+          font-size: 1rem;
+          font-weight: 600;
+          padding: 8px 16px;
+          border-radius: 100px;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          align-self: flex-start;
+          border: 1px solid;
+          margin-top: 1rem;
+        }
+        
+        .back-desc {
+          font-size: 0.95rem;
+          line-height: 1.4;
+          color: var(--text);
+        }
+        
+        .back-meta-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          color: var(--text-3);
+          font-size: 0.95rem;
+          font-family: var(--font-num);
+        }
+        
+        .open-btn {
+          margin-top: auto;
+          background: rgba(var(--fg-rgb), 0.05);
+          color: var(--text);
+          padding: 12px 24px;
+          border-radius: 100px;
+          text-align: center;
+          font-weight: 600;
+          transition: all 0.3s;
+          border: 1px solid rgba(var(--fg-rgb), 0.1);
+          text-decoration: none;
+        }
+        
+        .open-btn:hover {
+          background: rgba(var(--fg-rgb), 0.15);
+          transform: translateY(-2px);
+        }
+      `}</style>
+
       <div className="cases-grid">
         {activeReaches.map((r, i) => {
           const meta = LOCATION_META[r.reach_id];
-          const color = VERDICT_COLOR[r.verdict] ?? 'var(--text-3)';
+          const color = VERDICT_COLOR[r.verdict] ?? '#6F7880';
           const icon = VERDICT_ICON[r.verdict] ?? '·';
-          const verdictClass = r.verdict.toLowerCase();
 
           return (
-            <a
-              key={r.reach_id}
-              href={`/app?reach=${r.reach_id}`}
-              className={`case-card case-card--${verdictClass}`}
+            <div 
+              key={r.reach_id} 
+              className="flip-card-container"
+              tabIndex={0}
               style={{ animationDelay: `${0.1 * i}s`, animation: `fade-in-up 0.5s var(--ease-out) ${0.1 * i}s both` }}
             >
-              {/* Change type badge */}
-              <div className="case-card__type">
-                <span className="case-card__type-icon">{meta?.icon ?? '📡'}</span>
-                {meta?.changeType ?? 'Surface Change'} · {meta?.region ?? 'Global'}
-              </div>
+              <div className="flip-card-inner">
+                
+                {/* ── Front of Card ── */}
+                <div className="flip-card-front" style={{ borderTop: `3px solid ${color}` }}>
+                  <div className="case-card__type" style={{ marginBottom: '1.5rem', color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                    <span style={{ color: color }}>{meta?.icon ?? <Radio size={18} />}</span>
+                    {meta?.changeType ?? 'Surface Change'} · {meta?.region ?? 'Global'}
+                  </div>
+                  
+                  <div className="case-front-content">
+                    <div className="case-title">{r.name}</div>
+                    <div className="case-subtitle">{r.river}</div>
+                    
+                    <div className="front-verdict" style={{ color: color, borderColor: `${color}40`, backgroundColor: `${color}10` }}>
+                      {icon} {r.verdict}
+                    </div>
+                  </div>
+                </div>
 
-              {/* Title */}
-              <div className="case-card__title">
-                {r.name}
-              </div>
+                {/* ── Back of Card ── */}
+                <div className="flip-card-back" style={{ border: `1px solid ${color}50`, boxShadow: `inset 0 0 60px ${color}10` }}>
+                  <div className="back-desc">
+                    {meta?.description ?? 'No description available for this case.'}
+                  </div>
+                  
+                  <hr style={{ border: 'none', borderTop: '1px solid rgba(var(--fg-rgb), 0.08)', margin: '1rem 0' }} />
+                  
+                  <div className="back-meta-item">
+                    <Radio size={18} color={color} /> NISAR L-band SAR Analysis
+                  </div>
+                  <div className="back-meta-item">
+                    <span style={{fontSize: '18px', filter:`drop-shadow(0 0 4px ${color})`}}>📍</span> 
+                    BBox: {r.bbox.map(n => n.toFixed(2)).join(', ')}
+                  </div>
+                  <div className="back-meta-item">
+                    <span style={{fontSize: '18px', filter:`drop-shadow(0 0 4px ${color})`}}>🕐</span> 
+                    Data Date: {r.data_frozen_at.split('T')[0]}
+                  </div>
+                  
+                  <a href={`/app?reach=${r.reach_id}`} className="open-btn" style={{ borderColor: `${color}50`, color: 'var(--text)', backgroundColor: `${color}20` }}>
+                    Open Investigation →
+                  </a>
+                </div>
 
-              {/* Location */}
-              <div className="case-card__location">
-                {r.river}
-                {meta && ` — ${meta.description}`}
               </div>
-
-              {/* Verdict */}
-              <div className="case-card__verdict" style={{ color, borderColor: color }}>
-                {icon} {r.verdict}
-              </div>
-
-              {/* Change type tag */}
-              {meta && (
-                <span className={`change-type-badge change-type-badge--${meta.changeClass}`}>
-                  {meta.changeType}
-                </span>
-              )}
-
-              {/* Metadata */}
-              <div className="case-card__meta">
-                <span>📡 NISAR L-band</span>
-                <span>📍 {r.bbox.map(n => n.toFixed(1)).join(', ')}</span>
-                <span>🕐 {r.data_frozen_at.split('T')[0]}</span>
-              </div>
-
-              {/* CTA */}
-              <div className="case-card__cta">
-                Open Investigation <span>→</span>
-              </div>
-            </a>
+            </div>
           );
         })}
       </div>
@@ -248,7 +388,7 @@ export function CasesPage() {
       {/* ════ Info Footer ════ */}
       <div className="cases-footer">
         <div className="cases-footer__info">
-          <span className="cases-footer__icon">🔬</span>
+          <span className="cases-footer__icon"><Microscope size={18} style={{ display: 'inline', verticalAlign: 'text-bottom', margin: '0 4px' }} /></span>
           <div>
             <strong style={{ color: 'var(--text)' }}>How verdicts work:</strong> Each site runs through our 12-step
             analysis pipeline. The system actively tries to break its own findings — if any quality check fails
