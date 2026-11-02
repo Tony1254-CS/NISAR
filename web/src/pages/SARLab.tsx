@@ -2,7 +2,7 @@
 import { useStore } from '../state/store';
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Navbar } from '../components/Navbar';
-import { Rocket, Globe, RefreshCw, Radio, Search, Ruler, Zap, Save, Clock, Handshake, Satellite, Target, Tornado, BarChart2, TrendingUp, Map, Star, XCircle, CheckCircle2, Leaf, Mountain } from 'lucide-react';
+import { Rocket, Globe, RefreshCw, Radio, Search, Ruler, Zap, Save, Clock, Handshake, Satellite, Target, Tornado, BarChart2, TrendingUp, Map, Star, XCircle, CheckCircle2, Leaf, Mountain, Antenna, Layers, Weight, Waves } from 'lucide-react';
 import '../styles/globe.css';
 
 /* ═══════════════════════════════════════════════════════════════
@@ -11,38 +11,41 @@ import '../styles/globe.css';
    ═══════════════════════════════════════════════════════════════ */
 
 const BANDS = [
-  { name: 'X-band', freq: '8–12 GHz', wl: '2.5–3.75 cm', pen: '~1 cm', use: 'Urban mapping, subsidence', color: 'var(--erosion)', sat: 'TerraSAR-X, COSMO-SkyMed' },
-  { name: 'C-band', freq: '4–8 GHz', wl: '3.75–7.5 cm', pen: '~5 cm', use: 'Sea ice, agriculture, Sentinel-1', color: '#E0B34A', sat: 'Sentinel-1 A/B, Radarsat-2' },
-  { name: 'L-band', freq: '1–2 GHz', wl: '15–30 cm', pen: '~30 cm', use: 'Forest biomass, soil moisture, NISAR', color: 'var(--water)', sat: 'NISAR, ALOS-2 PALSAR', highlight: true },
-  { name: 'P-band', freq: '0.3–1 GHz', wl: '30–100 cm', pen: '>1 m', use: 'Subsurface, biomass (BIOMASS mission)', color: '#7FBF8E', sat: 'ESA BIOMASS (planned)' },
+  { name: 'X-band', freq: '8–12 GHz', wl: '2.5–3.75 cm', pen: 'Shorter wavelength', use: 'High-detail mapping, urban areas', color: 'var(--erosion)', sat: 'TerraSAR-X, COSMO-SkyMed' },
+  { name: 'C-band', freq: '4–8 GHz', wl: '3.75–7.5 cm', pen: 'Intermediate', use: 'Sea ice, agriculture, land monitoring', color: '#E0B34A', sat: 'Sentinel-1, Radarsat-2' },
+  { name: 'L-band', freq: '1–2 GHz', wl: '15–30 cm', pen: 'Longer wavelength', use: 'Vegetation structure, soil moisture', color: 'var(--water)', sat: 'NISAR, ALOS-2 PALSAR', highlight: true },
+  { name: 'P-band', freq: '0.3–1 GHz', wl: '30–100 cm', pen: 'Very long wavelength', use: 'Forest biomass and structure', color: '#7FBF8E', sat: 'ESA BIOMASS' },
 ];
 
 const POL_CHANNELS = [
-  { id: 'HH', label: 'Horizontal–Horizontal', desc: 'Co-polarization. Strong returns from bare soil, water surfaces (specular reflection). Used for flood/inundation mapping.', color: 'var(--water)', mechanism: 'Surface scattering', simVal: -11.4 },
-  { id: 'HV', label: 'Horizontal–Vertical', desc: 'Cross-polarization. Strong returns from vegetation canopy (volume scattering). Key for biomass estimation and forest change.', color: 'var(--accretion)', mechanism: 'Volume scattering', simVal: -18.7 },
-  { id: 'VV', label: 'Vertical–Vertical', desc: 'Co-polarization. Similar to HH but with different sensitivity to surface roughness. Often used in combination with HH.', color: 'var(--pass)', mechanism: 'Surface scattering', simVal: -12.1 },
-  { id: 'VH', label: 'Vertical–Horizontal', desc: 'Cross-polarization. Reciprocal of HV in monostatic SAR. Sensitive to vegetation structure and moisture content.', color: '#E0B34A', mechanism: 'Volume scattering', simVal: -19.2 },
+  { id: 'HH', label: 'Horizontal transmit / receive', desc: 'Co-polarized channel. Response depends on roughness, dielectric properties, incidence angle, and geometry; calm open water is often dark when specular.', color: 'var(--water)', mechanism: 'Co-pol' },
+  { id: 'HV', label: 'Horizontal transmit / vertical receive', desc: 'Cross-polarized channel. Depolarization can reveal volume scattering from vegetation, though it is not a direct biomass measurement.', color: 'var(--accretion)', mechanism: 'Cross-pol' },
+  { id: 'VV', label: 'Vertical transmit / receive', desc: 'Co-polarized channel with a response that differs from HH as incidence angle and surface properties change.', color: 'var(--pass)', mechanism: 'Co-pol' },
+  { id: 'VH', label: 'Vertical transmit / horizontal receive', desc: 'Cross-polarized channel. For an ideal reciprocal monostatic target VH and HV are related, but practical products and modes vary.', color: '#E0B34A', mechanism: 'Cross-pol' },
 ];
 
 const INSAR_STEPS = [
-  { title: 'Acquire SAR Pair', desc: 'Two SAR images from same orbital track, different dates. NISAR has 12-day exact repeat orbit — ideal for coherent change detection.', icon: <Satellite size={24} /> },
-  { title: 'Co-registration', desc: 'Sub-pixel alignment of reference (primary) and secondary image using orbital ephemeris + cross-correlation. Accuracy: <0.1 pixel.', icon: <Target size={24} /> },
-  { title: 'Interferogram Formation', desc: 'Complex multiplication of aligned SLC images produces phase difference map. Each fringe = half-wavelength displacement (11.55 cm for L-band).', icon: <Tornado size={24} /> },
-  { title: 'Coherence Estimation', desc: 'Spatial window (5×5) correlation between acquisitions. High coherence (>0.7) = stable surface. Low coherence (<0.3) = surface change detected.', icon: <BarChart2 size={24} /> },
-  { title: 'Phase Unwrapping', desc: 'Convert wrapped 2π-ambiguous phase into continuous displacement field using minimum cost flow algorithm. Critical for measuring actual ground movement.', icon: <TrendingUp size={24} /> },
-  { title: 'Geocoding & Output', desc: 'Project unwrapped phase from radar geometry (range/azimuth) to geographic coordinates using DEM. Output: displacement map in mm/year.', icon: <Map size={24} /> },
+  { title: 'Acquire SAR Pair', desc: 'Use repeat-pass complex SAR acquisitions from a compatible orbit, polarization, and viewing geometry.', icon: <Satellite size={24} /> },
+  { title: 'Co-registration', desc: 'Align the complex images to sub-pixel precision; residual misregistration degrades phase and coherence.', icon: <Target size={24} /> },
+  { title: 'Interferogram', desc: 'Multiply one complex image by the conjugate of the other. Phase includes motion, topography, atmosphere, and noise.', icon: <Tornado size={24} /> },
+  { title: 'Coherence & QC', desc: 'Estimate local phase consistency. Low coherence means phase is unreliable; it does not identify the cause of change by itself.', icon: <BarChart2 size={24} /> },
+  { title: 'Unwrap Phase', desc: 'Resolve 2π phase ambiguities where signal quality and spatial continuity support a reliable solution.', icon: <TrendingUp size={24} /> },
+  { title: 'Correct & Interpret', desc: 'Remove topographic and orbital contributions, assess atmospheric effects, then convert phase to line-of-sight displacement.', icon: <Map size={24} /> },
 ];
 
 const NISAR_SPECS = [
-  { param: 'Launch', value: 'March 2024', icon: <Rocket size={24} /> },
+  { param: 'Launch', value: 'July 30, 2025 (SDSC-SHAR)', icon: <Rocket size={24} /> },
   { param: 'Orbit', value: '747 km, Sun-synchronous', icon: <Globe size={24} /> },
-  { param: 'Repeat Cycle', value: '12 days (exact)', icon: <RefreshCw size={24} /> },
-  { param: 'L-band Frequency', value: '1.257 GHz (λ = 23.8 cm)', icon: <Radio size={24} /> },
-  { param: 'Resolution', value: '3–10 m (ScanSAR: 5–25 m)', icon: <Search size={24} /> },
-  { param: 'Swath Width', value: '240 km', icon: <Ruler size={24} /> },
-  { param: 'Polarization', value: 'Quad-pol (HH+HV+VH+VV)', icon: <Zap size={24} /> },
-  { param: 'Data Rate', value: '26 Tbits/day (largest Earth science mission)', icon: <Save size={24} /> },
-  { param: 'Mission Life', value: '3 years (design), 5+ years (goal)', icon: <Clock size={24} /> },
+  { param: 'Repeat Cycle', value: '12 days (exact repeat)', icon: <RefreshCw size={24} /> },
+  { param: 'S-band (ISRO)', value: '3.2 GHz (λ ≈ 9.4 cm)', icon: <Satellite size={24} /> },
+  { param: 'Antenna', value: '12 m deployable mesh reflector on 9 m boom', icon: <Ruler size={24} /> },
+  { param: 'Mass', value: '~2,800 kg', icon: <Globe size={24} /> },
+  { param: 'L-band (NASA)', value: '1.257 GHz (λ = 23.8 cm)', icon: <Radio size={24} /> },
+  { param: 'Resolution', value: 'About 3–10 m (mode-dependent)', icon: <Search size={24} /> },
+  { param: 'Swath Width', value: 'About 242 km (SweepSAR)', icon: <Ruler size={24} /> },
+  { param: 'Polarization', value: 'Mode-dependent; dual-pol is common', icon: <Zap size={24} /> },
+  { param: 'Data Volume', value: 'About 80 TB of data per day', icon: <Save size={24} /> },
+  { param: 'Mission Life', value: '3-year baseline mission', icon: <Clock size={24} /> },
   { param: 'Partnership', value: 'NASA JPL + ISRO SAC', icon: <Handshake size={24} /> },
 ];
 
@@ -120,12 +123,22 @@ function FeatureRadarViewer() {
   // Pane 3: Change Detection Scanner
   const changeCanvasRef = useRef(null);
   const [isScanning, setIsScanning] = useState(false);
-  const [hectaresLost, setHectaresLost] = useState(0);
+  const [erosionEstimate, setErosionEstimate] = useState(null);
+  const [reachAssessment, setReachAssessment] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/data/v1/${reachId}/reach.json`)
+      .then(response => response.ok ? response.json() : null)
+      .then(reach => { if (!cancelled) setReachAssessment(reach); })
+      .catch(() => { if (!cancelled) setReachAssessment(null); });
+    return () => { cancelled = true; };
+  }, [reachId]);
   
   const runDiff = () => {
     if (isScanning) return;
     setIsScanning(true);
-    setHectaresLost(0);
+    setErosionEstimate(null);
     
     const img = new Image();
     img.src = `/data/v1/${reachId}/img/change_20260826_20260919.png`;
@@ -143,7 +156,6 @@ function FeatureRadarViewer() {
       
       // We will reveal it line by line
       let currentY = 0;
-      let totalHectares = 0;
       const outData = ctx.createImageData(w, h);
       
       // Fill initial black background
@@ -154,6 +166,13 @@ function FeatureRadarViewer() {
       const animate = () => {
         if (currentY >= h) {
           setIsScanning(false);
+          fetch(`/data/v1/${reachId}/manifest.json`)
+            .then(response => response.ok ? response.json() : null)
+            .then(manifest => {
+              const metric = manifest?.metrics?.find(item => item.id === 'erosion_area');
+              if (metric && Number.isFinite(metric.value)) setErosionEstimate(metric);
+            })
+            .catch(() => setErosionEstimate(null));
           return;
         }
         
@@ -167,7 +186,6 @@ function FeatureRadarViewer() {
               outData.data[i] = 255; // Red
               outData.data[i+1] = 50; 
               outData.data[i+2] = 50;
-              totalHectares += 0.09; // Approx 30x30m pixel = 900sqm = 0.09 ha
             }
           }
         }
@@ -178,7 +196,6 @@ function FeatureRadarViewer() {
         ctx.fillStyle = 'rgba(255, 50, 50, 0.8)';
         ctx.fillRect(0, currentY + 10, w, 2);
         
-        setHectaresLost(Math.round(totalHectares));
         currentY += 10;
         requestAnimationFrame(animate);
       };
@@ -188,13 +205,13 @@ function FeatureRadarViewer() {
   
   return (
     <div style={{ marginBottom: 'var(--s8)' }}>
-      <SectionTitle title="Live NISAR Pipeline Sandbox" subtitle="Don't just view the outputs. Run the actual mathematical pipeline on real L-band backscatter data." />
+      <SectionTitle title="Change Detection Explorer" subtitle="Inspect paired HH backscatter and the classified change layer. Area comes from the geospatial product manifest, not the display image's pixel size." />
       <GlassCard>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 'var(--s4)' }}>
           
           {/* Box 1 */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s2)', background: 'rgba(var(--fg-rgb), 0.02)', padding: 'var(--s3)', borderRadius: 'var(--r-md)', border: '1px solid rgba(var(--fg-rgb), 0.05)' }}>
-            <div style={{ fontSize: '1rem', fontWeight: 'bold', color: 'var(--text)', textAlign: 'center' }}>1. Raw σ⁰ Backscatter</div>
+            <div style={{ fontSize: '1rem', fontWeight: 'bold', color: 'var(--text)', textAlign: 'center' }}>1. HH Backscatter (display stretch)</div>
             <div style={{ position: 'relative', height: 280, overflow: 'hidden', borderRadius: '4px', background: '#000', border: '1px solid #333' }}>
               <img src={`/data/v1/${reachId}/img/radar_20260919.png`} style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover' }} alt="t1" />
               <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, clipPath: `polygon(0 0, ${sliderPos}% 0, ${sliderPos}% 100%, 0 100%)` }}>
@@ -211,44 +228,43 @@ function FeatureRadarViewer() {
 
           {/* Box 2 */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s2)', background: 'rgba(var(--fg-rgb), 0.02)', padding: 'var(--s3)', borderRadius: 'var(--r-md)', border: '1px solid rgba(0,100,255,0.2)' }}>
-            <div style={{ fontSize: '1rem', fontWeight: 'bold', color: 'var(--water)', textAlign: 'center' }}>2. Interactive Otsu Threshold</div>
+            <div style={{ fontSize: '1rem', fontWeight: 'bold', color: 'var(--water)', textAlign: 'center' }}>2. Display Brightness Cutoff</div>
             <div style={{ height: 280, borderRadius: '4px', overflow: 'hidden', position: 'relative', background: '#000', border: '1px solid rgba(0,100,255,0.3)' }}>
               <canvas ref={otsuCanvasRef} width={400} height={300} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               <div className="hud-dark" style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: 'rgba(var(--shadow-rgb), 0.8)', padding: 'var(--s3)', borderTop: '1px solid rgba(0,100,255,0.3)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: '#fff', fontSize: '0.9rem', marginBottom: '8px' }}>
-                  <span>Backscatter Threshold</span>
-                  <span>{otsuThresh} DN</span>
+                  <span>8-bit display brightness cutoff</span>
+                  <span>{otsuThresh}</span>
                 </div>
                 <input type="range" min="10" max="150" value={otsuThresh} onChange={e => setOtsuThresh(Number(e.target.value))} style={{ width: '100%', accentColor: 'var(--water)' }} />
               </div>
             </div>
-            <div style={{ textAlign: 'center', fontSize: '0.86rem', color: 'var(--text-3)' }}>Drag slider to classify water pixels in real-time based on brightness.</div>
+            <div style={{ textAlign: 'center', fontSize: '0.86rem', color: 'var(--text-3)' }}>A visual demo on a stretched PNG; this is not calibrated σ⁰ or the production classifier.</div>
           </div>
           
           {/* Box 3 */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s2)', background: 'rgba(var(--fg-rgb), 0.02)', padding: 'var(--s3)', borderRadius: 'var(--r-md)', border: '1px solid rgba(255,50,50,0.2)' }}>
-            <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#f44', textAlign: 'center' }}>3. Morphological Change diff()</div>
+            <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#f44', textAlign: 'center' }}>3. Change Map Scan</div>
             <div style={{ height: 280, borderRadius: '4px', overflow: 'hidden', position: 'relative', background: '#000', border: '1px solid rgba(255,50,50,0.3)' }}>
               <canvas ref={changeCanvasRef} width={400} height={300} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               
-              {!isScanning && hectaresLost === 0 && (
+            {!isScanning && erosionEstimate == null && (
                  <img src={`/data/v1/${reachId}/img/change_20260826_20260919.png`} style={{ position: 'absolute', top:0, left:0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.1 }} />
               )}
               
-              <div className="hud-dark" style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(var(--shadow-rgb), 0.8)', padding: '8px 12px', borderRadius: 4, fontSize: '0.92rem', border: '1px solid #f44' }}>
-                <div style={{ color: '#aaa', marginBottom: 4 }}>Land Area Lost</div>
-                <div style={{ color: '#f44', fontWeight: 'bold', fontSize: '1.2rem', fontFamily: 'var(--font-num)' }}>{hectaresLost} ha</div>
-              </div>
-              
-              <button 
-                onClick={runDiff} 
-                disabled={isScanning}
-                style={{ position: 'absolute', bottom: 15, left: '50%', transform: 'translateX(-50%)', padding: '8px 24px', background: isScanning ? '#333' : 'rgba(255,50,50,0.2)', border: `1px solid ${isScanning ? '#555' : '#f44'}`, color: isScanning ? '#888' : '#f44', borderRadius: '4px', cursor: isScanning ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}
-              >
-                {isScanning ? 'COMPUTING DIFF...' : 'RUN PIPELINE'}
-              </button>
             </div>
-            <div style={{ textAlign: 'center', fontSize: '0.86rem', color: 'var(--text-3)' }}>Execute Boolean XOR on t₀ and t₁ masks to isolate riverbank erosion.</div>
+            {erosionEstimate && (
+              <div style={{ padding: 'var(--s3)', borderRadius: 'var(--r-md)', background: 'rgba(var(--shadow-rgb), 0.42)', border: '1px solid rgba(255,80,80,.28)' }}>
+                <div style={{ color: 'var(--text-3)', fontSize: '0.78rem', marginBottom: 3 }}>Mapped land → water area · manifest value</div>
+                <div style={{ color: '#ff7a72', fontWeight: 800, fontSize: '1.2rem', fontFamily: 'var(--font-num)' }}>{Number(erosionEstimate.value).toLocaleString()} ha <span style={{ color: 'var(--text-3)', fontSize: '0.76rem', fontFamily: 'inherit' }}>provisional</span></div>
+                {Number.isFinite(erosionEstimate.low) && Number.isFinite(erosionEstimate.high) && <div style={{ color: 'var(--text-3)', fontSize: '0.76rem', marginTop: 2 }}>Threshold-sensitivity envelope: {Number(erosionEstimate.low).toLocaleString()}–{Number(erosionEstimate.high).toLocaleString()} ha</div>}
+                {reachAssessment?.verdict === 'INCONCLUSIVE' && <div style={{ marginTop: 'var(--s2)', paddingTop: 'var(--s2)', borderTop: '1px solid rgba(255,255,255,.14)', color: '#ffd38b', fontSize: '0.8rem', lineHeight: 1.45 }}><strong>INCONCLUSIVE</strong> · The threshold-sensitivity check fails, only two dates are available, and a swath-edge artifact remains in the mapped inputs. This is not confirmed erosion.</div>}
+              </div>
+            )}
+            <button onClick={runDiff} disabled={isScanning} style={{ alignSelf: 'center', padding: '9px 20px', background: isScanning ? 'rgba(var(--fg-rgb), .04)' : 'rgba(255,50,50,0.12)', border: `1px solid ${isScanning ? 'var(--glass-border)' : '#f44'}`, color: isScanning ? 'var(--text-3)' : '#ff7a72', borderRadius: 'var(--r-md)', cursor: isScanning ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}>
+              {isScanning ? 'SCANNING MAP…' : erosionEstimate ? 'REPLAY MAP SCAN' : 'SCAN CHANGE MAP'}
+            </button>
+            <div style={{ textAlign: 'center', fontSize: '0.82rem', color: 'var(--text-3)', lineHeight: 1.5 }}>The scan animates the mapped land-to-water mask. Area is read from the analysis manifest; it is not recalculated from this display PNG.</div>
           </div>
           
         </div>
@@ -259,18 +275,18 @@ function FeatureRadarViewer() {
 
 function FeaturePipelineWalkthrough() {
   const steps = [
-    { title: "Raw Backscatter", desc: "NISAR GCOV σ⁰ HH image" },
-    { title: "Histogram + Otsu", desc: "Find bimodal threshold" },
+    { title: "Calibrated Backscatter", desc: "NISAR GCOV HH, in σ⁰ dB" },
+    { title: "Tile QC + Threshold", desc: "Otsu on eligible samples" },
     { title: "Binary Mask", desc: "Land = white, Water = black" },
     { title: "Median Filter", desc: "Remove speckle holes (5×5)" },
-    { title: "HAND Mask", desc: "Exclude >15m elevation" },
-    { title: "Change Detection", desc: "Diff t₀ and t₁ masks" },
+    { title: "HAND Screen", desc: "Exclude HAND > 15 m" },
+    { title: "Water-mask Comparison", desc: "Compare t₀ and t₁ masks; then check stage and persistence QC" },
     { title: "Polygonization", desc: "Extract connected components" },
-    { title: "Erosion Map", desc: "Final QC & product generation" }
+    { title: "Change Candidate Map", desc: "Candidate transitions; confirm only after QC and validation" }
   ];
   return (
-    <div style={{ marginBottom: 'var(--s8)' }}>
-      <SectionTitle title="Water Classification Pipeline Walkthrough" subtitle="From pixels to people. Every step of our algorithmic journey." />
+    <div id="pipeline" className="sar-section">
+      <SectionTitle title="Water Classification Pipeline" subtitle="Follow the processing chain used for the Jamuna case study. The current two-date land-to-water result is inconclusive; a mapped transition is not automatically confirmed erosion." />
       <GlassCard>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--s2)', justifyContent: 'center' }}>
           {steps.map((step, i) => (
@@ -296,18 +312,13 @@ function FeatureSARvsOptical() {
   // Animate the sweeping radar beam
   const [beamPos, setBeamPos] = useState(0);
   useEffect(() => {
-    let animationFrameId;
-    const animate = () => {
-      setBeamPos(prev => (prev + 0.5) % 100);
-      animationFrameId = requestAnimationFrame(animate);
-    };
-    animate();
-    return () => cancelAnimationFrame(animationFrameId);
+    const timer = window.setInterval(() => setBeamPos(prev => (prev + 0.8) % 100), 60);
+    return () => window.clearInterval(timer);
   }, []);
   
   return (
     <div style={{ marginBottom: 'var(--s8)' }}>
-      <SectionTitle title="SAR vs Optical: The Cloud Problem" subtitle="Why NASA NISAR is the ONLY reliable choice for monsoon-season disaster monitoring." />
+      <SectionTitle title="SAR and Optical in Cloudy Conditions" subtitle="Microwave SAR can collect through most clouds and without sunlight. Optical imagery still adds valuable land-cover context when skies are clear." />
       
       <GlassCard style={{ padding: 'var(--s5)' }}>
         
@@ -333,11 +344,11 @@ function FeatureSARvsOptical() {
           
           {/* OPTICAL SATELLITE PANE */}
           <div style={{ borderRadius: 'var(--r-md)', overflow: 'hidden', border: '1px solid rgba(255,100,100,0.3)', position: 'relative', height: '350px' }}>
-            {/* Base Image (Simulated optical via filters on the radar image) */}
+            {/* Stylized overhead floodplain scene keeps this cloud comparison illustrative. */}
             <div style={{ 
               position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-              backgroundImage: `url(${radarUrl})`, backgroundSize: 'cover', backgroundPosition: 'center',
-              filter: 'sepia(0.8) hue-rotate(50deg) saturate(2) contrast(1.2)'
+              backgroundImage: 'linear-gradient(rgba(18, 28, 22, 0.12), rgba(18, 28, 22, 0.12)), url("/optical-satellite-scene.svg")',
+              backgroundSize: 'cover', backgroundPosition: 'center'
             }} />
             
             {/* Procedural Cloud Layer */}
@@ -351,13 +362,13 @@ function FeatureSARvsOptical() {
             
             {/* UI Overlay */}
             <div className="hud-dark" style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(var(--shadow-rgb), 0.7)', padding: '4px 8px', borderRadius: '4px', color: '#f44', fontWeight: 'bold', fontSize: '0.9rem', border: '1px solid #f44' }}>
-              OPTICAL SENSOR (Landsat / Sentinel-2)
+              ILLUSTRATIVE OPTICAL SATELLITE VIEW
             </div>
             
             {cloudDensity > 60 && (
               <div className="hud-dark" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(var(--shadow-rgb), 0.8)', padding: 'var(--s3)', borderRadius: 'var(--r-md)', border: '2px solid #f44', textAlign: 'center', width: '80%' }}>
-                <div style={{ color: '#f44', fontWeight: 'bold', fontSize: '1.2rem', letterSpacing: 2, marginBottom: 8 }}>ACQUISITION BLOCKED</div>
-                <div style={{ color: 'var(--text-3)', fontSize: '0.9rem' }}>Visible/NIR wavelengths cannot penetrate thick monsoon cloud cover. Earth surface is unobservable.</div>
+                <div style={{ color: '#f44', fontWeight: 'bold', fontSize: '1.2rem', letterSpacing: 2, marginBottom: 8 }}>SURFACE OBSCURED</div>
+                <div style={{ color: 'var(--text-3)', fontSize: '0.9rem' }}>Thick cloud can block visible and near-infrared views of the surface.</div>
               </div>
             )}
             
@@ -366,10 +377,10 @@ function FeatureSARvsOptical() {
                 <span>WAVELENGTH:</span><span style={{ color: 'var(--text)' }}>400-900 nm</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-3)', fontSize: '0.86rem', marginBottom: 4 }}>
-                <span>PENETRATION:</span><span style={{ color: '#f44', fontWeight: 'bold' }}>0% (Absorbed by H₂O)</span>
+                <span>CLOUD EFFECT:</span><span style={{ color: '#f44', fontWeight: 'bold' }}>Can obscure the surface</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-3)', fontSize: '0.86rem' }}>
-                <span>USABLE DATA (JUN-SEP):</span><span style={{ color: '#f44', fontWeight: 'bold' }}>~15%</span>
+                <span>OBSERVABILITY:</span><span style={{ color: '#f44', fontWeight: 'bold' }}>Depends on cloud conditions</span>
               </div>
             </div>
           </div>
@@ -409,10 +420,10 @@ function FeatureSARvsOptical() {
                 <span>WAVELENGTH:</span><span style={{ color: 'var(--text)' }}>23.8 cm (L-Band)</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-3)', fontSize: '0.86rem', marginBottom: 4 }}>
-                <span>PENETRATION:</span><span style={{ color: '#0ff', fontWeight: 'bold' }}>100% (Passes through H₂O)</span>
+                <span>CLOUD EFFECT:</span><span style={{ color: '#0ff', fontWeight: 'bold' }}>Most clouds weakly affect microwaves</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-3)', fontSize: '0.86rem' }}>
-                <span>USABLE DATA (JUN-SEP):</span><span style={{ color: '#0ff', fontWeight: 'bold' }}>100% Guaranteed</span>
+                <span>OBSERVABILITY:</span><span style={{ color: '#0ff', fontWeight: 'bold' }}>Day / night, cloud tolerant</span>
               </div>
             </div>
           </div>
@@ -423,8 +434,153 @@ function FeatureSARvsOptical() {
   );
 }
 
+const FLOOD_SCENARIOS = {
+  open: {
+    label: 'Open floodplain',
+    mechanism: 'Specular surface reflection',
+    description: 'Smooth open water often reflects energy away from a side-looking radar, so the co-pol return can drop. Wind-roughened water can return more energy and weaken this simple cue.',
+    hh: 'Often lower over smooth water; may brighten as wind roughens it',
+    hv: 'Usually weak over smooth water; roughness and mixed pixels matter',
+  },
+  crops: {
+    label: 'Crops / emergent plants',
+    mechanism: 'Surface, volume, and possible double-bounce',
+    description: 'Stems over water can create a trunk–water-like double-bounce path. Crop height, spacing, growth stage, partial flooding, and viewing geometry can change or hide that response.',
+    hh: 'May rise where vertical stems meet standing water',
+    hv: 'Can respond to canopy volume; no fixed flood direction',
+  },
+  woody: {
+    label: 'Woody vegetation',
+    mechanism: 'Canopy volume + possible trunk–water double-bounce',
+    description: 'At L-band, a flooded woody stand can produce a stronger HH return from trunk–water double-bounce. Canopy structure and moisture affect the signal, so this is a clue to test, not proof of flooding.',
+    hh: 'Can rise in flooded woody stands through double-bounce',
+    hv: 'Can stay strong from canopy volume; not flood-specific',
+  },
+} as const;
+
+function FeatureFloodMechanisms() {
+  const [cover, setCover] = useState<keyof typeof FLOOD_SCENARIOS>('woody');
+  const [flooded, setFlooded] = useState(true);
+  const [wind, setWind] = useState(20);
+  const scenario = FLOOD_SCENARIOS[cover];
+  const openWaterWindNote = cover === 'open' && wind >= 65;
+
+  return (
+    <div style={{ marginBottom: 'var(--s8)' }}>
+      <SectionTitle
+        title="Flood Signal Mechanism Simulator"
+        subtitle="Explore why inundation can darken smooth open water yet brighten some flooded vegetation in L-band HH. Choose a land cover and toggle water to see the scattering path and interpretation change."
+      />
+      <GlassCard>
+        <div style={{ display: 'flex', gap: 'var(--s2)', flexWrap: 'wrap', marginBottom: 'var(--s4)' }} role="group" aria-label="Select land cover">
+          {(Object.entries(FLOOD_SCENARIOS) as [keyof typeof FLOOD_SCENARIOS, typeof FLOOD_SCENARIOS[keyof typeof FLOOD_SCENARIOS]][]).map(([id, item]) => (
+            <button key={id} onClick={() => setCover(id)} aria-pressed={cover === id} style={{
+              flex: '1 1 170px', padding: '0.8rem 1rem', borderRadius: 'var(--r-md)',
+              border: `1px solid ${cover === id ? 'var(--water)' : 'var(--glass-border)'}`,
+              background: cover === id ? 'rgba(var(--water-rgb), 0.11)' : 'rgba(var(--fg-rgb), 0.025)',
+              color: cover === id ? 'var(--water)' : 'var(--text-2)', fontWeight: 700, cursor: 'pointer'
+            }}>{item.label}</button>
+          ))}
+        </div>
+
+        <div className="sar-flood-sim-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.25fr) minmax(260px, 0.75fr)', gap: 'var(--s4)', alignItems: 'stretch' }}>
+          <div style={{ minWidth: 0, border: '1px solid rgba(var(--water-rgb), 0.16)', borderRadius: 'var(--r-md)', overflow: 'hidden', background: 'linear-gradient(180deg, #081322 0%, #102033 68%, #392d20 68%, #201b17 100%)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', padding: '0.8rem 1rem', borderBottom: '1px solid rgba(var(--water-rgb), 0.14)' }}>
+              <span style={{ color: 'var(--text-2)', fontSize: '0.84rem', fontWeight: 700 }}>SIDE-LOOKING L-BAND VIEW · SCHEMATIC</span>
+              <button onClick={() => setFlooded(value => !value)} aria-pressed={flooded} style={{
+                padding: '0.5rem 0.8rem', borderRadius: 999, border: `1px solid ${flooded ? 'var(--water)' : 'var(--glass-border)'}`,
+                background: flooded ? 'rgba(var(--water-rgb), 0.12)' : 'rgba(var(--fg-rgb), 0.04)',
+                color: flooded ? 'var(--water)' : 'var(--text-2)', fontWeight: 700, cursor: 'pointer'
+              }}>{flooded ? 'Standing water · ON' : 'Standing water · OFF'}</button>
+            </div>
+            <svg viewBox="0 0 760 300" role="img" aria-label={`${scenario.label}, ${flooded ? 'flooded' : 'not flooded'}: conceptual side-looking SAR scattering diagram`} style={{ display: 'block', width: '100%', height: 'auto', minHeight: 190 }}>
+              <defs>
+                <marker id="flood-ray-arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#26e6e6" /></marker>
+                <marker id="flood-volume-arrow" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#b8f08a" /></marker>
+                <pattern id="flood-ground-lines" width="34" height="18" patternUnits="userSpaceOnUse"><path d="M0 16H34" stroke="#a28a62" strokeOpacity=".24" strokeWidth="1" /></pattern>
+              </defs>
+              <rect x="0" y="236" width="760" height="64" fill="#514331" />
+              <rect x="0" y="236" width="760" height="64" fill="url(#flood-ground-lines)" />
+              {flooded && <path d="M0 219 Q160 214 310 219 T610 218 Q690 217 760 220 V250 H0Z" fill="#276f85" fillOpacity=".8" stroke="#55c8d4" strokeOpacity=".7" strokeWidth="2" />}
+
+              {cover === 'woody' && [300, 380, 470, 565, 650].map((x, i) => (
+                <g key={x}>
+                  <path d={`M${x} 236 L${x} ${flooded ? 160 + (i % 2) * 10 : 150 + (i % 2) * 10}`} stroke="#9d7550" strokeWidth={i % 2 ? 8 : 11} />
+                  <circle cx={x} cy={flooded ? 139 + (i % 2) * 10 : 129 + (i % 2) * 10} r={29 + (i % 3) * 5} fill={i % 2 ? '#567a4f' : '#648357'} stroke="#8aa878" strokeOpacity=".45" strokeWidth="2" />
+                  <circle cx={x - 10} cy={flooded ? 135 + (i % 2) * 10 : 125 + (i % 2) * 10} r="12" fill="#769461" fillOpacity=".7" />
+                </g>
+              ))}
+              {cover === 'crops' && Array.from({ length: 12 }, (_, i) => {
+                const x = 295 + i * 34;
+                const top = 172 + (i % 3) * 12;
+                return <g key={x} stroke="#8eb66b" strokeWidth="4" strokeLinecap="round"><path d={`M${x} 236V${top}`} /><path d={`M${x} ${top + 20}l-10 -8m10 20 10 -8`} strokeWidth="2" /></g>;
+              })}
+              {cover === 'open' && !flooded && <path d="M0 235 Q155 232 300 236 T600 234 T760 236" fill="none" stroke="#9a8b68" strokeWidth="5" strokeDasharray="12 12" />}
+
+              <g aria-hidden="true">
+                <rect x="74" y="37" width="64" height="28" rx="6" fill="#b9d6df" stroke="#43e2e3" strokeWidth="2" />
+                <path d="M106 65V79M78 40 49 30V71L78 62M134 40 163 30V71L134 62" fill="#236a83" stroke="#43e2e3" strokeWidth="2" />
+                <text x="106" y="55" fill="#06202a" fontSize="12" fontWeight="700" textAnchor="middle">NISAR</text>
+                <text x="57" y="101" fill="#a7d7df" fontSize="12">L-band · 23.8 cm</text>
+              </g>
+
+              {cover === 'open' ? (
+                <>
+                  <path d={flooded ? 'M144 82 L345 218 L559 87' : 'M144 82 L340 235 L555 96'} fill="none" stroke="#26e6e6" strokeWidth="3" markerEnd="url(#flood-ray-arrow)" className="sar-flood-ray" />
+                  <text x="475" y="113" fill="#d4f9fa" fontSize="13">specular reflection away</text>
+                </>
+              ) : flooded ? (
+                <>
+                  <path d="M144 82 L416 178 L416 219 L151 91" fill="none" stroke="#26e6e6" strokeWidth="3" markerEnd="url(#flood-ray-arrow)" className="sar-flood-ray" />
+                  <text x="436" y="213" fill="#d4f9fa" fontSize="13">double-bounce path</text>
+                  {cover === 'woody' && [325, 470, 610].map(x => <path key={x} d={`M${x} 182 l22 -24`} stroke="#b8f08a" strokeWidth="2" markerEnd="url(#flood-volume-arrow)" opacity=".8" />)}
+                  {cover === 'crops' && [350, 470, 590].map(x => <path key={x} d={`M${x} 187 l18 -26`} stroke="#b8f08a" strokeWidth="2" markerEnd="url(#flood-volume-arrow)" opacity=".75" />)}
+                </>
+              ) : (
+                <>
+                  <path d="M144 82 L370 163 L565 100" fill="none" stroke="#26e6e6" strokeWidth="3" markerEnd="url(#flood-ray-arrow)" className="sar-flood-ray" />
+                  <text x="462" y="120" fill="#d4f9fa" fontSize="13">no water surface beneath canopy</text>
+                </>
+              )}
+              <text x="24" y="280" fill="#d9c9a1" fontSize="12">GROUND PROFILE</text>
+            </svg>
+            <div style={{ padding: '0.65rem 1rem', color: 'var(--text-3)', fontSize: '0.78rem', borderTop: '1px solid rgba(var(--water-rgb), 0.12)' }}>Arrows show possible interaction paths only; drawing is not to scale and does not simulate calibrated backscatter.</div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s3)' }} aria-live="polite">
+            <div style={{ padding: 'var(--s4)', borderRadius: 'var(--r-md)', border: '1px solid rgba(var(--water-rgb), 0.18)', background: 'rgba(var(--water-rgb), 0.045)' }}>
+              <div style={{ color: 'var(--water)', fontSize: '0.76rem', fontWeight: 800, letterSpacing: '.08em', textTransform: 'uppercase' }}>Dominant possible mechanism</div>
+              <h3 style={{ margin: '0.45rem 0', fontSize: '1.1rem' }}>{scenario.mechanism}</h3>
+              <p style={{ margin: 0, color: 'var(--text-2)', fontSize: '0.88rem', lineHeight: 1.55 }}>{scenario.description}</p>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s2)' }}>
+              <div style={{ padding: 'var(--s3)', borderRadius: 'var(--r-md)', background: 'rgba(var(--fg-rgb), 0.035)', border: '1px solid rgba(var(--fg-rgb), 0.08)' }}>
+                <strong style={{ color: 'var(--water)', fontSize: '1.1rem' }}>HH · co-pol</strong>
+                <div style={{ marginTop: 6, color: 'var(--text-2)', fontSize: '0.82rem', lineHeight: 1.45 }}>{openWaterWindNote ? 'Strong wind can roughen water and raise the return; darkness is less reliable.' : scenario.hh}</div>
+              </div>
+              <div style={{ padding: 'var(--s3)', borderRadius: 'var(--r-md)', background: 'rgba(var(--fg-rgb), 0.035)', border: '1px solid rgba(var(--fg-rgb), 0.08)' }}>
+                <strong style={{ color: 'var(--pass)', fontSize: '1.1rem' }}>HV · cross-pol</strong>
+                <div style={{ marginTop: 6, color: 'var(--text-2)', fontSize: '0.82rem', lineHeight: 1.45 }}>{scenario.hv}</div>
+              </div>
+            </div>
+            {cover === 'open' && (
+              <label style={{ padding: 'var(--s3)', borderRadius: 'var(--r-md)', background: 'rgba(var(--fg-rgb), 0.035)' }}>
+                <span style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-2)', fontSize: '0.84rem', fontWeight: 700, marginBottom: 6 }}><span>Wind-roughening example</span><span>{wind}%</span></span>
+                <input aria-label="Wind roughening example" type="range" min="0" max="100" value={wind} onChange={e => setWind(Number(e.target.value))} style={{ width: '100%', accentColor: 'var(--water)' }} />
+                <span style={{ color: 'var(--text-3)', fontSize: '0.76rem' }}>Conceptual control; not a wind-speed estimate.</span>
+              </label>
+            )}
+            <div style={{ padding: 'var(--s3)', borderRadius: 'var(--r-md)', borderLeft: '3px solid var(--warn)', background: 'rgba(224,179,74,0.06)', color: 'var(--text-2)', fontSize: '0.82rem', lineHeight: 1.5 }}>
+              A single bright or dark pixel cannot confirm flooding. Interpret change with land cover, incidence angle, wind, topography, multi-date evidence, and validation. This teaching simulation does not use or alter the Jamuna measurements.
+            </div>
+          </div>
+        </div>
+      </GlassCard>
+    </div>
+  );
+}
+
 function FeatureSpeckleFilter() {
-  const reachId = useStore(state => state.reachId) || 'jamuna-chilmari';
   const [windowSize, setWindowSize] = useState(7);
   const [noiseLevel, setNoiseLevel] = useState(2); // L looks
   const [sliderPos, setSliderPos] = useState(50);
@@ -438,19 +594,16 @@ function FeatureSpeckleFilter() {
 
   // Load real image snippet
   useEffect(() => {
-    const img = new Image();
-    img.src = `/data/v1/${reachId}/img/radar_20260826.png`;
-    img.onload = () => {
-      // Zoom into a specific complex river braided area for max visual impact
-      const w = 600; const h = 400;
-      const offCanvas = document.createElement('canvas');
-      offCanvas.width = w; offCanvas.height = h;
-      const ctx = offCanvas.getContext('2d');
-      // Crop a 600x400 section from the middle
-      ctx.drawImage(img, 300, 200, w, h, 0, 0, w, h);
-      setBaseTruth(ctx.getImageData(0, 0, w, h));
-    };
-  }, [reachId]);
+    const w = 600; const h = 400;
+    const scene = document.createElement('canvas'); scene.width = w; scene.height = h;
+    const ctx = scene.getContext('2d');
+    ctx.fillStyle = '#777'; ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = '#a0a0a0'; ctx.fillRect(0, 0, 285, h);
+    ctx.fillStyle = '#626262'; ctx.beginPath(); ctx.moveTo(285, 0); ctx.bezierCurveTo(350, 110, 225, 190, 320, 280); ctx.bezierCurveTo(390, 340, 285, 360, 310, 400); ctx.lineTo(425, 400); ctx.bezierCurveTo(390, 320, 480, 260, 382, 190); ctx.bezierCurveTo(320, 130, 435, 80, 380, 0); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#929292'; [[440,35,120,100],[455,175,100,75],[435,295,135,80],[40,45,100,95],[55,260,120,90]].forEach(([x,y,ww,hh])=>ctx.fillRect(x,y,ww,hh));
+    const image = ctx.getImageData(0, 0, w, h);
+    setBaseTruth(image);
+  }, []);
 
   // Process Noise and Filter
   useEffect(() => {
@@ -482,8 +635,8 @@ function FeatureSpeckleFilter() {
         }
         noise = noise / (2.0 * noiseLevel);
         
-        // Add artificial brightness bump to make the speckle pop visually
-        noisy[i] = Math.min(255, (truthVal * 1.2) * noise);
+        // Mean-one Gamma multiplier: preserves expected intensity before display clipping.
+        noisy[i] = Math.min(255, truthVal * noise);
         
         rawImg.data[i*4] = noisy[i];
         rawImg.data[i*4+1] = noisy[i];
@@ -539,7 +692,7 @@ function FeatureSpeckleFilter() {
 
   return (
     <div style={{ marginBottom: 'var(--s8)' }}>
-      <SectionTitle title="Quantum Speckle Suppression Engine" subtitle="Speckle isn't just noise; it's a deterministic interference pattern. Our adaptive Lee-Sigma filter preserves critical river edges while smoothing homogenous zones." />
+      <SectionTitle title="Speckle Statistics & Lee Filtering Lab" subtitle="Start from a known synthetic intensity scene, add mean-one Gamma speckle for the selected number of looks, then compare a local Lee estimate. This does not simulate complex SLC phase or the production pipeline filter." />
       <GlassCard style={{ padding: 0, overflow: 'hidden' }}>
         
         {/* Interactive Viewer Area */}
@@ -565,12 +718,12 @@ function FeatureSpeckleFilter() {
           {/* HUD Labels */}
           <div className="hud-dark" style={{ position: 'absolute', top: 15, left: 15, background: 'rgba(var(--shadow-rgb), 0.8)', padding: '6px 12px', borderRadius: 6, fontSize: '0.92rem', border: '1px solid rgba(0,255,255,0.3)', color: '#0ff', zIndex: 5, backdropFilter: 'blur(4px)', pointerEvents: 'none' }}>
             <div style={{ fontWeight: 'bold', marginBottom: 2 }}>FILTERED OUTPUT</div>
-            <div style={{ fontSize: '0.82rem', color: 'var(--text-3)' }}>Adaptive Lee-Sigma Filter</div>
+            <div style={{ fontSize: '0.82rem', color: 'var(--text-3)' }}>Simple Lee filter • illustrative</div>
           </div>
           
           <div className="hud-dark" style={{ position: 'absolute', top: 15, right: 15, background: 'rgba(var(--shadow-rgb), 0.8)', padding: '6px 12px', borderRadius: 6, fontSize: '0.92rem', border: '1px solid rgba(255,50,50,0.3)', color: '#f44', zIndex: 5, backdropFilter: 'blur(4px)', pointerEvents: 'none', textAlign: 'right' }}>
-            <div style={{ fontWeight: 'bold', marginBottom: 2 }}>SIMULATED RAW SLC</div>
-            <div style={{ fontSize: '0.82rem', color: 'var(--text-3)' }}>Single Look Complex ({noiseLevel}-Look)</div>
+            <div style={{ fontWeight: 'bold', marginBottom: 2 }}>SIMULATED INTENSITY IMAGE</div>
+            <div style={{ fontSize: '0.82rem', color: 'var(--text-3)' }}>Synthetic intensity input (L = {noiseLevel})</div>
           </div>
           
           {/* Loading / Processing Indicator */}
@@ -597,17 +750,17 @@ function FeatureSpeckleFilter() {
             
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ fontSize: '0.92rem', color: 'var(--text-2)', fontWeight: 'bold' }}>Equivalent Number of Looks (ENL)</span>
+                <span style={{ fontSize: '0.92rem', color: 'var(--text-2)', fontWeight: 'bold' }}>Independent looks (L)</span>
                 <span style={{ fontSize: '0.9rem', color: 'var(--text)', fontFamily: 'var(--font-num)' }}>L = {noiseLevel}</span>
               </div>
               <input type="range" min="1" max="16" step="1" value={noiseLevel} onChange={e => setNoiseLevel(Number(e.target.value))} style={{ width: '100%', accentColor: '#f44', marginBottom: 8 }} />
-              <div style={{ fontSize: '0.86rem', color: 'var(--text-3)' }}>Simulates multi-looking. L=1 is raw SLC data with maximum multiplicative speckle variance.</div>
+              <div style={{ fontSize: '0.86rem', color: 'var(--text-3)' }}>For the ideal mean-one Gamma intensity model, CV = 1/√L = {(1 / Math.sqrt(noiseLevel)).toFixed(2)}. This is the input looks parameter, not a measured post-filter ENL.</div>
             </div>
             
             <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', background: 'rgba(var(--fg-rgb), 0.03)', padding: 'var(--s3)', borderRadius: 'var(--r-sm)', border: '1px solid rgba(var(--fg-rgb), 0.1)' }}>
                <div style={{ fontSize: '0.86rem', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Filter Performance</div>
                <div style={{ fontSize: '1.2rem', color: '#0ff', fontWeight: 'bold', fontFamily: 'var(--font-num)' }}>{calcTime} ms</div>
-               <div style={{ fontSize: '0.82rem', color: 'var(--text-3)', marginTop: 4 }}>Computed over 240,000 pixels instantly via optimized JS TypedArrays.</div>
+               <div style={{ fontSize: '0.82rem', color: 'var(--text-3)', marginTop: 4 }}>Measured locally over a 600 × 400 pixel illustrative image.</div>
             </div>
             
           </div>
@@ -866,7 +1019,7 @@ function FeaturePauliRGB() {
 
   return (
     <div style={{ marginBottom: 'var(--s8)' }}>
-      <SectionTitle title="Quad-Pol Synthesis Lens" subtitle="Explore REAL NASA radar data from the Jamuna River. Use the Pauli Lens to reveal the hidden physical scattering mechanisms behind the raw grayscale backscatter." />
+      <SectionTitle title="Water and Change Map Lens" subtitle="Explore the Jamuna HH backscatter alongside the project’s water and change masks. The colors show our classified map layers; they are not a polarimetric decomposition." />
       
       <GlassCard style={{ padding: '0', overflow: 'hidden' }}>
         <div 
@@ -929,7 +1082,7 @@ function FeaturePauliRGB() {
               <div style={{ position: 'absolute', left: '50%', top: '40%', bottom: '40%', width: '1px', background: 'rgba(0, 255, 255, 0.5)' }} />
               
               <div style={{ position: 'absolute', bottom: -30, left: '50%', transform: 'translateX(-50%)', color: '#0ff', fontSize: '12px', fontFamily: 'monospace', whiteSpace: 'nowrap', textShadow: '0 0 5px #0ff' }}>
-                SYNTHETIC PAULI COMPOSITE
+                CLASSIFIED MASK OVERLAY
               </div>
             </div>
           </div>
@@ -940,24 +1093,24 @@ function FeaturePauliRGB() {
            <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
              <div style={{ width: 16, height: 16, background: '#f44', borderRadius: '4px', boxShadow: '0 0 10px #f44' }} />
              <div>
-               <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--text)' }}>Double-Bounce (Red)</div>
-               <div style={{ fontSize: '0.86rem', color: 'var(--text-3)' }}>Erosion boundaries / Urban</div>
+               <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--text)' }}>Mapped erosion (red)</div>
+               <div style={{ fontSize: '0.86rem', color: 'var(--text-3)' }}>Classified land-to-water change</div>
              </div>
            </div>
            
            <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
              <div style={{ width: 16, height: 16, background: '#4f4', borderRadius: '4px', boxShadow: '0 0 10px #4f4' }} />
              <div>
-               <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--text)' }}>Volume (Green)</div>
-               <div style={{ fontSize: '0.86rem', color: 'var(--text-3)' }}>Stable forest / Agriculture</div>
+               <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--text)' }}>Mapped land (green)</div>
+               <div style={{ fontSize: '0.86rem', color: 'var(--text-3)' }}>HH backscatter context</div>
              </div>
            </div>
            
            <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
              <div style={{ width: 16, height: 16, background: '#44f', borderRadius: '4px', boxShadow: '0 0 10px #44f' }} />
              <div>
-               <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--text)' }}>Surface (Blue)</div>
-               <div style={{ fontSize: '0.86rem', color: 'var(--text-3)' }}>River water / Bare soil</div>
+               <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--text)' }}>Mapped water (blue)</div>
+               <div style={{ fontSize: '0.86rem', color: 'var(--text-3)' }}>Water classification mask</div>
              </div>
            </div>
         </div>
@@ -969,245 +1122,376 @@ function FeaturePauliRGB() {
 
 
 function FeatureCloudePottier() {
-  const reachId = useStore(state => state.reachId) || 'jamuna-chilmari';
-  const mapCanvasRef = useRef(null);
-  const plotCanvasRef = useRef(null);
-  
-  // Offscreen canvas to read pixel data
-  const offCanvasRef = useRef(null);
-  const [isLoaded, setIsLoaded] = useState(false);
-  
-  // Telemetry state
-  const [telemetry, setTelemetry] = useState({
-    h: 0, alpha: 0, type: 'NO SIGNAL', samples: 0, dominant: 'N/A'
-  });
-  
-  const [reticlePos, setReticlePos] = useState({ x: -100, y: -100 });
-
-  useEffect(() => {
-    const w = 400; const h = 400;
-    const offCanvas = document.createElement('canvas');
-    offCanvas.width = w; offCanvas.height = h;
-    const ctx = offCanvas.getContext('2d', { willReadFrequently: true });
-    offCanvasRef.current = { canvas: offCanvas, ctx };
-    
-    const imgRadar = new Image();
-    const imgChange = new Image();
-    
-    let loaded = 0;
-    const checkDone = () => {
-      loaded++;
-      if (loaded === 2) {
-        // Draw radar first
-        ctx.drawImage(imgRadar, 0, 0, w, h);
-        // Draw change overlay
-        ctx.globalCompositeOperation = 'screen';
-        ctx.globalAlpha = 0.7; // Blend it nicely
-        ctx.drawImage(imgChange, 0, 0, w, h);
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.globalAlpha = 1.0;
-        
-        // Draw initial static map to mapCanvas
-        if (mapCanvasRef.current) {
-           const mapCtx = mapCanvasRef.current.getContext('2d');
-           mapCtx.drawImage(offCanvas, 0, 0);
-        }
-        
-        setIsLoaded(true);
-      }
-    };
-    
-    imgRadar.src = `/data/v1/${reachId}/img/radar_20260826.png`;
-    imgRadar.onload = checkDone;
-    
-    imgChange.src = `/data/v1/${reachId}/img/change_20260826_20260919.png`;
-    imgChange.onload = checkDone;
-  }, [reachId]);
-
-  // Gaussian noise generator for realistic clustering
-  const randn_bm = () => {
-    let u = 0, v = 0;
-    while(u === 0) u = Math.random();
-    while(v === 0) v = Math.random();
-    return Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
-  };
-
-  const handleMouseMove = (e) => {
-    if (!isLoaded || !mapCanvasRef.current || !plotCanvasRef.current || !offCanvasRef.current) return;
-    
-    const rect = mapCanvasRef.current.getBoundingClientRect();
-    const mx = Math.floor(e.clientX - rect.left);
-    const my = Math.floor(e.clientY - rect.top);
-    
-    setReticlePos({ x: mx, y: my });
-    
-    const mapCtx = mapCanvasRef.current.getContext('2d');
-    const plotCtx = plotCanvasRef.current.getContext('2d');
-    
-    // 1. Re-draw Map with Reticle
-    mapCtx.clearRect(0, 0, 400, 400);
-    mapCtx.drawImage(offCanvasRef.current.canvas, 0, 0);
-    
-    const boxSize = 20; // 20x20 pixel analysis window
-    
-    // Draw professional crosshair
-    mapCtx.strokeStyle = 'rgba(0, 255, 255, 0.8)';
-    mapCtx.lineWidth = 1;
-    mapCtx.beginPath();
-    mapCtx.moveTo(mx, 0); mapCtx.lineTo(mx, 400);
-    mapCtx.moveTo(0, my); mapCtx.lineTo(400, my);
-    mapCtx.stroke();
-    
-    // Draw bounding box
-    mapCtx.strokeStyle = '#0ff';
-    mapCtx.strokeRect(mx - boxSize/2, my - boxSize/2, boxSize, boxSize);
-    
-    // 2. Extract Data and Compute Pol Scatter
-    const half = Math.floor(boxSize/2);
-    let waterCount = 0; let forestCount = 0; let erosionCount = 0;
-    let sumH = 0; let sumAlpha = 0;
-    
-    // Clear Plot Canvas
-    plotCtx.clearRect(0, 0, 400, 400);
-    
-    // Draw Plot Background / Zones
-    plotCtx.strokeStyle = 'rgba(255,255,255,0.15)';
-    plotCtx.lineWidth = 1;
-    // H=0.5
-    plotCtx.beginPath(); plotCtx.moveTo(200, 0); plotCtx.lineTo(200, 400); plotCtx.stroke();
-    // H=0.9
-    plotCtx.beginPath(); plotCtx.moveTo(360, 0); plotCtx.lineTo(360, 400); plotCtx.stroke();
-    // Alpha=40, Alpha=50 (approx 44%, 55% of 90)
-    const y40 = 400 - (40/90)*400;
-    const y50 = 400 - (50/90)*400;
-    plotCtx.beginPath(); plotCtx.moveTo(0, y40); plotCtx.lineTo(400, y40); plotCtx.stroke();
-    plotCtx.beginPath(); plotCtx.moveTo(0, y50); plotCtx.lineTo(400, y50); plotCtx.stroke();
-    
-    // Zone Labels
-    plotCtx.fillStyle = 'rgba(255,255,255,0.2)';
-    plotCtx.font = '10px monospace';
-    plotCtx.fillText("Z9 (Surface)", 10, 390);
-    plotCtx.fillText("Z5 (Volume)", 210, y40 + 15);
-    plotCtx.fillText("Z7 (Double-Bounce)", 10, 20);
-    
-    // Ensure we don't go out of bounds
-    if (mx < half || my < half || mx > 400-half || my > 400-half) return;
-    
-    const pixelData = offCanvasRef.current.ctx.getImageData(mx - half, my - half, boxSize, boxSize).data;
-    
-    plotCtx.fillStyle = 'rgba(0, 255, 255, 0.6)';
-    
-    let validSamples = 0;
-    
-    for (let i = 0; i < pixelData.length; i += 4) {
-      const r = pixelData[i];
-      const g = pixelData[i+1];
-      const b = pixelData[i+2];
-      
-      let baseH, baseAlpha, color;
-      
-      if (r > 120 && g < 100 && b < 100) {
-        // Erosion -> Z7
-        baseH = 0.3; baseAlpha = 70;
-        color = 'rgba(255, 50, 50, 0.6)';
-        erosionCount++;
-      } else if (r < 60 && g < 60 && b < 60) {
-        // Water -> Z9
-        baseH = 0.15; baseAlpha = 15;
-        color = 'rgba(0, 200, 255, 0.6)';
-        waterCount++;
-      } else {
-        // Land/Forest -> Z5
-        baseH = 0.7; baseAlpha = 45;
-        color = 'rgba(50, 255, 50, 0.4)';
-        forestCount++;
-      }
-      
-      // Add realistic statistical variance
-      const h = Math.max(0, Math.min(1, baseH + randn_bm() * 0.08));
-      const alpha = Math.max(0, Math.min(90, baseAlpha + randn_bm() * 8));
-      
-      sumH += h;
-      sumAlpha += alpha;
-      validSamples++;
-      
-      // Map to plot coords (H: 0->1 -> x: 0->400) (Alpha: 0->90 -> y: 400->0)
-      const px = h * 400;
-      const py = 400 - (alpha / 90) * 400;
-      
-      plotCtx.fillStyle = color;
-      plotCtx.fillRect(px, py, 2, 2);
-    }
-    
-    let dominant = 'Volume Scattering (Z5)';
-    if (waterCount > forestCount && waterCount > erosionCount) dominant = 'Bragg Surface Scattering (Z9)';
-    if (erosionCount > forestCount && erosionCount > waterCount) dominant = 'Dihedral Double-Bounce (Z7)';
-    
-    setTelemetry({
-      h: (sumH / validSamples).toFixed(3),
-      alpha: (sumAlpha / validSamples).toFixed(1),
-      samples: validSamples,
-      dominant
-    });
-  };
+  const [weights, setWeights] = useState([80, 10, 10]);
+  const sum = weights.reduce((a, b) => a + b, 0) || 1;
+  const p = weights.map(value => value / sum);
+  const alpha = [10, 45, 80]; // canonical surface-, volume-, and dihedral-like eigenvector examples
+  const entropy = -p.reduce((h, value) => h + (value > 0 ? value * Math.log(value) / Math.log(3) : 0), 0);
+  const meanAlpha = p.reduce((a, value, i) => a + value * alpha[i], 0);
+  const dotX = 72 + entropy * 560;
+  const dotY = 250 - meanAlpha / 90 * 210;
+  const names = ['Surface-like', 'Volume-like', 'Dihedral-like'];
+  const colors = ['var(--water)', 'var(--pass)', 'var(--warn)'];
+  const presets = [[90, 5, 5], [34, 42, 24], [5, 5, 90]];
 
   return (
     <div style={{ marginBottom: 'var(--s8)' }}>
-      <SectionTitle title="Polarimetric Signature Analysis (H/α)" subtitle="Real-time localized Cloude-Pottier decomposition. Inspect regions to evaluate scattering entropy and mechanism phase angle." />
-      <GlassCard style={{ padding: 'var(--s4)', background: '#02050A' }}>
-        
-        <div style={{ display: 'grid', gridTemplateColumns: '400px 1fr 400px', gap: 'var(--s4)' }}>
-           
-           {/* LEFT: Map */}
-           <div style={{ position: 'relative', width: 400, height: 400, border: '1px solid rgba(0,255,255,0.3)', background: '#000', cursor: 'crosshair' }}>
-              {!isLoaded && <div style={{ position: 'absolute', top: 180, left: 100, color: '#0ff' }}>CALIBRATING SENSORS...</div>}
-              <canvas ref={mapCanvasRef} width={400} height={400} style={{ display: 'block' }} onMouseMove={handleMouseMove} />
-              <div className="hud-dark" style={{ position: 'absolute', top: 5, left: 5, background: 'rgba(var(--shadow-rgb), 0.8)', padding: '2px 6px', border: '1px solid #0ff', color: '#0ff', fontSize: '0.82rem', fontFamily: 'var(--font-num)' }}>
-                 TARGET POS: {reticlePos.x > 0 ? `${(25.1234 + reticlePos.y*0.0001).toFixed(4)}°N, ${(89.5678 + reticlePos.x*0.0001).toFixed(4)}°E` : 'AWAITING TARGET'}
-              </div>
-           </div>
-           
-           {/* CENTER: Telemetry HUD */}
-           <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 'var(--s4)', padding: 'var(--s4)', background: 'rgba(0,255,255,0.02)', border: '1px solid rgba(var(--fg-rgb), 0.05)', borderRadius: 'var(--r-md)' }}>
-              
-              <div>
-                 <div style={{ fontSize: '0.82rem', color: 'var(--text-3)', letterSpacing: 1, textTransform: 'uppercase' }}>Dominant Mechanism</div>
-                 <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: telemetry.dominant.includes('Surface') ? '#0ff' : telemetry.dominant.includes('Double') ? '#f44' : '#4f4' }}>
-                   {telemetry.dominant}
-                 </div>
-              </div>
-              
-              <div style={{ height: '1px', background: 'rgba(var(--fg-rgb), 0.1)' }} />
-              
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s3)' }}>
-                 <div>
-                    <div style={{ fontSize: '0.82rem', color: 'var(--text-3)', letterSpacing: 1 }}>ENTROPY (H)</div>
-                    <div style={{ fontSize: '1.5rem', fontFamily: 'var(--font-num)', color: '#fff' }}>{telemetry.h}</div>
-                 </div>
-                 <div>
-                    <div style={{ fontSize: '0.82rem', color: 'var(--text-3)', letterSpacing: 1 }}>ALPHA (α)</div>
-                    <div style={{ fontSize: '1.5rem', fontFamily: 'var(--font-num)', color: '#fff' }}>{telemetry.alpha}°</div>
-                 </div>
-              </div>
-              
-              <div style={{ height: '1px', background: 'rgba(var(--fg-rgb), 0.1)' }} />
-              
-              <div>
-                 <div style={{ fontSize: '0.82rem', color: 'var(--text-3)', letterSpacing: 1 }}>ANALYSIS WINDOW</div>
-                 <div style={{ fontSize: '0.9rem', fontFamily: 'var(--font-num)', color: '#aaa' }}>20×20 px ({telemetry.samples} samples)</div>
-                 <div style={{ fontSize: '0.82rem', color: '#555', marginTop: 4 }}>Live Gaussian dispersion modeling applied to localized backscatter tensor.</div>
-              </div>
-
-           </div>
-
-           {/* RIGHT: Scatter Plot */}
-           <div style={{ position: 'relative', width: 400, height: 400, border: '1px solid rgba(var(--fg-rgb), 0.2)', background: '#050a10' }}>
-              <canvas ref={plotCanvasRef} width={400} height={400} style={{ display: 'block' }} />
-              <div style={{ position: 'absolute', bottom: -20, left: '50%', transform: 'translateX(-50%)', fontSize: '0.86rem', color: 'var(--text-3)' }}>Entropy (H) 0 → 1</div>
-              <div style={{ position: 'absolute', left: -25, top: '50%', transform: 'translateY(-50%) rotate(-90deg)', fontSize: '0.86rem', color: 'var(--text-3)' }}>Alpha (α) 0° → 90°</div>
-           </div>
-           
+      <SectionTitle title="H/α Eigenvalue Decomposition · Synthetic Lab" subtitle="Adjust a synthetic three-component coherency model. The lab computes normalized eigenvalue entropy H and mean α from the selected powers and canonical component angles; it does not analyze the Jamuna imagery." />
+      <GlassCard>
+        <div style={{ display: 'flex', gap: 'var(--s2)', flexWrap: 'wrap', marginBottom: 'var(--s4)' }}>
+          {presets.map((preset, i) => <button key={i} onClick={() => setWeights(preset)} style={{ padding: '.6rem .9rem', border: '1px solid var(--glass-border)', borderRadius: 999, background: 'rgba(var(--fg-rgb),.04)', color: 'var(--text-2)', cursor: 'pointer' }}>{['Surface-dominant', 'Mixed scattering', 'Dihedral-dominant'][i]}</button>)}
         </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(260px, .8fr) minmax(0,1.2fr)', gap: 'var(--s5)', alignItems: 'center' }}>
+          <div style={{ display: 'grid', gap: 'var(--s4)' }}>
+            {names.map((name, i) => <label key={name} style={{ color: 'var(--text-2)', fontSize: '.88rem' }}>{name} power <strong style={{ float: 'right', color: colors[i] }}>{weights[i]}%</strong><input aria-label={`${name} eigenvalue weight`} type="range" min="0" max="100" value={weights[i]} onChange={e => setWeights(current => current.map((v, j) => j === i ? Number(e.target.value) : v))} style={{ width: '100%', accentColor: colors[i] }} /></label>)}
+            <div style={{ padding: 'var(--s3)', borderRadius: 'var(--r-md)', background: 'rgba(var(--fg-rgb),.04)', color: 'var(--text-3)', fontSize: '.82rem', lineHeight: 1.5 }}>Normalized synthetic eigenvalues: λᵢ / Σλ = {p.map(v => v.toFixed(2)).join(' · ')}. Component angles (10°, 45°, 80°) are teaching archetypes.</div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 210px', gap: 'var(--s4)', alignItems: 'center' }}>
+            <svg viewBox="0 0 680 300" role="img" aria-label={`Synthetic H alpha plot, entropy ${entropy.toFixed(2)}, mean alpha ${meanAlpha.toFixed(1)} degrees`} style={{ width: '100%', background: 'rgba(var(--shadow-rgb),.25)', borderRadius: 'var(--r-md)' }}>
+              <rect x="72" y="40" width="560" height="210" fill="rgba(var(--water-rgb),.025)" stroke="rgba(255,255,255,.2)"/>
+              {[0,.25,.5,.75,1].map(v=><g key={v}><line x1={72+560*v} x2={72+560*v} y1="40" y2="250" stroke="rgba(255,255,255,.1)"/><text x={72+560*v} y="272" textAnchor="middle" fill="#aab7c4" fontSize="12">{v.toFixed(2)}</text></g>)}
+              {[0,30,60,90].map(v=><g key={v}><line x1="72" x2="632" y1={250-v/90*210} y2={250-v/90*210} stroke="rgba(255,255,255,.1)"/><text x="56" y={254-v/90*210} textAnchor="end" fill="#aab7c4" fontSize="12">{v}°</text></g>)}
+              <text x="352" y="294" textAnchor="middle" fill="#c3ced8" fontSize="13">Entropy H (0–1)</text><text x="15" y="145" textAnchor="middle" transform="rotate(-90 15 145)" fill="#c3ced8" fontSize="13">Mean α</text>
+              {p.map((v,i)=><circle key={i} cx={72+560*entropy} cy={250-alpha[i]/90*210} r={7+v*12} fill={colors[i]} opacity=".26"/>)}
+              <circle cx={dotX} cy={dotY} r="8" fill="#fff" stroke="#001018" strokeWidth="3"/><circle cx={dotX} cy={dotY} r="15" fill="none" stroke="#fff" opacity=".5"/>
+            </svg>
+            <div style={{ padding: 'var(--s4)', border: '1px solid rgba(var(--water-rgb),.18)', borderRadius: 'var(--r-md)' }}><div style={{ color: 'var(--text-3)', fontSize: '.75rem' }}>COMPUTED FROM THIS TOY MODEL</div><strong style={{ display: 'block', color: 'var(--water)', fontSize: '1.8rem', marginTop: 6 }}>H {entropy.toFixed(3)}</strong><strong style={{ display: 'block', color: 'var(--pass)', fontSize: '1.8rem' }}>ᾱ {meanAlpha.toFixed(1)}°</strong><div style={{ marginTop: 8, color: 'var(--text-3)', fontSize: '.76rem' }}>H = −Σpᵢlog₃pᵢ<br/>ᾱ = Σpᵢαᵢ</div></div>
+          </div>
+        </div>
+        <p style={{ margin: 'var(--s4) 0 0', color: 'var(--text-3)', fontSize: '.82rem', lineHeight: 1.5 }}>Cloude–Pottier H/α requires an estimated polarimetric coherency/covariance matrix and its eigendecomposition. This diagonal toy model teaches the equations only; no H/α values are inferred from project rasters.</p>
+      </GlassCard>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   NEW SIMULATION 1: SweepSAR Beam Animation
+   NISAR's key innovation — digital beamforming on receive.
+   Traditional SAR uses a single narrow beam; SweepSAR illuminates
+   a wide swath with ONE transmit beam, then forms multiple
+   simultaneous receive beams via DBF to track the echoes.
+   ═══════════════════════════════════════════════════════════════ */
+function FeatureSweepSAR() {
+  const [mode, setMode] = useState<'traditional' | 'sweepsar'>('sweepsar');
+  const [animTime, setAnimTime] = useState(0);
+  useEffect(() => {
+    const timer = window.setInterval(() => setAnimTime(t => (t + 3) % 360), 50);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const satX = 500;
+  const satY = 50;
+  const groundY = 280;
+  const txLeft = 150;
+  const txRight = 850;
+  const swathWidth = txRight - txLeft;
+  const tradBeamCenter = txLeft + ((animTime / 360) * swathWidth);
+  const tradBeamHalf = 40;
+  const numRxBeams = 6;
+  const rxBeamPositions = Array.from({ length: numRxBeams }, (_, i) => {
+    const baseX = txLeft + (i + 0.5) * (swathWidth / numRxBeams);
+    const phase = (animTime * 3 + i * 60) % 360;
+    const intensity = Math.max(0, Math.cos((phase / 180) * Math.PI));
+    return { x: baseX, intensity };
+  });
+
+  return (
+    <div id="simulations" className="sar-section">
+      <SectionTitle
+        title="SweepSAR: NISAR's Key Innovation"
+        subtitle="NISAR uses SweepSAR, a scan-on-receive technique that combines wide area coverage with fine spatial resolution. The animation is a conceptual view of the antenna operation."
+      />
+      <GlassCard style={{ padding: 0, overflow: 'hidden' }}>
+        <div style={{ display: 'flex', gap: 'var(--s2)', padding: 'var(--s4)', background: 'rgba(var(--fg-rgb), 0.03)', borderBottom: '1px solid rgba(var(--fg-rgb), 0.05)' }}>
+          <button
+            onClick={() => setMode('traditional')}
+            style={{
+              padding: '8px 20px', borderRadius: 'var(--r-md)', border: `2px solid ${mode === 'traditional' ? 'var(--warn)' : 'rgba(var(--fg-rgb), 0.1)'}`,
+              background: mode === 'traditional' ? 'rgba(255,170,0,0.1)' : 'transparent',
+              color: mode === 'traditional' ? 'var(--warn)' : 'var(--text-3)', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem'
+            }}
+          >
+            Traditional Stripmap SAR
+          </button>
+          <button
+            onClick={() => setMode('sweepsar')}
+            style={{
+              padding: '8px 20px', borderRadius: 'var(--r-md)', border: `2px solid ${mode === 'sweepsar' ? '#0ff' : 'rgba(var(--fg-rgb), 0.1)'}`,
+              background: mode === 'sweepsar' ? 'rgba(0,255,255,0.1)' : 'transparent',
+              color: mode === 'sweepsar' ? '#0ff' : 'var(--text-3)', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem'
+            }}
+          >
+            SweepSAR + DBF (NISAR)
+          </button>
+        </div>
+
+        <div className="sweep-visual">
+          <svg width="100%" height="100%" viewBox="0 0 1000 380" preserveAspectRatio="xMidYMid meet">
+            <rect x="0" y={groundY} width="1000" height="100" fill="#1a2a10" />
+            <line x1="0" y1={groundY} x2="1000" y2={groundY} stroke="rgba(100,200,100,0.3)" strokeWidth="2" />
+            <text x="200" y={groundY + 25} fill="rgba(255,255,255,0.3)" fontSize="11" textAnchor="middle">RIVER</text>
+            <rect x="170" y={groundY + 5} width="60" height="15" fill="rgba(0,100,200,0.3)" rx="2" />
+            <text x="400" y={groundY + 25} fill="rgba(255,255,255,0.3)" fontSize="11" textAnchor="middle">FOREST</text>
+            <rect x="370" y={groundY + 5} width="60" height="15" fill="rgba(0,150,50,0.3)" rx="2" />
+            <text x="600" y={groundY + 25} fill="rgba(255,255,255,0.3)" fontSize="11" textAnchor="middle">URBAN</text>
+            <rect x="570" y={groundY + 5} width="60" height="15" fill="rgba(200,200,200,0.3)" rx="2" />
+            <text x="800" y={groundY + 25} fill="rgba(255,255,255,0.3)" fontSize="11" textAnchor="middle">AGRICULTURE</text>
+            <rect x="760" y={groundY + 5} width="80" height="15" fill="rgba(200,200,0,0.2)" rx="2" />
+            <circle cx={satX} cy={satY} r="10" fill="#0ff" />
+            <rect x={satX - 40} y={satY - 6} width="25" height="12" fill="#088" rx="2" />
+            <rect x={satX + 15} y={satY - 6} width="25" height="12" fill="#088" rx="2" />
+            <ellipse cx={satX} cy={satY + 18} rx="18" ry="6" fill="none" stroke="#0ff" strokeWidth="2" />
+            <text x={satX} y={satY - 18} fill="#0ff" fontSize="12" fontWeight="bold" textAnchor="middle">NISAR (747 km)</text>
+
+            {mode === 'sweepsar' ? (
+              <g>
+                <polygon
+                  points={`${satX},${satY + 24} ${txLeft},${groundY} ${txRight},${groundY}`}
+                  fill="rgba(0,255,255,0.04)"
+                  stroke="rgba(0,255,255,0.15)"
+                  strokeWidth="1"
+                  strokeDasharray="4,4"
+                />
+                <text x={satX} y={satY + 40} fill="rgba(0,255,255,0.5)" fontSize="10" textAnchor="middle">TX • reflector illuminates swath</text>
+                {rxBeamPositions.map((beam, i) => (
+                  <g key={i}>
+                    <line
+                      x1={satX} y1={satY + 24}
+                      x2={beam.x} y2={groundY}
+                      stroke={`rgba(0,255,255,${0.15 + beam.intensity * 0.7})`}
+                      strokeWidth={1 + beam.intensity * 3}
+                    />
+                    <rect
+                      x={beam.x - 20} y={groundY - 4}
+                      width="40" height="4"
+                      fill={`rgba(0,255,255,${beam.intensity * 0.8})`}
+                      rx="2"
+                    />
+                    {beam.intensity > 0.5 && (
+                      <text x={beam.x} y={groundY - 10} fill="rgba(0,255,255,0.7)" fontSize="9" textAnchor="middle">
+                        RX {i + 1}
+                      </text>
+                    )}
+                  </g>
+                ))}
+                <line x1={txLeft} y1={groundY + 50} x2={txRight} y2={groundY + 50} stroke="#0ff" strokeWidth="2" />
+                <text x={satX} y={groundY + 65} fill="#0ff" fontSize="13" fontWeight="bold" textAnchor="middle">~242 km SWATH</text>
+              </g>
+            ) : (
+              <g>
+                <polygon
+                  points={`${satX},${satY + 24} ${tradBeamCenter - tradBeamHalf},${groundY} ${tradBeamCenter + tradBeamHalf},${groundY}`}
+                  fill="rgba(255,170,0,0.12)"
+                  stroke="rgba(255,170,0,0.6)"
+                  strokeWidth="1.5"
+                />
+                <rect
+                  x={tradBeamCenter - tradBeamHalf} y={groundY - 4}
+                  width={tradBeamHalf * 2} height="4"
+                  fill="rgba(255,170,0,0.8)"
+                  rx="2"
+                />
+                <line x1={tradBeamCenter - tradBeamHalf} y1={groundY + 50} x2={tradBeamCenter + tradBeamHalf} y2={groundY + 50} stroke="var(--warn)" strokeWidth="2" />
+                <text x={tradBeamCenter} y={groundY + 65} fill="var(--warn)" fontSize="13" fontWeight="bold" textAnchor="middle">~20-40 km SWATH</text>
+              </g>
+            )}
+          </svg>
+
+        </div>
+        <div className={`sweep-explainer${mode === 'traditional' ? ' sweep-explainer--traditional' : ''}`} aria-live="polite">
+          <div className="sweep-explainer__copy">
+            <h3 style={{ color: mode === 'sweepsar' ? 'var(--water)' : 'var(--warn)' }}>
+              {mode === 'sweepsar' ? 'SweepSAR + Digital Beamforming' : 'Traditional Stripmap SAR'}
+            </h3>
+            <p>
+              {mode === 'sweepsar'
+                ? "NISAR's SweepSAR uses a stationary transmit feed and a phased-array feed that sweeps on receive. This schematic illustrates scan-on-receive across a roughly 242 km swath; beam count and geometry here are illustrative."
+                : 'This comparison is conceptual. Swath width depends on radar mode and instrument design; this panel does not model a specific alternative mission.'}
+            </p>
+          </div>
+          <div className="sweep-explainer__metric">
+            <small>ILLUSTRATED SWATH</small>
+            <strong>{mode === 'sweepsar' ? '~242 km' : 'Narrower area'}</strong>
+            <span>{mode === 'sweepsar' ? 'Mode-dependent resolution' : 'Conceptual comparison'}</span>
+          </div>
+        </div>
+      </GlassCard>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   NEW SIMULATION 2: Dielectric Constant & Backscatter Explorer
+   ═══════════════════════════════════════════════════════════════ */
+const SURFACE_MATERIALS = [
+  { name: 'Water (representative)', epsilon: 80, color: '#0088ff', desc: 'High permittivity. A calm, smooth water surface tends to reflect energy specularly away from a side-looking radar.' },
+  { name: 'Wet Soil (representative)', epsilon: 25, color: '#8B6914', desc: 'Soil permittivity generally increases with water content. Texture and vegetation also shape the measured radar return.' },
+  { name: 'Dry Soil (representative)', epsilon: 4, color: '#C4A35A', desc: 'Lower water content often means lower permittivity, but soil composition and texture create wide variation.' },
+  { name: 'Ice (representative)', epsilon: 3.5, color: '#bbddff', desc: 'Ice permittivity depends on frequency, temperature, liquid water, and impurities; this simple value is illustrative.' },
+  { name: 'Concrete (representative)', epsilon: 5, color: '#aaaaaa', desc: 'A simple dielectric interface does not represent building geometry, corner reflectors, or urban double-bounce scattering.' },
+];
+
+function FeatureDielectric() {
+  const [selectedIdx, setSelectedIdx] = useState(0);
+  const [incAngle, setIncAngle] = useState(35);
+  const material = SURFACE_MATERIALS[selectedIdx];
+
+  const thetaRad = (incAngle * Math.PI) / 180;
+  const cosTheta = Math.cos(thetaRad);
+  const sinTheta = Math.sin(thetaRad);
+  const transmittedCos = Math.sqrt(Math.max(0, material.epsilon - sinTheta * sinTheta));
+  const fresnelH = Math.pow((cosTheta - transmittedCos) / (cosTheta + transmittedCos), 2);
+  const fresnelV = Math.pow((material.epsilon * cosTheta - transmittedCos) / (material.epsilon * cosTheta + transmittedCos), 2);
+  const thetaTrans = Math.asin(Math.min(1, sinTheta / Math.sqrt(material.epsilon)));
+  const rayLength = 96;
+  const interfaceX = 300;
+  const interfaceY = 116;
+  const incidentX = interfaceX - rayLength * Math.sin(thetaRad);
+  const incidentY = interfaceY - rayLength * Math.cos(thetaRad);
+  const reflectedX = interfaceX + rayLength * Math.sin(thetaRad);
+  const reflectedY = interfaceY - rayLength * Math.cos(thetaRad);
+  const transmittedX = interfaceX + rayLength * Math.sin(thetaTrans);
+  const transmittedY = interfaceY + rayLength * Math.cos(thetaTrans);
+
+  return (
+    <div className="sar-dielectric-lab" style={{ marginBottom: 'var(--s8)' }}>
+      <SectionTitle
+        title="Dielectric Interface: Fresnel Reflectance"
+        subtitle="Change representative dielectric permittivity and incidence angle to see idealized H- and V-polarized reflection at a flat boundary. Fresnel reflectance is not SAR backscatter σ⁰; roughness, vegetation, and sensor-return geometry are outside this model."
+      />
+      <GlassCard>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 'var(--s4)', alignItems: 'start' }}>
+        <div>
+        <div style={{ background: 'rgba(var(--fg-rgb), 0.03)', padding: 'var(--s3)', borderRadius: 'var(--r-md)', border: '1px solid rgba(var(--fg-rgb), 0.05)', marginBottom: 'var(--s3)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+            <span style={{ fontSize: '0.9rem', color: 'var(--text-2)', fontWeight: 'bold' }}>Incidence angle</span>
+            <span style={{ fontSize: '1rem', color: '#0ff', fontWeight: 'bold', fontFamily: 'var(--font-num)' }}>{incAngle}°</span>
+          </div>
+          <input aria-label="Incidence angle in degrees" type="range" min="10" max="65" value={incAngle} onChange={e => setIncAngle(Number(e.target.value))} style={{ width: '100%', accentColor: '#0ff' }} />
+          <div style={{ fontSize: '0.78rem', color: 'var(--text-3)', marginTop: 4 }}>Measured from the surface normal · ray paths update live</div>
+        </div>
+        <div className="sar-dielectric-ray-diagram" style={{ marginBottom: 'var(--s4)', overflow: 'hidden', borderRadius: 'var(--r-md)', border: '1px solid rgba(var(--water-rgb),.16)', background: 'linear-gradient(180deg,#081421 0%,#101d2a 48%,#453b2c 49%,#2e2924 100%)' }}>
+          <div style={{ padding: '8px 12px', color: 'var(--text-2)', fontSize: '.75rem', fontWeight: 800, letterSpacing: '.08em', borderBottom: '1px solid rgba(var(--water-rgb),.13)' }}>LIVE RAY GEOMETRY · ANGLES FROM THE SURFACE NORMAL</div>
+          <svg viewBox="0 0 600 250" role="img" aria-label={`Incident and reflected angles are ${incAngle} degrees; transmitted angle is ${(thetaTrans * 180 / Math.PI).toFixed(1)} degrees`} style={{ display: 'block', width: '100%', height: 'auto', minHeight: 205, maxHeight: 245 }}>
+            <defs>
+              <marker id="fresnel-arrow-in" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="#f2c66d"/></marker>
+              <marker id="fresnel-arrow-out" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="#42dce5"/></marker>
+              <marker id="fresnel-arrow-through" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="#a7d994"/></marker>
+            </defs>
+            <line x1="26" y1={interfaceY} x2="574" y2={interfaceY} stroke="#c2a879" strokeWidth="3"/>
+            <line x1={interfaceX} y1="18" x2={interfaceX} y2="224" stroke="rgba(255,255,255,.42)" strokeDasharray="6 6"/>
+            <path d={`M ${incidentX} ${incidentY} L ${interfaceX} ${interfaceY}`} fill="none" stroke="#f2c66d" strokeWidth="4" markerEnd="url(#fresnel-arrow-in)"/>
+            <path d={`M ${interfaceX} ${interfaceY} L ${reflectedX} ${reflectedY}`} fill="none" stroke="#42dce5" strokeWidth="4" markerEnd="url(#fresnel-arrow-out)"/>
+            <path d={`M ${interfaceX} ${interfaceY} L ${transmittedX} ${transmittedY}`} fill="none" stroke="#a7d994" strokeWidth="4" markerEnd="url(#fresnel-arrow-through)"/>
+            <circle cx={interfaceX} cy={interfaceY} r="7" fill="#fff"/>
+            <text x={incidentX - 8} y={incidentY - 10} fill="#f2c66d" fontSize="14" fontWeight="700">incident ray</text>
+            <text x={reflectedX + 10} y={reflectedY - 9} fill="#42dce5" fontSize="14" fontWeight="700">reflected ray</text>
+            <text x={interfaceX + 20} y={transmittedY + 18} fill="#a7d994" fontSize="14" fontWeight="700">transmitted ray</text>
+            <text x={interfaceX + 10} y="38" fill="#c4d0dc" fontSize="12">surface normal</text>
+            <text x={interfaceX - 57} y={interfaceY - 37} fill="#f2c66d" fontSize="12">θᵢ {incAngle}°</text>
+            <text x={interfaceX + 20} y={interfaceY - 37} fill="#42dce5" fontSize="12">θᵣ {incAngle}°</text>
+            <text x={interfaceX + 20} y={interfaceY + 53} fill="#a7d994" fontSize="12">θₜ {(thetaTrans * 180 / Math.PI).toFixed(1)}°</text>
+            <text x="35" y="100" fill="#d5c39f" fontSize="13">incident medium</text>
+            <text x="35" y="145" fill="#d5c39f" fontSize="13">{material.name} · εᵣ {material.epsilon}</text>
+            <text x="565" y="238" textAnchor="end" fill="#9eabb6" fontSize="10">Snell + Fresnel · ideal interface</text>
+          </svg>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 'var(--s2)', marginBottom: 'var(--s5)' }}>
+          {SURFACE_MATERIALS.map((mat, i) => (
+            <button
+              key={mat.name}
+              onClick={() => setSelectedIdx(i)}
+              style={{
+                padding: '10px 14px', borderRadius: 'var(--r-md)',
+                border: `2px solid ${selectedIdx === i ? mat.color : 'rgba(var(--fg-rgb), 0.08)'}`,
+                background: selectedIdx === i ? `${mat.color}15` : 'transparent',
+                color: selectedIdx === i ? mat.color : 'var(--text-3)',
+                fontWeight: 600, cursor: 'pointer', fontSize: '0.86rem', textAlign: 'left',
+                transition: 'all 0.2s'
+              }}
+            >
+              <div style={{ width: 10, height: 10, background: mat.color, borderRadius: '50%', display: 'inline-block', marginRight: 6 }} />
+              {mat.name}
+            </button>
+          ))}
+        </div>
+        </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 430px), 1fr))', gap: 'var(--s4)', alignItems: 'start' }}>
+        <div>
+            <div style={{ background: 'rgba(var(--fg-rgb), 0.03)', padding: 'var(--s4)', borderRadius: 'var(--r-md)', border: `1px solid ${material.color}30`, marginBottom: 'var(--s4)' }}>
+              <div style={{ fontSize: '1.3rem', fontWeight: 900, color: material.color, marginBottom: 8 }}>{material.name}</div>
+                <div style={{ fontSize: '0.9rem', color: 'var(--text-2)', lineHeight: 1.6, marginBottom: 'var(--s3)' }}>{material.desc}</div>
+                <div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 1 }}>Representative real relative permittivity (εᵣ)</div>
+                  <div style={{ fontSize: '1.8rem', fontWeight: 900, fontFamily: 'var(--font-num)', color: material.color }}>{material.epsilon}</div>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <div style={{ fontSize: '0.92rem', fontWeight: 'bold', color: 'var(--text-2)', marginBottom: 'var(--s3)' }}>Reflected incident power at {incAngle}°</div>
+            {[
+              { label: 'H-polarized Fresnel reflectance', fraction: fresnelH, color: 'var(--water)' },
+              { label: 'V-polarized Fresnel reflectance', fraction: fresnelV, color: 'var(--pass)' },
+            ].map(ch => (
+              <div key={ch.label} style={{ marginBottom: 'var(--s3)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ fontSize: '0.86rem', color: 'var(--text-3)' }}>{ch.label}</span>
+                  <span style={{ fontSize: '0.92rem', fontWeight: 'bold', fontFamily: 'var(--font-num)', color: ch.color }}>{(ch.fraction * 100).toFixed(1)}%</span>
+                </div>
+                <div style={{ height: 20, background: 'rgba(var(--fg-rgb), 0.05)', borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
+                  <div style={{
+                    height: '100%', width: `${Math.max(0, Math.min(100, ch.fraction * 100))}%`,
+                    background: `linear-gradient(90deg, ${ch.color}40, ${ch.color})`,
+                    borderRadius: 4, transition: 'width 0.3s ease'
+                  }} />
+                </div>
+              </div>
+            ))}
+            <div style={{ marginTop: 'var(--s4)', padding: 'var(--s3)', background: 'rgba(var(--fg-rgb), 0.03)', borderRadius: 'var(--r-md)', border: '1px solid rgba(var(--fg-rgb), 0.05)' }}>
+              <div style={{ fontSize: '0.82rem', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>What this percentage means</div>
+              <p style={{ fontSize: '0.86rem', color: 'var(--text-2)', lineHeight: 1.5, margin: 0 }}>For a lossless, non-magnetic flat interface, this is the Fresnel power fraction reflected at the boundary. A smooth surface can send that specular reflection away from a monostatic radar, so a high reflectance here does not mean a bright SAR pixel. Real materials have frequency-dependent complex permittivity.</p>
+            </div>
+        </div>
+        </div>
+      </GlassCard>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   NEW SIMULATION 3: Dual-Frequency L+S Band Penetration Simulator
+   ═══════════════════════════════════════════════════════════════ */
+function FeatureDualFrequency() {
+  const [diameterMm, setDiameterMm] = useState(30);
+  const bands = [{ name: 'L-band · NISAR', lambda: 238, color: 'var(--water)' }, { name: 'S-band · NISAR', lambda: 94, color: 'var(--warn)' }];
+  const sizeParameter = (lambdaMm: number) => Math.PI * diameterMm / lambdaMm;
+  const regime = (x: number) => x < 0.3 ? 'Electrically small (Rayleigh-like limit)' : x <= 3 ? 'Wavelength-scale interaction' : 'Large relative to wavelength';
+  return (
+    <div style={{ marginBottom: 'var(--s8)' }}>
+      <SectionTitle title="L- and S-band · Target-Scale Simulator" subtitle="Compare NISAR wavelengths with a chosen effective scatterer size using the dimensionless size parameter x = πd/λ. This tests scale relationships; it does not predict penetration depth or backscatter." />
+      <GlassCard>
+        <label style={{ display: 'block', color: 'var(--text-2)', maxWidth: 720, marginBottom: 'var(--s5)' }}>Effective target diameter <strong style={{ color: 'var(--water)', float: 'right' }}>{diameterMm} mm</strong><input aria-label="Effective target diameter in millimeters" type="range" min="1" max="300" value={diameterMm} onChange={e => setDiameterMm(Number(e.target.value))} style={{ width: '100%' }}/><span style={{ display: 'block', color: 'var(--text-3)', fontSize: '.78rem' }}>Illustrative diameter only; vegetation elements are irregular and oriented.</span></label>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 'var(--s4)' }}>
+          {bands.map(band => {
+            const x = sizeParameter(band.lambda);
+            const waves = Math.max(1, Math.min(12, 300 / band.lambda));
+            const targetRadius = Math.max(4, Math.min(115, diameterMm / 300 * 120));
+            return <div key={band.name} style={{ padding: 'var(--s4)', border: `1px solid ${band.color}55`, borderRadius: 'var(--r-md)', background: 'rgba(var(--fg-rgb),.025)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: band.color, fontWeight: 800 }}><span>{band.name}</span><span>λ {band.lambda} mm</span></div>
+              <svg viewBox="0 0 600 150" role="img" aria-label={`${band.name}: target size parameter ${x.toFixed(2)}`} style={{ display: 'block', width: '100%', marginTop: 10, background: '#07111d', borderRadius: 8 }}>
+                <path d={Array.from({length: 121},(_,i)=>`${i?'L':'M'} ${20+i*4.65} ${75+28*Math.sin(i/120*waves*Math.PI*2)}`).join(' ')} fill="none" stroke={band.color} strokeWidth="3" opacity=".8"/>
+                <circle cx="300" cy="75" r={targetRadius} fill="rgba(225,236,224,.15)" stroke="#e1ece0" strokeWidth="2"/>
+                <line x1="300" x2="300" y1={75-targetRadius} y2={75+targetRadius} stroke="#fff" strokeWidth="2"/>
+              </svg>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 10 }}><span style={{ color: 'var(--text-3)' }}>x = πd/λ</span><strong style={{ color: band.color, fontSize: '1.5rem', fontFamily: 'var(--font-num)' }}>{x.toFixed(2)}</strong></div>
+              <div style={{ color: 'var(--text-2)', fontSize: '.88rem', marginTop: 5 }}>{regime(x)}</div>
+            </div>;
+          })}
+        </div>
+        <p style={{ margin: 'var(--s4) 0 0', color: 'var(--text-3)', fontSize: '.82rem', lineHeight: 1.5 }}>Size parameter helps describe how an idealized object’s size compares with wavelength. Actual vegetation scattering also depends on shape, orientation, dielectric properties, canopy structure, polarization, incidence angle, and multiple interactions; wavelength alone does not determine how deeply a radar signal penetrates.</p>
       </GlassCard>
     </div>
   );
@@ -1218,8 +1502,8 @@ export function SARLabPage() {
   const [activePol, setActivePol] = useState(0);
   const [activeStep, setActiveStep] = useState(0);
   
-  // Coherence (3D)
-  const [coherenceThreshold, setCoherenceThreshold] = useState(0.3);
+  const [coherenceDays, setCoherenceDays] = useState(12);
+  const [coherenceTau, setCoherenceTau] = useState(36);
 
   // Otsu (3A)
   const [otsuThreshold, setOtsuThreshold] = useState(-15);
@@ -1229,7 +1513,7 @@ export function SARLabPage() {
       // Bimodal mixture of gaussians
       const waterDist = 80 * Math.exp(-Math.pow(db - (-18), 2) / (2 * 1.5 * 1.5));
       const landDist = 60 * Math.exp(-Math.pow(db - (-10), 2) / (2 * 2 * 2));
-      const noise = Math.random() * 5;
+      const noise = (Math.sin((db + 25) * 12.9898) * 0.5 + 0.5) * 5;
       data.push({ db, count: Math.round(waterDist + landDist + noise) });
     }
     return data;
@@ -1335,14 +1619,14 @@ export function SARLabPage() {
 
 
   return (
-    <div style={{ background: 'transparent', minHeight: '100vh', color: 'var(--text)' }}>
+    <div className="sar-lab" style={{ background: 'transparent', minHeight: '100vh', color: 'var(--text)' }}>
       <Navbar />
       <div className="navbar-spacer" />
 
-      <div style={{ padding: 'var(--s6) clamp(var(--s5), 3vw, var(--s8))', maxWidth: 1640, margin: '0 auto' }}>
+      <main className="sar-lab__main" style={{ padding: 'var(--s6) clamp(var(--s5), 3vw, var(--s8))', maxWidth: 1640, margin: '0 auto' }}>
 
         {/* ═══ HERO ═══ */}
-        <div style={{ textAlign: 'center', marginBottom: 'var(--s8)', paddingTop: 'var(--s4)' }}>
+        <div className="sar-lab__hero" style={{ textAlign: 'center', marginBottom: 'var(--s8)', paddingTop: 'var(--s4)' }}>
           <div className="globe-hero__badge" style={{ borderColor: 'var(--water)', color: 'var(--water)' }}>
             <span className="globe-hero__badge-dot" style={{ background: 'var(--water)', boxShadow: '0 0 8px var(--water)' }} />
             INTERACTIVE SAR SCIENCE LAB
@@ -1352,14 +1636,23 @@ export function SARLabPage() {
             <span className="glow-text">Deep Dive</span>
           </h1>
           <p style={{ color: 'var(--text-2)', maxWidth: 1000, margin: '0 auto', fontSize: 'clamp(1.15rem, 1.7vw, 1.6rem)', lineHeight: 1.65 }}>
-            Understand the science behind our analysis. How synthetic aperture radar works,
-            why NISAR's L-band is revolutionary, and how we extract surface change from radar signals.
+            Explore how NISAR radar works, then adjust the controls to see how wavelength, surface conditions, and processing choices shape the signals we interpret.
           </p>
+          <div className="sar-lab__hero-stats" aria-label="NISAR at a glance">
+            <span><strong>24 cm</strong><small>L-band wavelength</small></span>
+            <span><strong>~242 km</strong><small>imaging swath</small></span>
+            <span><strong>12 days</strong><small>repeat cycle</small></span>
+            <span><strong>Day / night</strong><small>cloud tolerant</small></span>
+          </div>
         </div>
 
+        <nav className="sar-lab__nav" aria-label="SAR Lab sections">
+          <a href="#mission">Mission</a><a href="#signals">Radar signals</a><a href="#simulations">Simulations</a><a href="#pipeline">Our pipeline</a><a href="#insar">InSAR</a>
+        </nav>
+
         {/* ═══ SECTION 1: NISAR MISSION SPECS ═══ */}
-        <div style={{ marginBottom: 'var(--s8)' }}>
-          <SectionTitle title="NISAR Mission Parameters" subtitle="The most expensive Earth science radar satellite ever built — a joint NASA-ISRO mission designed to measure Earth's changing ecosystems." />
+        <div id="mission" className="sar-section">
+          <SectionTitle title="NISAR Mission" subtitle="A NASA–ISRO Earth-observing mission using L-band and S-band SAR to measure changes in land, ice, water, and vegetation." />
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))', gap: 'var(--s4)' }}>
             {NISAR_SPECS.map((spec) => (
               <div key={spec.param} className="glass-panel hover-lift" style={{ padding: 'var(--s5)', display: 'flex', gap: 'var(--s3)', alignItems: 'flex-start' }}>
@@ -1374,8 +1667,8 @@ export function SARLabPage() {
         </div>
 
         {/* ═══ SECTION 2: FREQUENCY BANDS ═══ */}
-        <div style={{ marginBottom: 'var(--s8)' }}>
-          <SectionTitle title="SAR Frequency Bands" subtitle="Different radar frequencies penetrate Earth's surface to different depths. NISAR uses L-band — the sweet spot for vegetation penetration and soil moisture sensing." />
+        <div id="signals" className="sar-section">
+      <SectionTitle title="Radar Frequency Bands" subtitle="Wavelength influences how radar interacts with vegetation and surface structure. Penetration varies with canopy, moisture, geometry, and frequency; it is not a fixed depth." />
           
           <GlassCard>
             {/* Band selector tabs */}
@@ -1415,8 +1708,8 @@ export function SARLabPage() {
                     <div style={{ fontSize: '1.2rem', fontWeight: 700, color: BANDS[activeBand].color, fontFamily: 'var(--font-num)' }}>{BANDS[activeBand].wl}</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--text-3)', textTransform: 'uppercase' }}>Vegetation Penetration</div>
-                    <div style={{ fontSize: '1.2rem', fontWeight: 700, color: BANDS[activeBand].color, fontFamily: 'var(--font-num)' }}>{BANDS[activeBand].pen}</div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-3)', textTransform: 'uppercase' }}>Canopy interaction (qualitative)</div>
+                <div style={{ fontSize: '1.05rem', fontWeight: 700, color: BANDS[activeBand].color }}>{BANDS[activeBand].pen}</div>
                   </div>
                   <div>
                     <div style={{ fontSize: '0.78rem', color: 'var(--text-3)', textTransform: 'uppercase' }}>Key Missions</div>
@@ -1452,7 +1745,7 @@ export function SARLabPage() {
                   left: '70%',
                   top: '15%',
                   width: 4,
-                  height: `${activeBand === 0 ? 15 : activeBand === 1 ? 25 : activeBand === 2 ? 45 : 65}%`,
+                  height: `${activeBand === 0 ? 10 : activeBand === 1 ? 17 : activeBand === 2 ? 24 : 29}%`,
                   background: `linear-gradient(180deg, ${BANDS[activeBand].color}, transparent)`,
                   borderRadius: 2,
                   transition: 'height 0.5s ease',
@@ -1468,18 +1761,19 @@ export function SARLabPage() {
                   fontFamily: 'var(--font-num)',
                   writingMode: 'vertical-rl'
                 }}>
-                  PENETRATION: {BANDS[activeBand].pen}
+                  CANOPY INTERACTION: {BANDS[activeBand].pen}
                 </div>
                 {/* SAR satellite icon */}
                 <div style={{ position: 'absolute', left: 'calc(70% - 12px)', top: '8%', fontSize: '1.5rem' }}><Satellite size={24} /></div>
+                <div style={{ position: 'absolute', right: 10, bottom: 8, color: 'rgba(255,255,255,0.55)', fontSize: '0.72rem', background: 'rgba(0,0,0,0.45)', padding: '4px 7px', borderRadius: 4 }}>Conceptual canopy interaction; not to scale</div>
               </div>
             </div>
           </GlassCard>
         </div>
 
         {/* ═══ SECTION 3: POLARIMETRY ═══ */}
-        <div style={{ marginBottom: 'var(--s8)' }}>
-          <SectionTitle title="SAR Polarimetry" subtitle="NISAR transmits and receives radar in multiple polarization orientations. Different polarizations reveal different scattering mechanisms on the ground." />
+        <div className="sar-section">
+          <SectionTitle title="Polarization" subtitle="Polarization channels provide complementary clues about surface structure. NISAR's selected mode depends on the observation target; these cards explain channel notation, not a claim that every scene is quad-pol." />
           
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 'var(--s4)' }}>
             {POL_CHANNELS.map((pol, i) => (
@@ -1496,10 +1790,8 @@ export function SARLabPage() {
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--s3)' }}>
-                  <div style={{ fontSize: '1.8rem', fontWeight: 900, color: pol.color, fontFamily: 'var(--font-num)' }}>{pol.id}</div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 900, color: pol.color, fontFamily: 'var(--font-num)' }}>
-                    {pol.simVal} <span style={{ fontSize: '0.82rem', color: 'var(--text-3)' }}>dB</span>
-                  </div>
+                    <div style={{ fontSize: '1.8rem', fontWeight: 900, color: pol.color, fontFamily: 'var(--font-num)' }}>{pol.id}</div>
+                  <div style={{ fontSize: '0.76rem', color: pol.color, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{pol.mechanism}</div>
                 </div>
                 <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-2)', marginBottom: 4 }}>{pol.label}</div>
                 <div style={{ fontSize: '0.86rem', color: 'var(--text-3)', lineHeight: 1.5, marginBottom: 'var(--s2)' }}>{pol.desc}</div>
@@ -1512,8 +1804,8 @@ export function SARLabPage() {
         </div>
 
         {/* ═══ SECTION 4: InSAR PIPELINE ═══ */}
-        <div style={{ marginBottom: 'var(--s8)' }}>
-          <SectionTitle title="InSAR Processing Pipeline" subtitle="Interferometric SAR (InSAR) combines two radar acquisitions to measure ground displacement with millimeter-precision. Here's how our pipeline works, step by step." />
+        <div id="insar" className="sar-section">
+          <SectionTitle title="InSAR Processing Pipeline" subtitle="Repeat-pass interferometry can measure line-of-sight surface motion when phase remains coherent and topography, orbit, and atmospheric effects are handled. This is a processing overview, not a displacement result from our river analysis." />
           
           <div className="snake-grid">
             {INSAR_STEPS.map((step, i) => {
@@ -1537,86 +1829,66 @@ export function SARLabPage() {
         </div>
 
         
-        {/* ═══ SECTION 5: COHERENCE DECAY SIMULATOR ═══ */}
-        <div style={{ marginBottom: 'var(--s8)' }}>
-          <SectionTitle title="Coherence Decay Simulator" subtitle="InSAR coherence is the fundamental signal we use to detect surface change. This chart shows coherence (γ) decay curves over temporal baseline (0-90 days)." />
-          
+        {/* ═══ SECTION 5: TEMPORAL COHERENCE MODEL ═══ */}
+        <div className="sar-section">
+          <SectionTitle title="Temporal Coherence Model" subtitle="Explore the first-order exponential temporal term γₜ = exp(−Δt / τ). This is a parameterized teaching model, not a land-cover prediction or NISAR measurement." />
           <GlassCard>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s4)' }}>
-              <div style={{ position: 'relative', height: '300px', width: '100%', background: 'rgba(var(--shadow-rgb), 0.2)', borderRadius: 'var(--r-md)', padding: '20px' }}>
-                <svg width="100%" height="100%" viewBox="0 0 900 100" preserveAspectRatio="none">
-                  {/* Grid lines */}
-                  {[0, 0.25, 0.5, 0.75, 1].map(v => (
-                    <line key={v} x1="0" y1={100 - v*100} x2="900" y2={100 - v*100} stroke="rgba(var(--fg-rgb), 0.1)" strokeWidth="1" />
-                  ))}
-                  
-                  {/* Curves */}
-                  {/* Urban (τ=500) */}
-                  <path d={Array.from({length: 91}).map((_, i) => `${i === 0 ? 'M' : 'L'} ${i * 10} ${100 - (0.9 * Math.exp(-i/500)) * 100}`).join(' ')} fill="none" stroke="#e0e0e0" strokeWidth="3" />
-                  {/* Bare Soil (τ=365) */}
-                  <path d={Array.from({length: 91}).map((_, i) => `${i === 0 ? 'M' : 'L'} ${i * 10} ${100 - (0.85 * Math.exp(-i/365)) * 100}`).join(' ')} fill="none" stroke="#E0B34A" strokeWidth="3" />
-                  {/* Vegetation (τ=15) */}
-                  <path d={Array.from({length: 91}).map((_, i) => `${i === 0 ? 'M' : 'L'} ${i * 10} ${100 - (0.7 * Math.exp(-i/15)) * 100}`).join(' ')} fill="none" stroke="#7FBF8E" strokeWidth="3" />
-                  {/* Active Erosion (drops at day 12) */}
-                  <path d={Array.from({length: 91}).map((_, i) => `${i === 0 ? 'M' : 'L'} ${i * 10} ${100 - (i < 12 ? 0.8 - (i * 0.01) : 0.1) * 100}`).join(' ')} fill="none" stroke="var(--erosion)" strokeWidth="3" />
-                  
-                  {/* Threshold Line */}
-                  <line x1="0" y1={100 - coherenceThreshold*100} x2="900" y2={100 - coherenceThreshold*100} stroke="var(--warn)" strokeWidth="2" strokeDasharray="5,5" />
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.35fr) minmax(260px, .65fr)', gap: 'var(--s5)', alignItems: 'center' }}>
+              <div style={{ minWidth: 0, background: 'rgba(var(--shadow-rgb), .25)', borderRadius: 'var(--r-md)', padding: 'var(--s3)' }}>
+                <svg viewBox="0 0 720 300" role="img" aria-label={`Temporal coherence model curve with ${coherenceDays} day interval`} style={{ width: '100%', display: 'block' }}>
+                  {[0, .25, .5, .75, 1].map(v => <g key={v}><line x1="58" x2="700" y1={250 - v * 210} y2={250 - v * 210} stroke="rgba(255,255,255,.13)"/><text x="12" y={254 - v * 210} fill="#9aa8b7" fontSize="12">{v.toFixed(2)}</text></g>)}
+                  <path d={Array.from({ length: 65 }, (_, i) => { const d = i; const g = Math.exp(-d / coherenceTau); return `${i ? 'L' : 'M'} ${58 + d * 10} ${250 - g * 210}`; }).join(' ')} fill="none" stroke="var(--water)" strokeWidth="4" />
+                  <line x1={58 + coherenceDays * 10} x2={58 + coherenceDays * 10} y1="40" y2="250" stroke="var(--warn)" strokeDasharray="6 5" />
+                  <circle cx={58 + coherenceDays * 10} cy={250 - Math.exp(-coherenceDays / coherenceTau) * 210} r="8" fill="var(--warn)" stroke="#fff" strokeWidth="2" />
+                  <text x="360" y="286" fill="#c3ced8" fontSize="13" textAnchor="middle">Temporal separation Δt (days)</text>
                 </svg>
               </div>
-              
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontSize: '0.9rem', color: 'var(--text-3)' }}>Detection Threshold (γ): {coherenceThreshold.toFixed(2)}</span>
-                <input 
-                  type="range" min="0" max="1" step="0.05" 
-                  value={coherenceThreshold} 
-                  onChange={e => setCoherenceThreshold(parseFloat(e.target.value))}
-                  style={{ flex: 1, accentColor: 'var(--warn)' }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: 'var(--s4)', justifyContent: 'center', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><div style={{ width: 16, height: 4, background: '#e0e0e0' }}></div><span style={{ fontSize: '0.92rem' }}>Urban (τ=500d)</span></div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><div style={{ width: 16, height: 4, background: '#E0B34A' }}></div><span style={{ fontSize: '0.92rem' }}>Bare Soil (τ=365d)</span></div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><div style={{ width: 16, height: 4, background: '#7FBF8E' }}></div><span style={{ fontSize: '0.92rem' }}>Vegetation (τ=15d)</span></div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><div style={{ width: 16, height: 4, background: 'var(--erosion)' }}></div><span style={{ fontSize: '0.92rem' }}>Active Erosion (Day 12 drop)</span></div>
+              <div style={{ display: 'grid', gap: 'var(--s4)' }}>
+                <label style={{ color: 'var(--text-2)', fontSize: '.9rem' }}>Temporal separation Δt <strong style={{ float: 'right', color: 'var(--water)' }}>{coherenceDays} days</strong><input aria-label="Temporal separation in days" type="range" min="0" max="60" value={coherenceDays} onChange={e => setCoherenceDays(Number(e.target.value))} style={{ width: '100%' }}/></label>
+                <label style={{ color: 'var(--text-2)', fontSize: '.9rem' }}>Illustrative time constant τ <strong style={{ float: 'right', color: 'var(--water)' }}>{coherenceTau} days</strong><input aria-label="Illustrative coherence time constant" type="range" min="3" max="90" value={coherenceTau} onChange={e => setCoherenceTau(Number(e.target.value))} style={{ width: '100%' }}/></label>
+                <div style={{ padding: 'var(--s4)', borderRadius: 'var(--r-md)', border: '1px solid rgba(var(--water-rgb),.2)', background: 'rgba(var(--water-rgb),.05)' }}><div style={{ color: 'var(--text-3)', fontSize: '.76rem', letterSpacing: '.08em' }}>MODELED TEMPORAL TERM</div><strong style={{ display: 'block', marginTop: 5, color: 'var(--water)', fontSize: '2rem', fontFamily: 'var(--font-num)' }}>{Math.exp(-coherenceDays / coherenceTau).toFixed(3)}</strong><span style={{ color: 'var(--text-3)', fontSize: '.8rem' }}>γₜ only · other coherence losses omitted</span></div>
+                <div style={{ color: 'var(--text-3)', fontSize: '.82rem', lineHeight: 1.5 }}>Real interferometric coherence also depends on thermal noise, spatial baseline, coregistration, atmosphere, and scatterer changes. τ is a user-set scenario parameter, not a measured surface constant.</div>
               </div>
             </div>
           </GlassCard>
         </div>
 {/* ═══ SECTION 6: WHY NISAR L-BAND MATTERS ═══ */}
-        <div style={{ marginBottom: 'var(--s8)' }}>
-          <SectionTitle title="Why L-band Changes Everything" subtitle="NISAR's L-band radar solves fundamental limitations of existing C-band systems like Sentinel-1." />
+        <div className="sar-section">
+          <SectionTitle title="Complementary Radar Wavelengths" subtitle="L-band and C-band offer different sensitivities. Neither band guarantees a usable signal in every landscape or condition." />
           
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s4)' }}>
             <GlassCard style={{ borderLeft: '3px solid var(--warn)' }}>
               <h3 style={{ margin: '0 0 var(--s3) 0', color: 'var(--warn)', fontSize: '1.1rem' }}><XCircle size={18} style={{ display: 'inline', verticalAlign: 'text-bottom', margin: '0 4px' }} /> C-band Limitations (Sentinel-1)</h3>
               <ul style={{ margin: 0, paddingLeft: 'var(--s4)', color: 'var(--text-2)', fontSize: '0.92rem', lineHeight: 1.8, listStyleType: "'– '" }}>
-                <li>Short wavelength (5.6 cm) cannot penetrate vegetation canopy</li>
-                <li>Rapid decorrelation in forested areas (coherence lost in days)</li>
-                <li>Cannot distinguish soil moisture change from surface deformation</li>
-                <li>12-day revisit (single satellite), 6-day with constellation</li>
-                <li>Limited to surface-only scattering information</li>
+                <li>Shorter wavelength (about 5.6 cm) often interacts strongly with leaves and small branches</li>
+                <li>Vegetation can decorrelate between repeat observations, depending on conditions</li>
+                <li>Still valuable for land change, agriculture, ice, and deformation monitoring</li>
               </ul>
             </GlassCard>
 
             <GlassCard style={{ borderLeft: '3px solid var(--water)' }}>
               <h3 style={{ margin: '0 0 var(--s3) 0', color: 'var(--water)', fontSize: '1.1rem' }}><CheckCircle2 size={18} style={{ display: 'inline', verticalAlign: 'text-bottom', margin: '0 4px' }} /> L-band Advantages (NISAR)</h3>
               <ul style={{ margin: 0, paddingLeft: 'var(--s4)', color: 'var(--text-2)', fontSize: '0.92rem', lineHeight: 1.8, listStyleType: "'✓ '" }}>
-                <li>Long wavelength (23.8 cm) penetrates through forest canopy to trunk/ground</li>
-                <li>Maintains coherence for months — enables true change detection</li>
-                <li>Quad-polarization reveals scattering mechanism (surface vs volume)</li>
-                <li>12-day exact repeat orbit with 240 km swath — global coverage</li>
-                <li>Sensitive to biomass, soil moisture, AND surface deformation simultaneously</li>
+                <li>Longer wavelength (24 cm) can retain sensitivity to woody structure and sometimes ground beneath canopy</li>
+                <li>Can maintain coherence longer than shorter wavelengths in some vegetated settings; it is not guaranteed</li>
+                <li>Dual-polarization observations provide complementary surface information; mode varies by target</li>
+                <li>Roughly 242 km swath and a 12-day repeat cycle support broad, regular coverage</li>
+                <li>Supports ecosystem, soil moisture, ice, and surface deformation studies with appropriate methods</li>
               </ul>
             </GlassCard>
           </div>
         </div>
 
         
+        {/* ═══ NEW: SweepSAR Beam Animation ═══ */}
+        <FeatureSweepSAR />
+
         {/* ═══ THE SAR PIPELINE: FROM PHOTONS TO PIXELS ═══ */}
         <FeatureSARvsOptical />
+        <FeatureFloodMechanisms />
           <FeatureRadarGeometry />
+          <FeatureDielectric />
+          <FeatureDualFrequency />
           <FeatureSpeckleFilter />
           <FeaturePauliRGB />
           <FeatureCloudePottier />
@@ -1625,14 +1897,14 @@ export function SARLabPage() {
 
         {/* ═══ SECTION 7: ADVANCED SAR PHYSICS ═══ */}
         <div style={{ marginBottom: 'var(--s8)' }}>
-          <SectionTitle title="Advanced SAR Physics Console" subtitle="Deep dive into processing techniques used in our analysis. Adjust parameters in real-time." />
+          <SectionTitle title="Processing Concepts" subtitle="Interactive examples for threshold sensitivity and interferometric phase. Synthetic inputs are identified; only the change estimate above is drawn from the project manifest." />
           
           <div style={{ display: 'grid', gap: 'var(--s4)' }}>
             
             {/* Otsu Threshold */}
             <GlassCard>
-              <h3 style={{ margin: '0 0 var(--s3) 0', color: 'var(--water)', fontSize: '1.2rem' }}>Dynamic Otsu Threshold (σ⁰)</h3>
-              <p style={{ color: 'var(--text-3)', fontSize: '0.9rem', marginBottom: 'var(--s3)' }}>Minimizes intra-class variance of the bimodal backscatter histogram. Adjust to distinguish water (-18dB) from land (-10dB).</p>
+              <h3 style={{ margin: '0 0 var(--s3) 0', color: 'var(--water)', fontSize: '1.2rem' }}>Threshold Sensitivity (synthetic histogram)</h3>
+              <p style={{ color: 'var(--text-3)', fontSize: '0.9rem', marginBottom: 'var(--s3)' }}>This generated histogram illustrates how a cutoff divides two overlapping backscatter populations. The slider is not running Otsu; water and land thresholds vary by scene and conditions.</p>
               
               <div style={{ position: 'relative', height: '150px', display: 'flex', alignItems: 'flex-end', gap: '2px', paddingBottom: '20px', borderBottom: '1px solid rgba(var(--fg-rgb), 0.1)' }}>
                 {otsuData.map((d, i) => {
@@ -1680,7 +1952,7 @@ export function SARLabPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--s3)' }}>
                 <div>
                   <h3 style={{ margin: '0 0 var(--s2) 0', color: 'var(--erosion)', fontSize: '1.2rem' }}>InSAR Fringe Synthesizer</h3>
-                  <p style={{ color: 'var(--text-3)', fontSize: '0.9rem', margin: 0 }}>Mathematical phase generator: φ(x,y) = (4π/λ) × d(x,y). L-band λ = 23.8 cm.</p>
+                  <p style={{ color: 'var(--text-3)', fontSize: '0.9rem', margin: 0 }}>Synthetic wrapped phase: φ(x,y) = (4π/λ) × d<sub>LOS</sub>(x,y). L-band λ = 23.8 cm.</p>
                   <p style={{ color: 'var(--text-3)', fontSize: '0.9rem', margin: '4px 0 0 0' }}>Click on the canvas to set deformation center.</p>
                 </div>
               </div>
@@ -1698,11 +1970,11 @@ export function SARLabPage() {
                 
                 <div style={{ flex: '1 1 200px', display: 'flex', flexDirection: 'column', gap: 'var(--s3)' }}>
                   <div>
-                    <div style={{ fontSize: '0.9rem', color: 'var(--text-3)', marginBottom: '4px' }}>Max Displacement (D): {insarMaxDisp} cm</div>
+            <div style={{ fontSize: '0.9rem', color: 'var(--text-3)', marginBottom: '4px' }}>Peak line-of-sight displacement: {insarMaxDisp} cm</div>
                     <input type="range" min="1" max="20" step="0.5" value={insarMaxDisp} onChange={e => setInsarMaxDisp(parseFloat(e.target.value))} style={{ width: '100%', accentColor: 'var(--erosion)' }} />
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.9rem', color: 'var(--text-3)', marginBottom: '4px' }}>Deformation Radius (σ): {insarRadius} m</div>
+            <div style={{ fontSize: '0.9rem', color: 'var(--text-3)', marginBottom: '4px' }}>Synthetic deformation radius: {insarRadius} m</div>
                     <input type="range" min="100" max="2000" step="100" value={insarRadius} onChange={e => setInsarRadius(parseInt(e.target.value))} style={{ width: '100%', accentColor: 'var(--erosion)' }} />
                   </div>
                   
@@ -1724,10 +1996,23 @@ export function SARLabPage() {
         <div style={{ textAlign: 'center', padding: 'var(--s8) 0', borderTop: '1px solid rgba(var(--fg-rgb), 0.05)' }}>
           <p style={{ fontSize: '0.86rem', color: 'var(--text-3)', maxWidth: 600, margin: '0 auto', lineHeight: 1.6 }}>
             This educational module is part of <strong>FluviSAR</strong> — built for NASA Space Apps Challenge 2026, "Dancing with the SARs".
-            All scientific content is sourced from NASA JPL NISAR documentation, ESA Sentinel-1 User Guide, and peer-reviewed SAR literature.
+            Mission facts link to NASA/JPL and ESA references. Interactive models are labeled where they are schematic.
           </p>
+          <div className="sar-lab__sources" aria-label="Scientific references">
+            <a href="https://science.nasa.gov/mission/nisar/mission-overview/" target="_blank" rel="noreferrer">NISAR mission overview</a>
+            <a href="https://science.nasa.gov/mission/nisar/sweepsar/" target="_blank" rel="noreferrer">SweepSAR</a>
+            <a href="https://nisar.jpl.nasa.gov/mission/get-to-know-sar/polarimetry/" target="_blank" rel="noreferrer">Polarimetry</a>
+            <a href="https://nisar.jpl.nasa.gov/documents/26/NISAR_FINAL_9-6-19.pdf" target="_blank" rel="noreferrer">NISAR Science Users’ Handbook</a>
+            <a href="https://svs.gsfc.nasa.gov/5661/" target="_blank" rel="noreferrer">NISAR flood example · Mozambique</a>
+            <a href="https://appliedsciences.nasa.gov/sites/default/files/2023-11/SAR_Part3.pdf" target="_blank" rel="noreferrer">NASA ARSET · Flood mapping limits</a>
+            <a href="https://www.mdpi.com/2072-4292/7/6/7447" target="_blank" rel="noreferrer">H/α decomposition method</a>
+            <a href="https://doi.org/10.1016/j.patrec.2025.02.021" target="_blank" rel="noreferrer">Gamma speckle model</a>
+            <a href="https://www.mdpi.com/2072-4292/12/16/2545" target="_blank" rel="noreferrer">Temporal decorrelation model</a>
+            <a href="https://science.nasa.gov/mission/nisar/interferometry/" target="_blank" rel="noreferrer">Interferometry</a>
+            <a href="https://www.esa.int/Applications/Observing_the_Earth/FutureEO/Biomass" target="_blank" rel="noreferrer">ESA BIOMASS</a>
+          </div>
         </div>
-      </div>
+      </main>
 
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }

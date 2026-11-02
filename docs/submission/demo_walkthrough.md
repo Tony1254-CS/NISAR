@@ -104,7 +104,23 @@
 - [ ] ম্যাপ tilt হয়ে যাওয়া দেখান
 - **বলুন:** *"এটা শুধু presentation layer, বৈজ্ঞানিক পরিমাপ না — বাটনের tooltip-এও সেটা লেখা আছে।"* (যমুনা সমতল এলাকা বলে বড় উচ্চতা-পার্থক্য দেখাবে না, এটাই বাস্তবতা)
 
-## ধাপ ১০ — Methods পেজ (`/methods`)
+## ধাপ ১০ — SAR Lab (`/sar-lab`)
+- [ ] শুরুতে NISAR mission facts ও band selector দেখান; বলুন wavelength interaction বদলায়, কিন্তু penetration depth স্থির সংখ্যা নয়
+- [ ] **Flood Signal Mechanism Simulator**-এ open floodplain, crops, woody vegetation বদলান এবং standing-water toggle দেখান
+- **বলুন:** *"এটা backscatter prediction নয়—কোন scattering path flood-এর সময় signal বাড়াতে বা কমাতে পারে, তার schematic।"*
+- [ ] **Radar Geometry Cross-Section**-এ incidence angle বদলে layover, foreshortening ও shadow দেখান
+- [ ] **SweepSAR**-এ Traditional Stripmap ও SweepSAR + DBF তুলনা করুন
+- [ ] **Dielectric Interface: Fresnel Reflectance**-এ angle slider সরান; incident/reflected/transmitted ray ও H/V reflectance একই সঙ্গে আপডেট দেখান
+- **বলুন:** *"এটি flat, lossless interface-এর Fresnel reflectance—SAR backscatter বা বাস্তব surface return নয়।"*
+- [ ] **L-/S-band Target-Scale Simulator**-এ target diameter বদলে `x = πd/λ` কীভাবে বদলায় দেখান
+- [ ] **Speckle Lab**, **H/α Synthetic Lab**, **Temporal Coherence Model**, **Threshold Sensitivity**, ও **InSAR Fringe Synthesizer**-এ synthetic/parameterized inputs-এর label দেখান
+- **বলুন:** *"এই panels শেখার জন্য synthetic বা idealized; এগুলো Jamuna data-তে H/α, coherence, বা deformation হিসাব করেছে—এমন দাবি নয়।"*
+- [ ] **Change Detection Explorer**-এ quicklook swipe এবং map scan চালান; manifest থেকে আসা area এবং **INCONCLUSIVE** verdict দেখান
+- **বলুন:** *"Quicklook cutoff production classifier নয়; mapped change-ও confirmed erosion নয়। বর্তমান result inconclusive।"*
+- [ ] **Water and Change Map Lens** এবং **Water Classification Pipeline** দেখান; lens-এর mask-কে Pauli decomposition বলবেন না
+- **বলুন:** *"SAR Lab-এর পুরো panel ও সীমাবদ্ধতা docs/SAR_LAB.md-এ লেখা আছে।"*
+
+## ধাপ ১১ — Methods পেজ (`/methods`)
 - [ ] TopBar/Landing থেকে "Methods" লিংকে ক্লিক করুন
 - [ ] Pipeline-এর ১২টা ধাপ (DISCOVER → ... → CHECK BUNDLE) দেখান
 - [ ] Data sources টেবিল দেখান (NISAR, DSWx-S1, HAND, JRC GSW, FFWC)
@@ -112,7 +128,7 @@
 - [ ] "Reproduce this" কোড ব্লক দেখান
 - **বলুন:** *"এই পেজেই সব সীমাবদ্ধতা খোলাখুলি লেখা আছে — কিছু লুকানো হয়নি।"*
 
-## ধাপ ১১ — PWA (ঐচ্ছিক, সময় থাকলে)
+## ধাপ ১২ — PWA (ঐচ্ছিক, সময় থাকলে)
 - [ ] ব্রাউজারের address bar-এ "Install" আইকন দেখান (Chrome desktop) অথবা মোবাইলে "Add to Home Screen"
 - **বলুন:** *"এটা মোবাইল/ডেস্কটপে একটা installable app হিসেবে ব্যবহার করা যায়।"*
 

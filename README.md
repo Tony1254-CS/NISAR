@@ -458,84 +458,24 @@ Module description showing 42% global phase unwrapping error reduction.
 ---
 
 # 5. Interactive SAR Science Lab
-**File:** `SARLab.tsx` (1743 lines, 95KB) — The pedagogical core.
 
-## 5.1 NISAR Mission Specs Matrix — 10 Parameters
-Launch (March 2024), Orbit (747km), Repeat (12d), Frequency (1.257 GHz), Resolution (3–10m), Swath (240km), Quad-pol, Data rate (26 Tbits/day), Lifetime (3–5+ yrs), Joint mission (NASA JPL + ISRO SAC).
+The SAR Lab is an educational collection of reference panels, project-product viewers, and clearly labeled synthetic or schematic simulations. It does not imply that every displayed teaching metric was computed from the Jamuna data. The current panel inventory, controls, assumptions, and limits are documented in [docs/SAR_LAB.md](docs/SAR_LAB.md).
 
-## 5.2 Frequency Band Simulator — 4 Interactive Tabs
-X-band (2.5–3.75 cm), C-band (3.75–7.5 cm, Sentinel-1), **L-band (15–30 cm, NISAR, highlighted)**, P-band (30–100 cm, ESA BIOMASS). Each tab shows wavelength, penetration depth, and satellite examples.
+### Current interactive simulations and viewers
 
-## 5.3 C-Band vs L-Band Comparison
-Side-by-side breakdown: C-band (5.6 cm, rapid decorrelation, canopy-reflected) vs L-band (23.8 cm, months of coherence, canopy-penetrating, quad-pol capable).
+- Cloud-density comparison for illustrative optical imagery and a Jamuna SAR quicklook.
+- Flood scattering mechanism scenarios for open water, crops, and woody vegetation.
+- Incidence-angle radar geometry cross-section for layover, foreshortening, and shadow.
+- NISAR SweepSAR versus conceptual stripmap animation.
+- Flat-interface Fresnel reflectance explorer with a live ray diagram and angle control.
+- L-band/S-band target-size scale comparison using `x = πd/λ`.
+- Synthetic Gamma-speckle and Lee-style filtering demonstration.
+- Synthetic H/α eigenvalue-weight teaching model.
+- Parameterized temporal coherence term `γₜ = exp(−Δt/τ)`.
+- Jamuna change explorer, water/change map lens, and water-classification walkthrough.
+- Synthetic threshold-sensitivity histogram and InSAR fringe synthesizer.
 
-## 5.4 Penetration Depth Visualization
-Tree canopy layers with penetration arrows: X-band 15%, C-band 25%, L-band 45%, P-band 65%.
-
-## 5.5 Chapter 1: SAR vs Optical Cloud Simulator
-- **Cloud Density Slider (0–100%):** Generates procedural SVG `feTurbulence` fractal clouds.
-- **Optical Panel:** Becomes progressively blind. Shows `"ACQUISITION BLOCKED"` overlay at >60%.
-- **SAR Panel:** 100% visible at all cloud densities. Animated cyan radar sweep beam with grid overlay.
-- **Continuous Sweep Animation:** `requestAnimationFrame` updating `beamPos = (prev + 0.5) % 100`.
-
-## 5.6 Chapter 2: Radar Acquisition Geometry
-- **Incidence Angle Slider (15°–65°).**
-- **Physics Engine:** Calculates satellite position as `satX = 500 + (250 - satY) × tan(θ)`.
-- **Dynamic Distortion Detection:** Evaluates `distPeak < distLeft` to toggle Layover vs Foreshortening labels.
-- **Shadow Ray Tracing:** Traces from satellite through mountain peak to ground plane.
-- **SVG Visualizer:** Satellite glyph, radar beam paths, distance circles, dynamic warning badges.
-
-## 5.7 Chapter 3: Speckle Suppression Engine
-- **Sliders:** Window Size (3–15, step 2), ENL Noise Level (1–16), Split Position (0–100%).
-- **Gamma Noise via Box-Muller Transform:** `z₀ = √(-2 ln u₁) cos(2π u₂)`, `noise = Σ(z₀² + z₁²) / (2 × ENL)`.
-- **Adaptive Lee-Sigma Filter:** Local mean/variance over window, Lee weight: `W = varX / (variance + 10⁻⁵)`, filtered = `mean + W × (noisy - mean)`.
-- **Canvas Swipe Comparison:** Draggable divider between raw noisy SLC and filtered output.
-- **Computation Time Display.**
-
-## 5.8 Chapter 4: Pauli RGB Decomposition
-- **Interactive Circular Lens** following mouse cursor.
-- **RGB Synthesis from 3 source images (radar, water mask, change mask):**
-  - Red (HH-VV): Double Bounce → `R = min(255, bright + 150)`
-  - Green (HV+VH): Volume Scattering → `G = min(255, bright + 50)`
-  - Blue (HH+VV): Surface Scattering → `B = min(255, bright + 100)`
-- **Circular ClipPath** with cyan reticle ring and crosshairs.
-
-## 5.9 Chapter 4b: Cloude-Pottier H/α Targeting Engine
-- **400×400 Operational Map** with 20×20 pixel targeting crosshair following mouse.
-- **Live Computation:** Calculates localized Entropy (H) and Alpha (α) from sampled pixels.
-- **Gaussian Dispersion Modeling:** `randn_bm()` function for realistic scatter distribution.
-- **9-Zone Cloude-Pottier Phase Space Plot:** Real-time scatter points into Z9 Surface, Z5 Volume, Z7 Double-Bounce.
-- **Telemetry HUD:** Dominant Mechanism, Entropy value, Alpha value, sample count, simulated Lat/Lon.
-
-## 5.10 Chapter 5: Processing Pipeline Walkthrough
-8 interactive step cards: Raw Backscatter → Histogram + Otsu → Binary Mask → Median Filter (5×5) → HAND Mask (>15m) → Change Detection → Polygonization → Erosion Map.
-
-## 5.11 Live Sandbox: Otsu Bimodal Histogram
-- **Bimodal Gaussian Simulation:** Water peak: `80 × exp(-(db-(-18))² / (2×1.5²))`, Land peak: `60 × exp(-(db-(-10))² / (2×2²))`.
-- **Threshold Slider (-25 dB to -5 dB):** Dynamically classifies pixels as water or land.
-- **Live Pixel Counts:** Water pixels and Land pixels update in real-time.
-
-## 5.12 Live Sandbox: Morphological Diff Scanner
-- **Canvas (400×300):** Loads change mask image.
-- **Button `"RUN PIPELINE"`:** Triggers line-by-line raster scan with animated red scanner line (`y += 10`).
-- **Per-Pixel Calculation:** For pixels with `r > 128`: `totalHectares += 0.09` (30m × 30m = 900 m² = 0.09 ha).
-- **Live Hectares Counter.**
-
-## 5.13 InSAR Fringe Synthesizer
-- **Canvas-based interferogram** with clickable deformation epicenter.
-- **Formulas:** `φ(x,y) = (4π/λ) × d(x,y) mod 2π`, where `d(x,y) = D × exp(-((x-x₀)² + (y-y₀)²) / 2σ²)`, λ = 23.8 cm.
-- **Sliders:** Max Displacement (cm), Deformation Radius (m).
-- **HSL→RGB Conversion** for rainbow fringe coloring.
-- **Fringe Count Display:** `(maxDisp / (23.8/2)).toFixed(1)` fringes.
-
-## 5.14 Coherence Decay Simulator
-SVG chart with exponential decay curves: Urban (τ=500d), Bare Soil (τ=365d), Vegetation (τ=15d), Active Erosion (anomalous drop at day 12).
-
-## 5.15 Polarimetry Channels — 4 Cards
-HH (-11.4 dB), HV (-18.7 dB), VV (-12.1 dB), VH (-19.2 dB) with descriptions, scattering mechanisms, and color codes.
-
----
-
+The lab also includes NISAR mission and frequency references, polarization explainers, an InSAR processing overview, and a qualitative L-/C-band comparison. See the dedicated guide for scientific assumptions and interpretation limits for each panel.
 # 6. Impact Dashboard
 **File:** `Impact.tsx` (386 lines) + `ForecastImpact.tsx` (310 lines)
 
@@ -610,7 +550,7 @@ Background image with luminosity blend, title `"The River Takes It All"`, gradie
 
 ## 8.3 The Architects — 4 Crew Members
 Cards with initials, role badges, descriptions:
-- Sabbir Ahmed (Mission Commander — System Architecture & AI Pipeline)
+- **Sabbir Ahmed** ([@Tony1254-CS](https://github.com/Tony1254-CS)) — Mission Commander & Principal Systems Architect (Core Pipeline, Radar Physics, InSAR & Full-Stack Architecture)
 - Sanjid Talukder (Data Scientist — SAR Processing & Remote Sensing)
 - Sakibul Hassan Shovon (Frontend Engineer — Interactive Visualization & UX)
 - Yasin Arafat (Hydro Analyst — River Dynamics & Quality Assurance)

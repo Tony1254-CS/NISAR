@@ -2,6 +2,257 @@
    Global Mission Control — Cases Page
    ══════════════════════════════════════════════════════ */
 
+/* SAR Lab visual system */
+.sar-lab__main {
+  max-width: 1360px !important;
+  padding-top: clamp(1.5rem, 4vw, 3.5rem) !important;
+}
+
+.sar-dielectric-lab {
+  width: 100%;
+  max-width: 1180px;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.sar-lab__hero {
+  position: relative;
+  isolation: isolate;
+  padding: clamp(2rem, 5vw, 4.5rem) clamp(1rem, 3vw, 2.5rem) !important;
+  margin-bottom: 2rem !important;
+  overflow: hidden;
+  border: 1px solid rgba(var(--water-rgb), 0.2);
+  border-radius: var(--r-xl, 24px);
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(var(--water-rgb), 0.15), transparent 62%),
+    linear-gradient(145deg, rgba(var(--panel-rgb), 0.88), rgba(var(--shadow-rgb), 0.7));
+  box-shadow: 0 18px 60px rgba(var(--shadow-rgb), 0.24), inset 0 1px rgba(255,255,255,0.06);
+}
+
+.sar-lab__hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(rgba(var(--water-rgb), 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--water-rgb), 0.045) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: linear-gradient(to bottom, black, transparent 82%);
+  pointer-events: none;
+}
+
+.sar-lab__hero h1 {
+  font-size: clamp(2.7rem, 6vw, 5.2rem) !important;
+}
+
+.sar-lab__hero > p {
+  max-width: 780px !important;
+  font-size: clamp(1rem, 1.35vw, 1.2rem) !important;
+}
+
+.sar-lab__hero-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  max-width: 920px;
+  margin: 2rem auto 0;
+}
+
+.sar-lab__hero-stats span {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.9rem 0.75rem;
+  border: 1px solid rgba(var(--water-rgb), 0.14);
+  border-radius: var(--r-md);
+  background: rgba(var(--panel-rgb), 0.58);
+}
+
+.sar-lab__hero-stats strong {
+  color: var(--water);
+  font: 700 1.1rem var(--font-num);
+}
+
+.sar-lab__hero-stats small {
+  color: var(--text-3);
+  font-size: 0.78rem;
+}
+
+.sar-lab__nav {
+  display: flex;
+  justify-content: center;
+  gap: 0.35rem;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto 2.5rem;
+  padding: 0.4rem;
+  border: 1px solid rgba(var(--water-rgb), 0.18);
+  border-radius: 999px;
+  background: rgba(var(--shadow-rgb), 0.88);
+  box-shadow: 0 12px 30px rgba(var(--shadow-rgb), 0.28);
+  backdrop-filter: blur(16px);
+}
+
+.sweep-visual {
+  width: 100%;
+  height: clamp(220px, 34vw, 380px);
+  background: linear-gradient(180deg, #050a18 0%, #0a1525 40%, #1a2a15 95%, #2a3a1a 100%);
+}
+
+.sweep-explainer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(190px, 0.34fr);
+  gap: 1.25rem;
+  align-items: center;
+  padding: clamp(1rem, 2.5vw, 1.5rem);
+  border-top: 1px solid rgba(var(--water-rgb), 0.12);
+  background: linear-gradient(105deg, rgba(var(--water-rgb), 0.055), rgba(var(--panel-rgb), 0.26));
+}
+
+.sweep-explainer__copy h3 {
+  margin: 0 0 0.45rem;
+  font-size: 1rem;
+}
+
+.sweep-explainer__copy p {
+  margin: 0;
+  color: var(--text-3);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.sweep-explainer__metric {
+  padding-left: 1.25rem;
+  border-left: 1px solid rgba(var(--water-rgb), 0.2);
+}
+
+.sweep-explainer__metric small,
+.sweep-explainer__metric span {
+  display: block;
+  color: var(--text-3);
+}
+
+.sweep-explainer__metric small {
+  margin-bottom: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.sweep-explainer__metric strong {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: var(--water);
+  font: 700 1.35rem var(--font-num);
+}
+
+.sweep-explainer--traditional .sweep-explainer__metric strong {
+  color: var(--warn);
+  font-size: 1.05rem;
+}
+
+.sar-lab__nav a {
+  padding: 0.65rem 1rem;
+  border-radius: 999px;
+  color: var(--text-2);
+  font-size: 0.82rem;
+  font-weight: 650;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 160ms ease, background 160ms ease;
+}
+
+.sar-lab__nav a:hover,
+.sar-lab__nav a:focus-visible {
+  color: var(--water);
+  background: rgba(var(--water-rgb), 0.12);
+  outline: none;
+}
+
+.sar-flood-ray {
+  stroke-dasharray: 10 8;
+  animation: sar-flood-ray-flow 1.5s linear infinite;
+}
+
+@keyframes sar-flood-ray-flow {
+  to { stroke-dashoffset: -36; }
+}
+
+.sar-section {
+  scroll-margin-top: 150px;
+  margin-bottom: clamp(3rem, 6vw, 5rem);
+}
+
+.sar-section > div:first-child h2 {
+  letter-spacing: -0.035em !important;
+}
+
+.sar-lab .glass-panel {
+  border-color: rgba(var(--water-rgb), 0.1);
+}
+
+.sar-lab__sources {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 1.25rem auto 0;
+}
+
+.sar-lab__sources a {
+  padding: 0.45rem 0.75rem;
+  border: 1px solid rgba(var(--water-rgb), 0.14);
+  border-radius: 999px;
+  color: var(--text-2);
+  font-size: 0.78rem;
+  text-decoration: none;
+}
+
+.sar-lab__sources a:hover,
+.sar-lab__sources a:focus-visible {
+  border-color: rgba(var(--water-rgb), 0.5);
+  color: var(--water);
+  outline: none;
+}
+
+@media (max-width: 700px) {
+  .sar-lab__hero-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sar-lab__nav {
+    width: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
+    border-radius: var(--r-md);
+    margin-bottom: 2.5rem;
+  }
+  .sweep-explainer { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+  .sweep-explainer__metric { padding: 0.9rem 0 0; border-top: 1px solid rgba(var(--water-rgb), 0.2); border-left: 0; }
+  .sar-lab__nav a { padding: 0.6rem 0.8rem; }
+  .sar-section { scroll-margin-top: 90px; }
+  .sar-lab [style*="grid-template-columns: 1fr 1fr"],
+  .sar-lab [style*="grid-template-columns: repeat(2,"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .sar-lab [style*="grid-template-columns: 400px 1fr 400px"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .sar-lab [style*="grid-template-columns: 400px 1fr 400px"] > * {
+    width: 100% !important;
+    max-width: 100%;
+  }
+  .sar-lab [style*="grid-template-columns: 400px 1fr 400px"] canvas {
+    width: 100%;
+    height: auto;
+  }
+}
+
+@media (max-width: 860px) {
+  .sar-flood-sim-grid { grid-template-columns: minmax(0, 1fr) !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sar-flood-ray { animation: none; }
+}
+
 /* ── Hero Banner ── */
 .globe-hero {
   position: relative;

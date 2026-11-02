@@ -180,7 +180,7 @@ export function AboutPage() {
             <h2 style={{ fontSize: 'clamp(2.2rem, 4vw, 3.5rem)', marginBottom: '3rem', color: 'var(--text)', fontWeight: 800 }}>Meet the Crew</h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '2rem' }}>
               {[
-                { name: 'Sabbir Ahmed', role: 'Mission Commander', desc: 'System Architecture & AI Pipeline', initials: 'SA' },
+                { name: 'Sabbir Ahmed', role: 'Mission Commander', desc: 'System Architecture & AI Pipeline', initials: 'SA', github: 'https://github.com/Tony1254-CS', handle: '@Tony1254-CS' },
                 { name: 'Sanjid Talukder', role: 'Data Scientist', desc: 'SAR Processing & Remote Sensing', initials: 'ST' },
                 { name: 'Sakibul Hassan Shovon', role: 'AI Engineer', desc: 'Interactive Visualization & UX', initials: 'SH' },
                 { name: 'Yasin Arafat', role: 'Hydro Analyst', desc: 'River Dynamics & Quality Assurance', initials: 'YA' }
@@ -218,6 +218,7 @@ export function AboutPage() {
                   <h3 style={{ fontSize: '1.7rem', marginBottom: '8px', letterSpacing: '0.04em', color: 'var(--text)', zIndex: 2 }}>{member.name}</h3>
                   <div style={{ color: 'var(--water)', fontSize: '1.05rem', textTransform: 'uppercase', fontWeight: 800, marginBottom: '12px', letterSpacing: '1px', zIndex: 2 }}>{member.role}</div>
                   <div style={{ color: 'var(--text-2)', fontSize: '1.1rem', lineHeight: 1.5, zIndex: 2 }}>{member.desc}</div>
+                  {member.github && (<a href={member.github} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: "6px", marginTop: "14px", padding: "6px 14px", background: "rgba(var(--fg-rgb), 0.06)", border: "1px solid rgba(var(--water-rgb), 0.3)", borderRadius: "20px", color: "var(--water)", fontSize: "0.85rem", fontWeight: 700, textDecoration: "none", zIndex: 2 }}>{member.handle}</a>)}
                 </div>
               ))}
             </div>

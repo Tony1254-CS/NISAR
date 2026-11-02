@@ -7,3 +7,5 @@ web/dist/
 .pytest_cache/
 
 .env
+
+graphify-out/
