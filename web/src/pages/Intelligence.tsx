@@ -1,886 +1,186 @@
-import { Brain, Check } from 'lucide-react';
-// @ts-nocheck
-import React, { useState, useEffect, useRef } from 'react';
-import { useStore } from '../state/store';
+import { AlertTriangle, ArrowRight, BrainCircuit, Check, CircleHelp, ExternalLink, Radio, ShieldCheck } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { Navbar } from '../components/Navbar';
+import { loadReachBundle, type ReachBundle } from '../data/load';
+import type { QCCheck } from '../data/types';
+import { useStore } from '../state/store';
+import { confusionMatrix, createSyntheticSamples, DEMO_CLASSES, permutationImportance, splitSyntheticSamples, trainSyntheticForest, type DemoClass, type DemoClassifier, type SarFeatures, type SarSample } from './sarForestDemo';
+import { trainTemporalMlp, type LossPoint } from './temporalMlpDemo';
 import '../styles/globe.css';
+import './intelligence.css';
+
+const CLASS_COLORS: Record<DemoClass, string> = {
+  'Stable land': '#56c8d8', 'Open water': '#7588ff', 'Seasonal inundation': '#e7b45d', 'Persistent transition candidate': '#ef745c',
+};
+const QC_STATUS: Record<QCCheck['status'], string> = { PASS: 'Pass', WARN: 'Review', FAIL: 'Fail', NOT_EVALUATED: 'Not evaluated', INFO: 'Context' };
+function fmt(value: number, digits = 1) { return new Intl.NumberFormat('en', { maximumFractionDigits: digits }).format(value); }
+function utcDate(value: string) { return new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(value)); }
+
+function getPrediction(model: DemoClassifier, features: SarFeatures) {
+  const scores = model.predict(features);
+  const label = DEMO_CLASSES.reduce((winner, current) => scores[current] > scores[winner] ? current : winner, DEMO_CLASSES[0]);
+  return { scores, label };
+}
+
+function scoreEntropy(scores: Record<DemoClass, number>) {
+  const entropy = DEMO_CLASSES.reduce((sum, label) => sum - (scores[label] > 0 ? scores[label] * Math.log(scores[label]) : 0), 0);
+  return entropy / Math.log(DEMO_CLASSES.length);
+}
+
+type ScenePerturbation = { eventDb: number; stageShift: number; persistenceShift: number };
+function perturb(features: SarFeatures, scene: ScenePerturbation): SarFeatures {
+  return [features[0], Math.max(-28,Math.min(-2,features[1]+scene.eventDb)), Math.max(0,Math.min(1,features[2]+scene.stageShift)), Math.max(0,Math.min(1,features[3]+scene.persistenceShift))];
+}
+
+function SceneControls({ scene, onChange }: { scene: ScenePerturbation; onChange: (next: ScenePerturbation) => void }) {
+  const controls:[keyof ScenePerturbation,string,number,number,number,string][]=[
+    ['eventDb','Scene-wide T1 backscatter offset',-6,6,.1,' dB'],
+    ['stageShift','Stage-difference shift',-.4,.4,.01,''],
+    ['persistenceShift','Later-water persistence shift',-.5,.5,.01,''],
+  ];
+  return <section className="ml-panel ml-scene-controls"><div className="ml-panel-head"><div><span className="ml-overline">SCENE-LEVEL WHAT-IF CONTROLS</span><h2>Perturb the whole scenario tile</h2></div><span className="ml-live-dot">MAP + MODEL UPDATE</span></div><p className="ml-panel-desc">Apply controlled offsets to every generated pixel. These are scenario perturbations, not environmental measurements or forecasts.</p><div className="ml-scene-control-grid">{controls.map(([key,label,min,max,step,suffix])=><label className="ml-slider" key={key}><span><b>{label}</b><output>{scene[key].toFixed(key==='eventDb'?1:2)}{suffix}</output></span><input type="range" min={min} max={max} step={step} value={scene[key]} onChange={(event)=>onChange({...scene,[key]:Number(event.target.value)})}/></label>)}</div></section>;
+}
+
+function ScenarioCube({ samples, model, modelName, selected, onSelect, scene }: { samples: SarSample[]; model: DemoClassifier; modelName: string; selected: SarFeatures; onSelect: (features: SarFeatures) => void; scene: ScenePerturbation }) {
+  const columns=26, rows=13;
+  const cells=Array.from({length:columns*rows},(_,index)=>{
+    const column=index%columns, row=Math.floor(index/columns);
+    const center=6.2+1.65*Math.sin(column*.25)+.65*Math.sin(column*.72);
+    const distance=Math.abs(row-center);
+    let target:DemoClass='Stable land';
+    if(distance<1.05)target='Open water';
+    else if(distance<2.05){const transition=(column>=7&&column<=13&&row<center)||(column>=18&&column<=23&&row>center);target=transition?'Persistent transition candidate':'Seasonal inundation';}
+    const candidates=samples.filter((sample)=>sample.y===target);
+    const sample=candidates[index%candidates.length]??samples[index%samples.length];
+    const features=perturb(sample.x,scene);
+    const prediction=getPrediction(model,features);
+    return {column,row,sample,features,target,prediction,entropy:scoreEntropy(prediction.scores)};
+  });
+  const frame=(kind:'t0'|'t1'|'t2'|'class'|'entropy',title:string)=><article className="ml-cube-frame" key={kind}><div className="ml-cube-frame-head"><b>{title}</b><span>{kind==='class'?modelName:kind==='entropy'?'normalized class-score entropy':kind.toUpperCase()}</span></div><svg viewBox="0 0 390 230" role="img" aria-label={`${title}, schematic generated scenario visualization`}><rect x="4" y="4" width="382" height="210" rx="7" fill="#0c151e" stroke="rgba(132,191,204,.2)"/><path d="M9 161 C74 122 112 163 168 132 S264 94 300 126 354 153 381 106" fill="none" stroke="rgba(58,95,147,.14)" strokeWidth="38"/>{cells.map((cell,index)=>{const db=kind==='t0'?cell.features[0]:kind==='t1'?cell.features[1]:cell.features[0]*(1-cell.features[3])+cell.features[1]*cell.features[3];const intensity=Math.max(.08,Math.min(.92,.12+(db+25)/25*.78));const isSelected=cell.features.every((v,i)=>Math.abs(v-selected[i])<.001);const color=kind==='class'?CLASS_COLORS[cell.prediction.label]:kind==='entropy'?`hsl(${Math.round(212-cell.entropy*130)} 82% ${Math.round(30+cell.entropy*34)}%)`:`hsl(190 45% ${Math.round(12+intensity*56)}%)`;return <rect key={index} x={9+cell.column*14.25} y={9+cell.row*15.4} width="12.2" height="13.2" rx="1.2" fill={color} opacity={kind==='entropy'?.35+cell.entropy*.65:.78} stroke={isSelected?'#fff':kind==='class'&&cell.prediction.label!==cell.target?'#f0d28b':'rgba(7,12,17,.7)'} strokeWidth={isSelected?2:kind==='class'&&cell.prediction.label!==cell.target?1.2:.45} role="button" tabIndex={0} aria-label={`Generated pixel: ${kind==='class'?`reference ${cell.target}, prediction ${cell.prediction.label}`:kind==='entropy'?`normalized score entropy ${cell.entropy.toFixed(2)}`:`HH backscatter ${db.toFixed(1)} decibels`}. Select pixel`} onClick={()=>onSelect(cell.sample.x)} onKeyDown={(event)=>{if(event.key==='Enter'||event.key===' ')onSelect(cell.sample.x);}}/>;})}<text x="11" y="226" className="ml-tile-label">{kind==='class'?'GOLD OUTLINE = LABEL / OUTPUT DIFFER':kind==='entropy'?'BRIGHTER = MORE CLASS-SCORE SPREAD':'LOW RETURN ← HH BACKSCATTER → HIGH RETURN'}</text></svg></article>;
+  return <section className="ml-panel ml-tile-panel"><div className="ml-panel-head"><div><span className="ml-overline">SCENARIO INPUT STACK / INFERENCE OUTPUT</span><h2>Follow a pixel through the model</h2></div><span className="ml-live-dot">CLICK ANY PIXEL</span></div><p className="ml-panel-desc">A schematic braided-channel layout links three generated HH observations to {modelName} outputs. It is not a geolocated NISAR image. Gold outlines mark disagreement with the scenario label; entropy is not calibrated uncertainty.</p><div className="ml-cube-subhead"><span>INPUT SEQUENCE · HH γ⁰</span><span>T0 → T1 → T2</span></div><div className="ml-cube-frames">{frame('t0','T0 · BEFORE')}{frame('t1','T1 · EVENT')}{frame('t2','T2 · FOLLOW-UP')}</div><div className="ml-cube-subhead ml-output-subhead"><span>ACTIVE MODEL · {modelName.toUpperCase()}</span><span>CLASS MAP + SCORE SPREAD</span></div><div className="ml-cube-frames ml-cube-frames--outputs">{frame('class','PREDICTED CLASS')}{frame('entropy','SCORE ENTROPY')}</div><div className="ml-legend ml-tile-legend">{DEMO_CLASSES.map((label)=><span key={label}><i style={{backgroundColor:CLASS_COLORS[label]}}/>{label}</span>)}</div></section>;
+}
+
+function FeatureSpace({ samples, selected, onSelect, scene }: { samples: SarSample[]; selected: SarFeatures; onSelect: (features: SarFeatures) => void; scene: ScenePerturbation }) {
+  const px=(db:number)=>45+((db+28)/26)*390;
+  const py=(delta:number)=>210-((delta+22)/28)*165;
+  const transformed=samples.map((sample)=>({sample,features:perturb(sample.x,scene)}));
+  const selectedEffective=perturb(selected,scene);
+  return <section className="ml-panel ml-feature-space"><div className="ml-panel-head"><div><span className="ml-overline">FEATURE SPACE / HELD-OUT SCENARIO PROBES</span><h2>Backscatter change distribution</h2></div></div><p className="ml-panel-desc">Scene offsets move the examples in this feature space. Click a point to load it into the pixel inspector.</p><svg viewBox="0 0 480 270" role="img" aria-label="Generated examples plotted by pre-event backscatter and backscatter change">{[0,1,2,3].map((i)=><g key={i}><line x1="45" y1={45+i*50} x2="445" y2={45+i*50} className="ml-chart-grid"/><text x="39" y={49+i*50} textAnchor="end" className="ml-chart-label">{5-i*8} dB</text></g>)}{transformed.filter((_,i)=>i%3===0).map(({sample,features},index)=><circle key={index} cx={px(features[0])} cy={py(features[1]-features[0])} r="3.3" fill={CLASS_COLORS[sample.y]} opacity=".52" role="button" tabIndex={0} onClick={()=>onSelect(sample.x)} onKeyDown={(event)=>{if(event.key==='Enter'||event.key===' ')onSelect(sample.x);}}/>)}<circle cx={px(selectedEffective[0])} cy={py(selectedEffective[1]-selectedEffective[0])} r="8" fill="#fff" stroke="#101820" strokeWidth="3"/><line x1="45" y1="210" x2="445" y2="210" className="ml-chart-axis"/><line x1="45" y1="45" x2="45" y2="210" className="ml-chart-axis"/><text x="245" y="253" textAnchor="middle" className="ml-chart-caption">PRE-EVENT HH γ⁰ (dB)</text><text x="13" y="132" textAnchor="middle" transform="rotate(-90 13 132)" className="ml-chart-caption">POST − PRE (dB)</text></svg><div className="ml-legend">{DEMO_CLASSES.map((label)=><span key={label}><i style={{backgroundColor:CLASS_COLORS[label]}}/>{label}</span>)}</div></section>;
+}
+
+function TemporalTraining({ history, bestEpoch }: { history: LossPoint[]; bestEpoch: number }) {
+  const losses = history.flatMap((point) => [point.train, point.validation]);
+  const min = Math.max(0, Math.min(...losses) - .05);
+  const max = Math.max(...losses) + .05;
+  const x = (index: number) => 38 + (history.length <= 1 ? 0 : index / (history.length - 1)) * 426;
+  const y = (value: number) => 183 - ((value - min) / Math.max(.01, max - min)) * 142;
+  const train = history.map((point, index) => `${index ? 'L' : 'M'} ${x(index)} ${y(point.train)}`).join(' ');
+  const validation = history.map((point, index) => `${index ? 'L' : 'M'} ${x(index)} ${y(point.validation)}`).join(' ');
+  return <section className="ml-panel ml-training-panel">
+    <div className="ml-panel-head"><div><span className="ml-overline">DEEP LEARNING / OPTIMIZATION TRACE</span><h2>Temporal MLP training behavior</h2></div><span className="ml-live-dot">BEST VALIDATION EPOCH {bestEpoch}</span></div>
+    <p className="ml-panel-desc">Training and validation cross-entropy for the generated scenario set. This trace describes optimization only; it is not a NISAR accuracy result.</p>
+    <div className="ml-training-layout">
+      <div className="ml-loss-chart-wrap"><svg className="ml-loss-chart" viewBox="0 0 500 235" role="img" aria-label="MLP training and validation cross-entropy by epoch">
+        {[0,1,2,3].map((step) => { const yy=42+step*45; return <g key={step}><line x1="38" y1={yy} x2="464" y2={yy} className="ml-chart-grid" /><text x="31" y={yy+3} textAnchor="end" className="ml-chart-label">{(max-(max-min)*step/3).toFixed(2)}</text></g>; })}
+        <path d={train} fill="none" stroke="#69d7df" strokeWidth="2.5" /><path d={validation} fill="none" stroke="#b39aff" strokeWidth="2.5" strokeDasharray="6 4" />
+        <line x1={x(bestEpoch - 1)} y1="40" x2={x(bestEpoch - 1)} y2="184" stroke="#f0c879" strokeDasharray="3 4" opacity=".7" />
+        <text x="39" y="211" className="ml-chart-label">EPOCH 1</text><text x="464" y="211" textAnchor="end" className="ml-chart-label">EPOCH {history.length}</text><text x="250" y="230" textAnchor="middle" className="ml-chart-caption">CROSS-ENTROPY · LOWER IS BETTER</text>
+      </svg><div className="ml-loss-legend"><span><i className="ml-loss-legend--train" />Training loss</span><span><i className="ml-loss-legend--validation" />Validation loss</span><span><i className="ml-loss-legend--best" />Selected weights</span></div></div>
+      <div className="ml-network-card"><div className="ml-network-label">TEMPORAL MLP · FORWARD PASS</div><div className="ml-network-flow">{[{title:'4 inputs',sub:'HH₀ · HH₁ · HH₂ · stage'},{title:'Dense · 16',sub:'ReLU activation'},{title:'Dense · 8',sub:'ReLU activation'},{title:'Softmax · 4',sub:'scenario classes'}].map((layer,index)=><div className="ml-network-layer" key={layer.title}><span>{['⌁','••••','•••','◉◉◉◉'][index]}</span><b>{layer.title}</b><small>{layer.sub}</small>{index<3&&<ArrowRight size={13} />}</div>)}</div><div className="ml-network-foot"><span>Optimizer</span><b>Mini-batch SGD</b><span>Batch size</span><b>24</b><span>Weight selection</span><b>Validation loss · early stopping</b></div></div>
+    </div>
+  </section>;
+}
+
+function ScenarioDiagnostics({ matrix, importance, sampleCount, modelName }: { matrix: ReturnType<typeof confusionMatrix>; importance: ReturnType<typeof permutationImportance>; sampleCount: number; modelName: string }) {
+  const short = ['Land', 'Water', 'Seasonal', 'Transition'];
+  const values = DEMO_CLASSES.flatMap((actual) => DEMO_CLASSES.map((predicted) => matrix[actual][predicted]));
+  const max = Math.max(...values, 1);
+  const classScores = DEMO_CLASSES.map((label) => {
+    const tp=matrix[label][label];
+    const actual=DEMO_CLASSES.reduce((sum,category)=>sum+matrix[label][category],0);
+    const predicted=DEMO_CLASSES.reduce((sum,category)=>sum+matrix[category][label],0);
+    return {label,precision:predicted?tp/predicted:0,recall:actual?tp/actual:0};
+  });
+  return <section className="ml-analysis-grid ml-scenario-diagnostics">
+    <article className="ml-panel"><div className="ml-panel-head"><div><span className="ml-overline">HELD-OUT SCENARIO PROBES / {modelName.toUpperCase()}</span><h2>Confusion matrix</h2></div><ShieldCheck size={18} className="ml-cyan"/></div><p className="ml-panel-desc">Rows are generated scenario labels; columns are model outputs. This checks behavior against the scenario generator only, not independent NISAR reference data.</p><div className="ml-confusion-wrap"><div className="ml-confusion-axis">PREDICTED CLASS →</div><div className="ml-confusion"><div className="ml-confusion-corner">ACTUAL ↓</div>{short.map((label)=><div className="ml-confusion-head" key={label}>{label}</div>)}{DEMO_CLASSES.map((actual,row)=><div className="ml-confusion-row" key={actual}><div className="ml-confusion-side">{short[row]}</div>{DEMO_CLASSES.map((predicted)=><div key={predicted} className={`ml-confusion-cell${actual===predicted?' is-correct':''}`} style={{backgroundColor:`rgba(88,174,186,${.08+.75*matrix[actual][predicted]/max})`}}>{matrix[actual][predicted]}</div>)}</div>)}</div><div className="ml-microcopy">{sampleCount} held-out generated examples · counts only</div><div className="ml-class-scores">{classScores.map((item)=><div key={item.label}><b>{item.label}</b><span>Precision {(item.precision*100).toFixed(0)}% · Recall {(item.recall*100).toFixed(0)}%</span></div>)}</div></div></article>
+    <article className="ml-panel"><div className="ml-panel-head"><div><span className="ml-overline">MODEL EXPLANATION / {modelName.toUpperCase()}</span><h2>Input sensitivity</h2></div><BrainCircuit size={18} className="ml-violet"/></div><p className="ml-panel-desc">Change in scenario-set accuracy when one input column is shuffled. Descriptive for this generated set, not causal and not a real-scene finding.</p><div className="ml-importance">{importance.map((item,index)=><div className="ml-importance-row" key={item.name}><span className="ml-importance-rank">0{index+1}</span><div><div className="ml-importance-label"><b>{item.name}</b><small>{(item.score*100).toFixed(1)} pp</small></div><div className="ml-importance-track"><i style={{width:`${Math.max(2,Math.max(0,item.score)/Math.max(importance[0]?.score??.01,.01)*100)}%`}}/></div></div></div>)}</div><div className="ml-caution-note"><AlertTriangle size={14}/> Correlated inputs can share or hide permutation importance.</div></article>
+  </section>;
+}
+
+function ScenarioLab({ forest, neural, history, bestEpoch, testSamples, onShowReal }: { forest: DemoClassifier; neural: DemoClassifier; history: LossPoint[]; bestEpoch: number; testSamples: SarSample[]; onShowReal: () => void }) {
+  const [mode, setMode] = useState<'neural'|'forest'>('neural');
+  const [features, setFeatures] = useState<SarFeatures>([-10, -17, .08, .9]);
+  const [cutoff,setCutoff]=useState(.55);
+  const [scene,setScene]=useState<ScenePerturbation>({eventDb:0,stageShift:0,persistenceShift:0});
+  const model = mode === 'neural' ? neural : forest;
+  const diagnostics = useMemo(() => ({ matrix: confusionMatrix(model, testSamples), importance: permutationImportance(model, testSamples) }), [model, testSamples]);
+  const effectiveFeatures=perturb(features,scene);
+  const prediction = getPrediction(model, effectiveFeatures);
+  const accepted=prediction.scores[prediction.label]>=cutoff;
+  const setFeature = (index: number, value: number) => setFeatures((current) => { const next: SarFeatures = [...current]; next[index] = value; return next; });
+  const presets: {label:string;values:SarFeatures}[] = [
+    {label:'Stable bank',values:[-9.4,-9.1,.06,.08]}, {label:'Open water',values:[-19.1,-18.5,.04,.94]},
+    {label:'Flood pulse',values:[-9.8,-17.4,.62,.14]}, {label:'Persistent change',values:[-10.2,-17.1,.07,.91]},
+  ];
+  const trajectory = [effectiveFeatures[0], effectiveFeatures[1], effectiveFeatures[0]*(1-effectiveFeatures[3])+effectiveFeatures[1]*effectiveFeatures[3]];
+  return <>
+    <section className="ml-sim-banner"><div className="ml-sim-badge"><BrainCircuit size={15} /> ML SCENARIO LAB</div><p>Explore how the classifiers respond to generated radar-like inputs. These scenarios are illustrative; they are <strong>not NISAR observations or validated Jamuna predictions.</strong> Model scores below are class outputs, not calibrated probabilities or accuracy.</p><button className="ml-sim-link" onClick={onShowReal}>Open real Jamuna evidence <ArrowRight size={13}/></button></section>
+    <div className="ml-model-selector" role="tablist" aria-label="Choose model"><button role="tab" aria-selected={mode==='neural'} className={mode==='neural'?'is-active':''} onClick={()=>setMode('neural')}><BrainCircuit size={17}/><span><b>Temporal MLP</b><small>4 → 16 → 8 → 4 · trained with SGD</small></span></button><button role="tab" aria-selected={mode==='forest'} className={mode==='forest'?'is-active':''} onClick={()=>setMode('forest')}><Radio size={17}/><span><b>Random Forest</b><small>31 trees · bootstrap voting</small></span></button></div>
+    <SceneControls scene={scene} onChange={setScene}/>
+    <div className="ml-visual-grid"><ScenarioCube samples={testSamples} model={model} modelName={mode==='neural'?'Temporal MLP':'Random Forest'} selected={effectiveFeatures} onSelect={setFeatures} scene={scene}/><FeatureSpace samples={testSamples} selected={features} onSelect={setFeatures} scene={scene}/></div>
+    <section className="ml-panel ml-scenario-panel"><div className="ml-panel-head"><div><span className="ml-overline">INTERACTIVE INFERENCE / {mode==='neural'?'TEMPORAL MLP':'RANDOM FOREST'}</span><h2>Probe a radar-change scenario</h2></div><span className="ml-live-dot">GENERATED INPUTS</span></div>
+      <div className="ml-presets">{presets.map((preset)=><button key={preset.label} className="ml-preset" onClick={()=>setFeatures(preset.values)}>{preset.label}</button>)}</div>
+      <div className="ml-scenario-grid"><div className="ml-sliders">{[{label:'T0 · pre-event HH γ⁰',index:0,min:-25,max:-3,step:.1,suffix:' dB'},{label:'T1 · event HH γ⁰',index:1,min:-25,max:-3,step:.1,suffix:' dB'},{label:'Stage-difference index',index:2,min:0,max:1,step:.01,suffix:''},{label:'Later-water persistence input',index:3,min:0,max:1,step:.01,suffix:''}].map((item)=><label className="ml-slider" key={item.index}><span><b>{item.label}</b><output>{features[item.index].toFixed(item.index<2?1:2)}{item.suffix}</output></span><input type="range" min={item.min} max={item.max} step={item.step} value={features[item.index]} onChange={(event)=>setFeature(item.index,Number(event.target.value))}/></label>)}
+        <div className={`ml-prediction${accepted?'':' ml-prediction--review'}`}><div className="ml-prediction__top"><span>{accepted?'SCENARIO CLASS OUTPUT':'BELOW REVIEW THRESHOLD · REVIEW'}</span><span>{(prediction.scores[prediction.label]*100).toFixed(1)}% {mode==='neural'?'SOFTMAX SCORE':'TREE-VOTE SHARE'}</span></div><strong style={{color:CLASS_COLORS[prediction.label]}}>{prediction.label}</strong><small>Largest model output for the selected inputs. It is not calibrated confidence and cannot establish erosion.</small></div>
+        <div className="ml-votes">{DEMO_CLASSES.map((label)=><div className="ml-vote" key={label}><span><i style={{backgroundColor:CLASS_COLORS[label]}}/>{label}</span><b>{(prediction.scores[label]*100).toFixed(1)}%</b><div><i style={{width:`${prediction.scores[label]*100}%`,backgroundColor:CLASS_COLORS[label]}}/></div></div>)}</div>
+        <label className="ml-slider ml-score-cutoff"><span><b>Review threshold for selected pixel</b><output>{Math.round(cutoff*100)}%</output></span><input type="range" min=".4" max=".9" step=".01" value={cutoff} onChange={(event)=>setCutoff(Number(event.target.value))}/></label>
+      </div><div className="ml-trajectory-card"><div className="ml-trajectory-head"><b>INPUT SEQUENCE · HH γ⁰</b><span>T2 is derived from persistence input</span></div><svg viewBox="0 0 360 180" role="img" aria-label="Generated HH backscatter scenario values at T0, T1 and T2"><line x1="38" y1="145" x2="330" y2="145" className="ml-chart-axis"/><line x1="38" y1="25" x2="38" y2="145" className="ml-chart-axis"/>{[-25,-15,-5].map((v,i)=><g key={v}><line x1="38" y1={145-i*55} x2="330" y2={145-i*55} className="ml-chart-grid"/><text x="30" y={149-i*55} textAnchor="end" className="ml-chart-label">{v}</text></g>)}<path d={trajectory.map((v,i)=>`${i?'L':'M'} ${75+i*115} ${145-(v+25)*5.5}`).join(' ')} fill="none" stroke="#69d7df" strokeWidth="3"/>{trajectory.map((v,i)=><g key={i}><circle cx={75+i*115} cy={145-(v+25)*5.5} r="5" fill="#101922" stroke="#9bf0ec" strokeWidth="2"/><text x={75+i*115} y={165} textAnchor="middle" className="ml-chart-label">{['T0','T1','T2'][i]}</text></g>)}</svg><p>Illustrative sequence only. No image pixels are being inferred in this scenario control.</p></div></div>
+    </section>
+    {mode==='neural'&&<TemporalTraining history={history} bestEpoch={bestEpoch}/>}
+    <ScenarioDiagnostics matrix={diagnostics.matrix} importance={diagnostics.importance} sampleCount={testSamples.length} modelName={mode==='neural'?'Temporal MLP':'Random Forest'} />
+    <details className="ml-method-details ml-scenario-model-card" open><summary>Model card · {mode==='neural'?'Temporal MLP':'Random Forest'} · inputs, training and intended use</summary><div className="ml-method-copy"><p><strong>Model:</strong> {mode==='neural'?'Dense network with 4 inputs, 16 and 8 ReLU units, and 4-way softmax; trained with mini-batch SGD and validation-loss early stopping.':'31 shallow CART trees trained by bootstrap aggregation; two randomly selected features are considered per split.'}</p><p><strong>Input features:</strong> Pre-event HH backscatter, event HH backscatter, a stage-difference index, and later-water persistence. The follow-up HH value in this scenario is derived from persistence.</p><p><strong>Training labels:</strong> Generated from hand-set scenario distributions. Held-out matrix and permutation sensitivity describe agreement with those generated rules only; they are not field-label validation.</p><p><strong>Intended use:</strong> Demonstrate model mechanics and compare responses to controlled scenarios. Do not interpret outputs as NISAR scene classifications, calibrated probabilities, or erosion estimates.</p></div></details>
+  </>;
+}
+
+function RealCaseTab({ bundle, error }: { bundle: ReachBundle | null; error: string | null }) {
+  if (error) return <div className="ml-case-error">Could not load the Jamuna source bundle: {error}</div>;
+  if (!bundle) return <div className="ml-case-loading">Loading the real NISAR evidence bundle…</div>;
+  const metric=bundle.manifest.metrics.find((item)=>item.id==='erosion_area');
+  const checks=bundle.qc?.checks??[];
+  const channels=[...new Set(metric?.inputs?.map((input)=>input.layer).filter((value):value is string=>Boolean(value)))];
+  const acquisitions=bundle.reach.dates.filter((date)=>date.status==='ok');
+  const unevaluated=checks.filter((check)=>check.status==='NOT_EVALUATED').length;
+  return <section className="ml-real-case" id="real-case">
+    <div className="ml-real-verdict"><div className="ml-real-verdict__icon"><AlertTriangle size={20}/></div><div><span>REAL NISAR CASE · {bundle.reach.verdict}</span><h2>The current observations do not support a confirmed erosion estimate.</h2><p>These values come from the Jamuna source bundle. The transition area is a threshold-based candidate, not verified ground truth.</p></div></div>
+    <section className="ml-validation-gate"><div className="ml-validation-gate__head"><BrainCircuit size={20}/><div><span>MODEL PERFORMANCE · REAL DATA</span><h2>Accuracy and F1: not evaluated</h2></div><b>NO REFERENCE LABELS</b></div><p>The available pair has {acquisitions.length} usable acquisitions, no independent labeled erosion reference, and no later-pass persistence evidence. A percentage here would imply validation this data does not provide.</p><div className="ml-validation-grid"><article><span>USABLE ACQUISITIONS</span><strong>{acquisitions.length}</strong><small>Two dates do not establish persistence</small></article><article><span>INDEPENDENT LABELS</span><strong>Unavailable</strong><small>Needed for supervised accuracy and F1</small></article><article><span>INDEPENDENT TEST SET</span><strong>Unavailable</strong><small>Needs spatially separate reference samples</small></article><article><span>QC NOT EVALUATED</span><strong>{unevaluated}</strong><small>Recorded in this data bundle</small></article></div></section>
+    <div className="ml-real-summary"><article><span>USABLE ACQUISITIONS</span><strong>{acquisitions.length}</strong><small>Relative orbit {bundle.reach.track.relative_orbit} / frame {bundle.reach.track.frame}</small></article><article><span>POLARIZATION</span><strong>{channels.join(', ')||'HHHH'}</strong><small>NISAR L-band GCOV input</small></article><article><span>THRESHOLD CANDIDATE AREA</span><strong>{metric?`${fmt(metric.value)} ha`:'Not reported'}</strong><small>Not a verified erosion estimate</small></article><article><span>QC WARNINGS / FAILS</span><strong>{checks.filter((check)=>check.status==='WARN'||check.status==='FAIL').length}</strong><small>{unevaluated} checks not evaluated</small></article></div>
+    <div className="ml-real-dates">{bundle.reach.dates.map((date)=><article key={date.date}><span className="ml-real-dot"/><div><b>{utcDate(date.acq_utc)}</b><small>{metric?.inputs?.find((input)=>input.acq_utc?.slice(0,10)===date.acq_utc.slice(0,10))?.granule??'Granule reference unavailable'}</small><em>{date.stage_source==='proxy'?'Stage context is imagery-derived; not gauge data.':`${date.stage_source} stage context`}</em></div></article>)}</div>
+    <div className="ml-real-qc">{checks.map((check)=><article key={check.id} className={`ml-qc-card ml-qc-card--${check.status.toLowerCase()}`}><div><span>{check.status==='PASS'?<Check size={14}/>:check.status==='WARN'||check.status==='FAIL'?<AlertTriangle size={14}/>:<CircleHelp size={14}/>}</span><b>{check.label??check.id}</b><em>{QC_STATUS[check.status]}</em></div><p>{check.explanation??'No explanation recorded.'}</p></article>)}</div>
+    <aside className="ml-real-caveat"><strong>Evidence needed to resolve this case</strong><span>Additional same-track acquisitions across the seasonal stage cycle, gauge-level stage control, later-date persistence, stable thresholding, and independent reference validation.</span></aside>
+  </section>;
+}
 
 export function IntelligencePage() {
-  const { reachId, reach } = useStore();
-  const [threshold, setThreshold] = useState<number>(0.5);
-  const [telemetryLines, setTelemetryLines] = useState<string[]>([]);
-  const telemetryFeedRef = useRef<HTMLDivElement>(null);
-  const [mounted, setMounted] = useState(false);
-  const [hoveredPoint, setHoveredPoint] = useState<number | null>(null);
-  const [hoveredCell, setHoveredCell] = useState<{ r: number; c: number } | null>(null);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const allTelemetry = [
-    "[14:02:01.041] INGEST: Loaded NISAR Granule NIL2GCOV_20260801_120000",
-    "[14:02:01.892] PREPROCESS: Applying Lee-Sigma speckle filter (window=7x7)...",
-    "[14:02:02.104] ANOMALY: High TEC Faraday rotation detected in azimuth sector 4.",
-    "[14:02:02.155] CORRECT: Auto-compensating phase unwrapping using quad-pol signatures.",
-    "[14:02:03.441] MASK: Fetching GLO-30 HAND data... Excluding 1,452,109 pixels > 15m elevation.",
-    "[14:02:04.012] INFER: Running 4D-SAR Transformer forward pass (batch_size=32)...",
-    "[14:02:06.874] DETECT: 1,247 ha water-to-land transition classified.",
-    "[14:02:07.112] FILTER: Rejecting 45 ha due to temporal coherence < 0.35 (dense vegetation artifact).",
-    "[14:02:08.000] COMMIT: Morphological erosion vectors pushed to Impact Database."
-  ];
-
-  useEffect(() => {
-    let index = 0;
-    const interval = setInterval(() => {
-      if (index < allTelemetry.length) {
-        const line = allTelemetry[index];
-        setTelemetryLines(prev => [...prev, line]);
-        index++;
-      } else {
-        clearInterval(interval);
-      }
-    }, 400); // 400ms stagger
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    if (telemetryFeedRef.current) {
-      telemetryFeedRef.current.scrollTop = telemetryFeedRef.current.scrollHeight;
-    }
-  }, [telemetryLines]);
-
-
-  // Backscatter data
-  const timeSeriesData = [
-    { date: 'Aug 02', hh: -9.2, hv: -16.4 },
-    { date: 'Aug 08', hh: -9.5, hv: -16.8 },
-    { date: 'Aug 14', hh: -10.1, hv: -17.2 },
-    { date: 'Aug 20', hh: -14.8, hv: -21.5 }, // Change event
-    { date: 'Aug 26', hh: -15.2, hv: -22.1 },
-    { date: 'Sep 01', hh: -14.9, hv: -21.8 },
-    { date: 'Sep 07', hh: -15.5, hv: -22.5 },
-    { date: 'Sep 13', hh: -15.1, hv: -21.9 },
-  ];
-
-  // Map backscatter dB (-25 to -5) to SVG Y (200 to 0)
-  const mapDbToY = (db: number) => {
-    const minDb = -25;
-    const maxDb = -5;
-    const range = maxDb - minDb;
-    const height = 200;
-    return height - ((db - minDb) / range) * height;
-  };
-
-  const getPoints = (key: 'hh' | 'hv') => {
-    return timeSeriesData.map((d, i) => {
-      const x = (i / (timeSeriesData.length - 1)) * 600;
-      const y = mapDbToY(d[key]);
-      return `${x},${y}`;
-    }).join(' ');
-  };
-
-  // ROC Curve Data
-  const rocPoints = "0,200 10,150 25,80 50,40 100,15 200,5 400,0 600,0";
-
-  // Feature Importance
-  const features = [
-    { name: 'σ⁰ HH Backscatter Change (dB)', value: 0.31 },
-    { name: 'Coherence Loss (γ)', value: 0.22 },
-    { name: 'σ⁰ HV Cross-pol Ratio', value: 0.18 },
-    { name: 'HAND (Height Above Nearest Drainage)', value: 0.12 },
-    { name: 'Precipitation Anomaly (GPM)', value: 0.09 },
-    { name: 'DEM Slope (°)', value: 0.05 },
-    { name: 'Distance to Channel (m)', value: 0.03 },
-  ];
-
-  // Training History Data
-  const epochData = Array.from({ length: 50 }, (_, i) => {
-    const epoch = i * 10;
-    // Loss starts 0.85 -> 0.12
-    const loss = 0.12 + 0.73 * Math.exp(-i / 10);
-    // IoU starts 0.15 -> 0.872
-    const iou = 0.872 - 0.722 * Math.exp(-i / 8);
-    return { epoch, loss, iou };
-  });
-
-  const getEpochPoints = (key: 'loss' | 'iou') => {
-    return epochData.map((d, i) => {
-      const x = (i / (epochData.length - 1)) * 600;
-      const y = key === 'loss' ? 200 - (d.loss / 1.0) * 200 : 200 - (d.iou / 1.0) * 200;
-      return `${x},${y}`;
-    }).join(' ');
-  };
-
-  return (
-    <div style={{ backgroundColor: 'transparent', minHeight: '100vh', color: 'var(--text, #E2E8F0)', fontFamily: 'system-ui, sans-serif' }}>
-      <Navbar />
-      <div className="navbar-spacer" style={{ height: '80px' }} />
-
-      <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 2rem 4rem 2rem' }}>
-        
-        {/* Section 1: Hero Header */}
-        <section style={{ textAlign: 'center', marginBottom: '4rem', animation: mounted ? 'fadeIn 1s ease-out' : 'none', opacity: mounted ? 1 : 0, transition: 'opacity 1s' }}>
-          <div style={{ display: 'inline-block', padding: '0.25rem 1rem', borderRadius: '9999px', backgroundColor: 'rgba(var(--water-rgb), 0.1)', color: 'var(--water, #39C4D9)', border: '1px solid rgba(var(--water-rgb), 0.3)', marginBottom: '1.5rem', fontSize: '0.875rem', fontWeight: 600, letterSpacing: '0.05em' }}>
-            LIVE ML INFERENCE CLUSTER
-          </div>
-          <h1 className="glow-text" style={{ fontSize: '3.5rem', fontWeight: 800, margin: '0 0 1rem 0', letterSpacing: '-0.02em' }}>
-            Spatio-Temporal Prediction Engine
-          </h1>
-          <p style={{ fontSize: '1.25rem', color: 'var(--text-2, #94A3B8)', maxWidth: '800px', margin: '0 auto 3rem auto', lineHeight: 1.6 }}>
-            Our 4D-SAR Transformer architecture processes dense multi-temporal NISAR L-band acquisitions. By fusing spatial context with polarimetric temporal attention, the model isolates persistent surface changes from seasonal phenology.
-          </p>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem' }}>
-            {[
-              { label: 'Global Sites Monitored', value: '4' },
-              { label: 'SAR Acquisitions Processed', value: '12' },
-              { label: 'Mean IoU', value: '0.872' },
-              { label: 'BCE Loss', value: '< 0.12' },
-            ].map((metric, i) => (
-              <div key={i} className="glass-panel" style={{ padding: '2rem', textAlign: 'center', borderRadius: '12px' }}>
-                <div style={{ fontSize: '2.5rem', fontWeight: 700, color: 'var(--water, #39C4D9)', fontFamily: 'var(--font-num, "IBM Plex Mono", monospace)', marginBottom: '0.5rem' }}>{metric.value}</div>
-                <div style={{ fontSize: '0.875rem', color: 'var(--text-3, #64748B)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{metric.label}</div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Section 2: SAR Backscatter Time-Series Analysis */}
-        <section className="glass-panel" style={{ padding: '3rem', marginBottom: '4rem', borderRadius: '16px', position: 'relative', overflow: 'hidden' }}>
-          <h2 style={{ margin: '0 0 0.5rem 0', fontSize: '2rem' }}>{reach ? reach.name + " -" : ""} L-band Backscatter Temporal Profile</h2>
-          <p style={{ color: 'var(--text-2, #94A3B8)', margin: '0 0 2rem 0' }}>σ⁰ HH + HV polarization channels — Otsu bimodal threshold</p>
-          
-          <div style={{ position: 'relative', height: '300px', width: '100%', maxWidth: '800px', margin: '0 auto' }}>
-            <svg viewBox="-50 -20 700 250" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
-              {/* Grid and Axes */}
-              <line x1="0" y1="0" x2="0" y2="200" stroke="var(--line-strong)" strokeWidth="2" />
-              <line x1="0" y1="200" x2="600" y2="200" stroke="var(--line-strong)" strokeWidth="2" />
-              
-              {/* Y-axis labels */}
-              {[-5, -10, -15, -20, -25].map(db => (
-                <text key={db} x="-10" y={mapDbToY(db)} fill="#64748B" fontSize="14" textAnchor="end" dominantBaseline="middle">{db} dB</text>
-              ))}
-
-              {/* Threshold line */}
-              <line x1="0" y1={mapDbToY(-14.2)} x2="600" y2={mapDbToY(-14.2)} stroke="rgba(228, 87, 46, 0.8)" strokeWidth="2" strokeDasharray="6,4" />
-              <text x="610" y={mapDbToY(-14.2)} fill="var(--erosion, #E4572E)" fontSize="14" dominantBaseline="middle">Otsu Threshold (-14.2 dB)</text>
-              
-              {/* Shaded water zone */}
-              <rect x="0" y={mapDbToY(-14.2)} width="600" height={200 - mapDbToY(-14.2)} fill="rgba(var(--water-rgb), 0.1)" />
-              <text x="300" y={mapDbToY(-14.2) + 20} fill="var(--water, #39C4D9)" fontSize="14" textAnchor="middle" opacity="0.6">Water Detection Zone</text>
-
-              {/* Data Lines */}
-              <polyline 
-                points={getPoints('hh')} 
-                fill="none" 
-                stroke="var(--water, #39C4D9)" 
-                strokeWidth="3"
-                style={{ strokeDasharray: '2000', strokeDashoffset: mounted ? 0 : 2000, transition: 'stroke-dashoffset 2s ease-out' }}
-              />
-              <polyline 
-                points={getPoints('hv')} 
-                fill="none" 
-                stroke="var(--accretion, #D9B26A)" 
-                strokeWidth="3"
-                style={{ strokeDasharray: '2000', strokeDashoffset: mounted ? 0 : 2000, transition: 'stroke-dashoffset 2s ease-out 0.5s' }}
-              />
-
-              {/* X-axis labels and interaction points */}
-              {timeSeriesData.map((d, i) => {
-                const x = (i / (timeSeriesData.length - 1)) * 600;
-                return (
-                  <g key={i} onMouseEnter={() => setHoveredPoint(i)} onMouseLeave={() => setHoveredPoint(null)}>
-                    <text x={x} y="220" fill="#64748B" fontSize="14" textAnchor="middle">{d.date}</text>
-                    <circle cx={x} cy={mapDbToY(d.hh)} r="5" fill="var(--water, #39C4D9)" style={{ cursor: 'pointer', transform: hoveredPoint === i ? 'scale(1.5)' : 'scale(1)', transformOrigin: `${x}px ${mapDbToY(d.hh)}px`, transition: 'transform 0.2s' }} />
-                    <circle cx={x} cy={mapDbToY(d.hv)} r="5" fill="var(--accretion, #D9B26A)" style={{ cursor: 'pointer', transform: hoveredPoint === i ? 'scale(1.5)' : 'scale(1)', transformOrigin: `${x}px ${mapDbToY(d.hv)}px`, transition: 'transform 0.2s' }} />
-                    
-                    {/* Tooltip */}
-                    {hoveredPoint === i && (
-                      <g style={{ pointerEvents: 'none' }}>
-                        <rect x={x - 45} y={Math.min(mapDbToY(d.hh), mapDbToY(d.hv)) - 55} width="90" height="45" fill="var(--panel)" stroke="var(--line-strong)" rx="4" />
-                        <text x={x} y={Math.min(mapDbToY(d.hh), mapDbToY(d.hv)) - 38} fill="var(--water, #39C4D9)" fontSize="13" textAnchor="middle" fontFamily="var(--font-num)">HH: {d.hh.toFixed(1)}</text>
-                        <text x={x} y={Math.min(mapDbToY(d.hh), mapDbToY(d.hv)) - 22} fill="var(--accretion, #D9B26A)" fontSize="13" textAnchor="middle" fontFamily="var(--font-num)">HV: {d.hv.toFixed(1)}</text>
-                      </g>
-                    )}
-                  </g>
-                );
-              })}
-            </svg>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem', marginTop: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><div style={{ width: '12px', height: '12px', backgroundColor: 'var(--water, #39C4D9)', borderRadius: '50%' }}></div> <span style={{ fontSize: '0.875rem' }}>HH (Co-pol)</span></div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><div style={{ width: '12px', height: '12px', backgroundColor: 'var(--accretion, #D9B26A)', borderRadius: '50%' }}></div> <span style={{ fontSize: '0.875rem' }}>HV (Cross-pol)</span></div>
-          </div>
-        </section>
-
-        
-        {/* Section 2b: Coherence Decay Profiler */}
-        <section className="glass-panel" style={{ padding: '3rem', marginBottom: '4rem', borderRadius: '16px' }}>
-          <h2 style={{ margin: '0 0 0.5rem 0', fontSize: '2rem' }}>InSAR Coherence Decay Profiler (γ)</h2>
-          <p style={{ color: 'var(--text-2, #94A3B8)', margin: '0 0 2rem 0' }}>Detecting surface anomalies through temporal decorrelation. A sudden drop indicates a change event.</p>
-          
-          <div style={{ height: '350px', position: 'relative', borderBottom: '1px solid var(--line)', borderLeft: '1px solid var(--line)', marginTop: '2rem', marginLeft: '3rem', marginRight: '9rem' }}>
-            <svg width="100%" height="100%" viewBox="0 0 800 350" preserveAspectRatio="none" style={{ overflow: 'visible' }}>
-              {/* Grid lines */}
-              {[0, 0.2, 0.4, 0.6, 0.8, 1.0].map((val, i) => (
-                <g key={i}>
-                  <line x1="0" y1={350 - val*300} x2="800" y2={350 - val*300} stroke="var(--line)" strokeDasharray="4 4" />
-                  <text x="-30" y={350 - val*300 + 4} fill="var(--text-3)" fontSize="14">{val.toFixed(1)}</text>
-                </g>
-              ))}
-              <text x="-40" y="20" fill="var(--text-3)" fontSize="14" transform="rotate(-90 -40 20)">Coherence (γ)</text>
-              <text x="400" y="380" fill="var(--text-3)" fontSize="14" textAnchor="middle">Time (days)</text>
-              
-              {/* X Axis ticks */}
-              {[0, 12, 24, 36, 48].map((day) => (
-                <text key={day} x={(day/48)*800} y="365" fill="var(--text-3)" fontSize="14" textAnchor="middle">{day}</text>
-              ))}
-
-              {/* Urban (τ=500d) */}
-              <path d="M0 50 Q 400 65, 800 80" fill="none" stroke="var(--text-3)" strokeWidth="2" />
-              <text x="810" y="80" fill="var(--text-3)" fontSize="14">Urban</text>
-
-              {/* Bare soil (τ=365d) */}
-              <path d="M0 50 Q 400 90, 800 130" fill="none" stroke="#D9B26A" strokeWidth="2" />
-              <text x="810" y="130" fill="#D9B26A" fontSize="14">Bare Soil</text>
-
-              {/* Vegetation (τ=15d) */}
-              <path d="M0 50 Q 200 250, 800 300" fill="none" stroke="#7FBF8E" strokeWidth="2" />
-              <text x="810" y="300" fill="#7FBF8E" fontSize="14">Vegetation</text>
-
-              {/* Changed surface (ANOMALY) */}
-              <path d="M0 50 L 200 70 L 200 300 L 800 320" fill="none" stroke="#E4572E" strokeWidth="3" />
-              <circle cx="200" cy="300" r="5" fill="#E4572E" />
-              <text x="215" y="295" fill="#E4572E" fontSize="14" fontWeight="bold">↓ DETECTION POINT</text>
-              <text x="810" y="320" fill="#E4572E" fontSize="14" fontWeight="bold">Changed Surface</text>
-
-              {/* Water */}
-              <path d="M0 350 L 800 350" fill="none" stroke="var(--water)" strokeWidth="2" />
-              <text x="810" y="350" fill="var(--water)" fontSize="14">Water (γ≈0)</text>
-            </svg>
-          </div>
-        </section>
-
-        {/* Section 3: Polarimetric Decomposition Viewer */}
-        <section className="glass-panel" style={{ padding: '3rem', marginBottom: '4rem', borderRadius: '16px' }}>
-          <h2 style={{ margin: '0 0 0.5rem 0', fontSize: '2rem' }}>Dual-Pol Decomposition: Surface vs Volume Scattering</h2>
-          <p style={{ color: 'var(--text-2, #94A3B8)', margin: '0 0 2rem 0' }}>L-band penetrates vegetation canopy, allowing precise measurement of sub-canopy inundation and structural changes.</p>
-          
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2rem' }}>
-            {[
-              { title: 'HH (Co-pol)', subtitle: 'Surface scattering dominates', color: 'rgba(57, 196, 217,', gradient: 'linear-gradient(135deg, var(--surface) 0%, rgba(var(--water-rgb), 0.4) 50%, var(--surface) 100%)', bar: 'linear-gradient(to right, #000, #39C4D9)' },
-              { title: 'HV (Cross-pol)', subtitle: 'Volume scattering from vegetation', color: 'rgba(217, 178, 106,', gradient: 'radial-gradient(circle at 70% 30%, rgba(217, 178, 106, 0.5) 0%, var(--surface) 70%)', bar: 'linear-gradient(to right, #000, #D9B26A)' },
-              { title: 'HH/HV Ratio', subtitle: 'Change detection signal', color: 'rgba(228, 87, 46,', gradient: 'conic-gradient(from 180deg at 50% 50%, var(--surface) 0deg, rgba(228, 87, 46, 0.6) 180deg, var(--surface) 360deg)', bar: 'linear-gradient(to right, #000, #E4572E)' }
-            ].map((panel, i) => (
-              <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div style={{ aspectRatio: '1', borderRadius: '8px', background: panel.gradient, border: `1px solid ${panel.color} 0.3)`, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(var(--fg-rgb), 0.03) 10px, rgba(var(--fg-rgb), 0.03) 20px)' }}></div>
-                </div>
-                <div style={{ height: '8px', borderRadius: '4px', background: panel.bar }}></div>
-                <div>
-                  <h3 style={{ margin: '0 0 0.25rem 0', fontSize: '1.1rem' }}>{panel.title}</h3>
-                  <div style={{ fontSize: '0.875rem', color: 'var(--text-3, #64748B)' }}>{panel.subtitle}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-                  {/* Section 4: Confusion Matrix */}
-        <section className="glass-panel" style={{ padding: '3rem', marginBottom: '4rem', borderRadius: '16px' }}>
-          <h2 style={{ margin: '0 0 0.5rem 0', fontSize: '2rem' }}>Detection Confidence Threshold</h2>
-          <div style={{ marginBottom: '2rem' }}>
-            <p style={{ color: 'var(--text-2)', marginBottom: '1rem' }}>Adjust the model's confidence threshold to balance precision vs. recall. Higher threshold reduces false positives but may miss subtle changes.</p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-              <input 
-                type="range" 
-                min="0.5" max="0.95" step="0.01" 
-                value={threshold} 
-                onChange={(e) => setThreshold(parseFloat(e.target.value))}
-                style={{ flex: 1, accentColor: 'var(--water)' }} 
-              />
-              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--water)', fontFamily: 'var(--font-num)', minWidth: '80px', textAlign: 'right' }}>
-                {threshold.toFixed(2)}
-              </div>
-            </div>
-            <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(var(--water-rgb), 0.1)', borderRadius: '8px', border: '1px solid rgba(var(--water-rgb), 0.2)', color: 'var(--water)', fontSize: '0.9rem' }}>
-              <strong>Impact:</strong> At confidence &ge; {threshold.toFixed(2)}: {Math.round(1247 - ((threshold - 0.5) / 0.45) * 600)} ha erosion detected (vs 1,247 ha at 0.5)
-            </div>
-          </div>
-
-          <h2 style={{ margin: '0 0 0.5rem 0', fontSize: '2rem' }}>Multi-Class Change Detection - Confusion Matrix</h2>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
-            <p style={{ color: 'var(--text-2, #94A3B8)', margin: 0, maxWidth: '600px' }}>Evaluating pixel-wise predictions across 3 dominant classes on the held-out test set.</p>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--pass, #7FBF8E)', lineHeight: 1 }}>
-                {(
-                  (
-                    Math.round(2847 - ((threshold - 0.5) / 0.45) * 200) + 
-                    Math.round(5621 - ((threshold - 0.5) / 0.45) * 300) + 
-                    Math.round(1893 - ((threshold - 0.5) / 0.45) * 400)
-                  ) / 10647 * 100
-                ).toFixed(1)}%
-              </div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-3, #64748B)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Overall Accuracy</div>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', writingMode: 'vertical-rl', transform: 'rotate(180deg)', color: 'var(--text-2)', fontWeight: 600, letterSpacing: '0.1em' }}>
-                ACTUAL CLASS
-              </div>
-              <div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'auto repeat(3, 1fr)', gap: '4px' }}>
-                  <div />
-                  {['Water', 'Land', 'Changed'].map((label, c) => (
-                    <div key={c} style={{ textAlign: 'center', padding: '0.5rem', fontWeight: 600, color: 'var(--text-2)' }}>{label}</div>
-                  ))}
-                  
-                  {(() => {
-                    const tf = (threshold - 0.5) / 0.45;
-                    const matrix = [
-                      { label: 'Water', vals: [
-                          { v: Math.round(2847 - tf * 200), color: '#39C4D9', desc: "True Water: correctly classified as water." }, 
-                          { v: Math.round(23 + tf * 150), color: '#334155', desc: "False Land: Water pixels misclassified as land (higher threshold increases false negatives)." }, 
-                          { v: Math.round(8 + tf * 50), color: '#334155', desc: "False Changed: Water misclassified as changed." }
-                      ]},
-                      { label: 'Land', vals: [
-                          { v: Math.round(31 + tf * 120), color: '#334155', desc: "False Water: Land misclassified as water." }, 
-                          { v: Math.round(5621 - tf * 300), color: '#7FBF8E', desc: "True Land: correctly classified as land." }, 
-                          { v: Math.round(45 + tf * 180), color: '#334155', desc: "False Changed: Land misclassified as changed." }
-                      ]},
-                      { label: 'Changed', vals: [
-                          { v: Math.round(12 + tf * 80), color: '#334155', desc: "False Water: Changed pixels misclassified as water." }, 
-                          { v: Math.round(67 + tf * 320), color: '#334155', desc: "False Land: Changed pixels misclassified as land (missed detection)." }, 
-                          { v: Math.round(1893 - tf * 400), color: '#E4572E', desc: "True Changed: correctly identified as erosion/accretion." }
-                      ]}
-                    ];
-                    return matrix.map((row, r) => (
-                      <React.Fragment key={r}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: '1rem', fontWeight: 600, color: 'var(--text-2)' }}>{row.label}</div>
-                        {row.vals.map((cell, c) => (
-                          <div 
-                            key={c}
-                            title={cell.desc}
-                            onMouseEnter={() => setHoveredCell({ r, c })}
-                            onMouseLeave={() => setHoveredCell(null)}
-                            style={{
-                              backgroundColor: cell.color,
-                              opacity: (hoveredCell && (hoveredCell.r === r || hoveredCell.c === c)) ? 1 : 0.8,
-                              padding: '2rem',
-                              textAlign: 'center',
-                              borderRadius: '4px',
-                              fontFamily: 'var(--font-num)',
-                              fontSize: '1.25rem',
-                              fontWeight: 700,
-                              color: cell.color === '#334155' ? 'var(--text-2)' : '#000',
-                              transition: 'all 0.2s ease',
-                              transform: (hoveredCell?.r === r && hoveredCell?.c === c) ? 'scale(1.05)' : 'scale(1)',
-                              zIndex: (hoveredCell?.r === r && hoveredCell?.c === c) ? 10 : 1,
-                              boxShadow: (hoveredCell?.r === r && hoveredCell?.c === c) ? '0 10px 25px -5px rgba(var(--shadow-rgb), 0.5)' : 'none'
-                            }}
-                          >
-                            {cell.v}
-                          </div>
-                        ))}
-                      </React.Fragment>
-                    ));
-                  })()}
-                </div>
-                <div style={{ textAlign: 'center', marginTop: '1rem', color: 'var(--text-2)', fontWeight: 600, letterSpacing: '0.1em' }}>
-                  PREDICTED CLASS
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2rem', marginTop: '3rem', width: '100%', maxWidth: '800px' }}>
-              {(() => {
-                const tf = (threshold - 0.5) / 0.45;
-                const matrix = [
-                  [Math.round(2847 - tf * 200), Math.round(23 + tf * 150), Math.round(8 + tf * 50)],
-                  [Math.round(31 + tf * 120), Math.round(5621 - tf * 300), Math.round(45 + tf * 180)],
-                  [Math.round(12 + tf * 80), Math.round(67 + tf * 320), Math.round(1893 - tf * 400)]
-                ];
-                const labels = ['Water', 'Land', 'Changed'];
-                return labels.map((label, i) => {
-                  const tp = matrix[i][i];
-                  const fp = matrix.reduce((acc, row, r) => acc + (r !== i ? row[i] : 0), 0);
-                  const fn = matrix[i].reduce((acc, val, c) => acc + (c !== i ? val : 0), 0);
-                  const p = ((tp / (tp + fp)) * 100).toFixed(1) + '%';
-                  const r = ((tp / (tp + fn)) * 100).toFixed(1) + '%';
-                  const f1 = ((2 * tp / (2 * tp + fp + fn)) * 100).toFixed(1) + '%';
-                  return (
-                    <div key={i} style={{ backgroundColor: 'rgba(var(--fg-rgb), 0.03)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(var(--fg-rgb), 0.1)' }}>
-                      <div style={{ fontWeight: 600, marginBottom: '0.5rem', textAlign: 'center', color: 'var(--text)' }}>{label} Metrics</div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', marginBottom: '0.25rem' }}><span style={{ color: 'var(--text-3)' }}>Precision</span> <span style={{ fontFamily: 'var(--font-num)' }}>{p}</span></div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', marginBottom: '0.25rem' }}><span style={{ color: 'var(--text-3)' }}>Recall</span> <span style={{ fontFamily: 'var(--font-num)' }}>{r}</span></div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}><span style={{ color: 'var(--text-3)' }}>F1-Score</span> <span style={{ fontFamily: 'var(--font-num)' }}>{f1}</span></div>
-                    </div>
-                  );
-                });
-              })()}
-            </div>
-          </div>
-        </section>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4rem', marginBottom: '4rem' }}>
-          {/* Section 5: ROC Curve */}
-          <section className="glass-panel" style={{ padding: '3rem', borderRadius: '16px' }}>
-            <h2 style={{ margin: '0 0 0.5rem 0', fontSize: '1.5rem' }}>Receiver Operating Characteristic</h2>
-            <p style={{ color: 'var(--text-2, #94A3B8)', margin: '0 0 2rem 0', fontSize: '0.875rem' }}>Change vs No-Change Classification</p>
-            
-            <div style={{ position: 'relative', height: '300px', width: '100%' }}>
-              <svg viewBox="-30 -10 650 250" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
-                <line x1="0" y1="0" x2="0" y2="200" stroke="var(--line-strong)" strokeWidth="2" />
-                <line x1="0" y1="200" x2="600" y2="200" stroke="var(--line-strong)" strokeWidth="2" />
-                
-                {/* Labels */}
-                <text x="-15" y="0" fill="#64748B" fontSize="14" textAnchor="end">1.0</text>
-                <text x="-15" y="100" fill="#64748B" fontSize="14" textAnchor="end">0.5</text>
-                <text x="-15" y="200" fill="#64748B" fontSize="14" textAnchor="end">0.0</text>
-                
-                <text x="0" y="220" fill="#64748B" fontSize="14" textAnchor="middle">0.0</text>
-                <text x="300" y="220" fill="#64748B" fontSize="14" textAnchor="middle">0.5</text>
-                <text x="600" y="220" fill="#64748B" fontSize="14" textAnchor="middle">1.0</text>
-                
-                <text x="-40" y="100" fill="#64748B" fontSize="14" textAnchor="middle" transform="rotate(-90, -40, 100)">True Positive Rate</text>
-                <text x="300" y="240" fill="#64748B" fontSize="14" textAnchor="middle">False Positive Rate</text>
-
-                {/* Baseline */}
-                <line x1="0" y1="200" x2="600" y2="0" stroke="#475569" strokeWidth="2" strokeDasharray="8,8" />
-                
-                {/* Shaded AUC */}
-                <polygon points={`0,200 ${rocPoints} 600,200`} fill="rgba(var(--water-rgb), 0.1)" />
-                
-                {/* Curve */}
-                <polyline 
-                  points={rocPoints} 
-                  fill="none" 
-                  stroke="var(--water, #39C4D9)" 
-                  strokeWidth="3"
-                  style={{ strokeDasharray: '1000', strokeDashoffset: mounted ? 0 : 1000, transition: 'stroke-dashoffset 2s ease-out' }}
-                />
-
-                <text x="400" y="80" fill="var(--water, #39C4D9)" fontSize="24" fontWeight="bold">AUC = 0.964</text>
-              </svg>
-            </div>
-          </section>
-
-          {/* Section 6: Feature Importance */}
-          <section className="glass-panel" style={{ padding: '3rem', borderRadius: '16px' }}>
-            <h2 style={{ margin: '0 0 0.5rem 0', fontSize: '1.5rem' }}>SHAP Feature Importance</h2>
-            <p style={{ color: 'var(--text-2, #94A3B8)', margin: '0 0 2rem 0', fontSize: '0.875rem' }}>Random Forest + Gradient Boosting Ensemble</p>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {features.map((feat, i) => (
-                <div key={i}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', marginBottom: '0.25rem' }}>
-                    <span>{feat.name}</span>
-                    <span style={{ fontFamily: 'var(--font-num)', color: 'var(--water, #39C4D9)' }}>{feat.value}</span>
-                  </div>
-                  <div style={{ height: '8px', backgroundColor: 'rgba(var(--fg-rgb), 0.05)', borderRadius: '4px', overflow: 'hidden' }}>
-                    <div 
-                      style={{ 
-                        height: '100%', 
-                        width: mounted ? `${(feat.value / 0.31) * 100}%` : '0%', 
-                        backgroundColor: `rgba(57, 196, 217, ${0.4 + (feat.value / 0.31) * 0.6})`,
-                        transition: `width 1s ease-out ${i * 0.1}s` 
-                      }} 
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
-
-        {/* Section 7: Training History */}
-        <section className="glass-panel" style={{ padding: '3rem', marginBottom: '4rem', borderRadius: '16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <h2 style={{ margin: '0 0 0.5rem 0', fontSize: '2rem' }}>Training Convergence</h2>
-              <p style={{ color: 'var(--text-2, #94A3B8)', margin: '0 0 2rem 0' }}>5-Fold Cross-Validation — BCE Loss vs IoU</p>
-            </div>
-            <div style={{ display: 'flex', gap: '2rem', textAlign: 'right' }}>
-              <div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--erosion, #E4572E)', fontFamily: 'var(--font-num)' }}>0.121</div>
-                <div style={{ fontSize: '0.86rem', color: 'var(--text-3)', textTransform: 'uppercase' }}>Val Loss</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--water, #39C4D9)', fontFamily: 'var(--font-num)' }}>0.872</div>
-                <div style={{ fontSize: '0.86rem', color: 'var(--text-3)', textTransform: 'uppercase' }}>Val IoU</div>
-              </div>
-            </div>
-          </div>
-
-          <div style={{ position: 'relative', height: '300px', width: '100%', maxWidth: '900px', margin: '0 auto' }}>
-            <svg viewBox="-50 -20 700 250" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
-              <line x1="0" y1="0" x2="0" y2="200" stroke="var(--line-strong)" strokeWidth="2" />
-              <line x1="600" y1="0" x2="600" y2="200" stroke="var(--line-strong)" strokeWidth="2" />
-              <line x1="0" y1="200" x2="600" y2="200" stroke="var(--line-strong)" strokeWidth="2" />
-
-              {/* Y-axis L (Loss) */}
-              {[0, 0.2, 0.4, 0.6, 0.8, 1.0].map(v => (
-                <text key={v} x="-10" y={200 - v * 200} fill="var(--erosion, #E4572E)" fontSize="14" textAnchor="end" dominantBaseline="middle">{v.toFixed(1)}</text>
-              ))}
-              <text x="-40" y="100" fill="var(--erosion, #E4572E)" fontSize="14" textAnchor="middle" transform="rotate(-90, -40, 100)">BCE Loss</text>
-
-              {/* Y-axis R (IoU) */}
-              {[0, 0.2, 0.4, 0.6, 0.8, 1.0].map(v => (
-                <text key={v} x="610" y={200 - v * 200} fill="var(--water, #39C4D9)" fontSize="14" textAnchor="start" dominantBaseline="middle">{v.toFixed(1)}</text>
-              ))}
-              <text x="640" y="100" fill="var(--water, #39C4D9)" fontSize="14" textAnchor="middle" transform="rotate(-90, 640, 100)">IoU Score</text>
-
-              {/* X-axis */}
-              {[0, 100, 200, 300, 400, 500].map(v => (
-                <text key={v} x={(v/500)*600} y="220" fill="#64748B" fontSize="14" textAnchor="middle">{v}</text>
-              ))}
-              <text x="300" y="240" fill="#64748B" fontSize="14" textAnchor="middle">Epochs</text>
-
-              {/* Early stopping line */}
-              <line x1={(350/500)*600} y1="0" x2={(350/500)*600} y2="200" stroke="#94A3B8" strokeWidth="1" strokeDasharray="4,4" />
-              <text x={(350/500)*600 + 10} y="20" fill="#94A3B8" fontSize="13">Early stopping checkpoint</text>
-
-              {/* Lines */}
-              <polyline 
-                points={getEpochPoints('loss')} 
-                fill="none" 
-                stroke="var(--erosion, #E4572E)" 
-                strokeWidth="2.5"
-                style={{ strokeDasharray: '2000', strokeDashoffset: mounted ? 0 : 2000, transition: 'stroke-dashoffset 2s ease-in-out' }}
-              />
-              <polyline 
-                points={getEpochPoints('iou')} 
-                fill="none" 
-                stroke="var(--water, #39C4D9)" 
-                strokeWidth="2.5"
-                style={{ strokeDasharray: '2000', strokeDashoffset: mounted ? 0 : 2000, transition: 'stroke-dashoffset 2s ease-in-out 0.2s' }}
-              />
-            </svg>
-          </div>
-        </section>
-
-        {/* Section 8: Cross-Validation Results Table */}
-        <section className="glass-panel" style={{ padding: '3rem', marginBottom: '4rem', borderRadius: '16px' }}>
-          <h2 style={{ margin: '0 0 0.5rem 0', fontSize: '2rem' }}>Stratified K-Fold Cross-Validation Results</h2>
-          <p style={{ color: 'var(--text-2, #94A3B8)', margin: '0 0 2rem 0' }}>Evaluating generalizability across diverse biomes and sensor viewing geometries.</p>
-          
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid rgba(var(--fg-rgb), 0.1)', color: 'var(--text-3)' }}>
-                  <th style={{ padding: '1rem', fontWeight: 600 }}>Fold</th>
-                  <th style={{ padding: '1rem', fontWeight: 600 }}>Train IoU</th>
-                  <th style={{ padding: '1rem', fontWeight: 600 }}>Val IoU</th>
-                  <th style={{ padding: '1rem', fontWeight: 600 }}>Train F1</th>
-                  <th style={{ padding: '1rem', fontWeight: 600 }}>Val F1</th>
-                  <th style={{ padding: '1rem', fontWeight: 600 }}>Epochs</th>
-                </tr>
-              </thead>
-              <tbody style={{ fontFamily: 'var(--font-num)' }}>
-                {[
-                  { fold: '1', trIou: '0.921', vIou: '0.864', trF1: '0.947', vF1: '0.923', ep: '487' },
-                  { fold: '2', trIou: '0.908', vIou: '0.879', trF1: '0.941', vF1: '0.931', ep: '462' },
-                  { fold: '3', trIou: '0.918', vIou: '0.868', trF1: '0.944', vF1: '0.925', ep: '501' },
-                  { fold: '4', trIou: '0.905', vIou: '0.881', trF1: '0.938', vF1: '0.934', ep: '445' },
-                  { fold: '5', trIou: '0.911', vIou: '0.871', trF1: '0.942', vF1: '0.927', ep: '478' },
-                ].map((row, i) => (
-                  <tr key={i} style={{ borderBottom: '1px solid rgba(var(--fg-rgb), 0.05)', backgroundColor: i % 2 === 0 ? 'rgba(var(--fg-rgb), 0.02)' : 'transparent' }}>
-                    <td style={{ padding: '1rem' }}>{row.fold}</td>
-                    <td style={{ padding: '1rem' }}>{row.trIou}</td>
-                    <td style={{ padding: '1rem', color: 'var(--water, #39C4D9)' }}>{row.vIou}</td>
-                    <td style={{ padding: '1rem' }}>{row.trF1}</td>
-                    <td style={{ padding: '1rem' }}>{row.vF1}</td>
-                    <td style={{ padding: '1rem', color: 'var(--text-3)' }}>{row.ep}</td>
-                  </tr>
-                ))}
-                <tr style={{ backgroundColor: 'rgba(var(--water-rgb), 0.05)', fontWeight: 700 }}>
-                  <td style={{ padding: '1rem', color: 'var(--text)' }}>Mean</td>
-                  <td style={{ padding: '1rem' }}>0.912±0.006</td>
-                  <td style={{ padding: '1rem', color: 'var(--water, #39C4D9)' }}>0.872±0.007</td>
-                  <td style={{ padding: '1rem' }}>0.942±0.003</td>
-                  <td style={{ padding: '1rem' }}>0.928±0.004</td>
-                  <td style={{ padding: '1rem' }}>475±20</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        
-        {/* Section 8b: Explainable AI (XAI) - Transformer Attention */}
-        <section className="glass-panel" style={{ padding: '3rem', marginBottom: '4rem', borderRadius: '16px', borderLeft: '4px solid var(--water)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '2rem' }}>
-            <div style={{ flex: '1 1 400px' }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 12px', background: 'rgba(var(--water-rgb), 0.1)', color: 'var(--water)', borderRadius: '100px', fontSize: '0.9rem', fontFamily: 'var(--font-num)', letterSpacing: '0.1em', marginBottom: '1rem' }}>
-                <span className="pulse-dot" style={{ display: 'inline-block', width: '8px', height: '8px', background: 'var(--water)', borderRadius: '50%' }}></span>
-                EXPLAINABLE AI (XAI) ACTIVE
-              </div>
-              <h2 style={{ margin: '0 0 1rem 0', fontSize: '2rem' }}>Self-Attention Feature Extraction</h2>
-              <p style={{ color: 'var(--text-2)', lineHeight: 1.7, marginBottom: '2rem' }}>
-                Black-box models are unacceptable for critical infrastructure decisions. Our 4D-SAR Transformer exposes its internal attention weights, proving that it physically understands river morphology. 
-                <br/><br/>
-                Notice how the multi-head attention (Head 4) completely ignores the stable inland pixels and focuses 94% of its activation energy strictly on the high-shear boundary where the river flow vectors intersect the embankment.
-              </p>
-              
-              <div style={{ display: 'flex', gap: '2rem' }}>
-                <div>
-                  <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--water)', fontFamily: 'var(--font-num)' }}>94.2%</div>
-                  <div style={{ fontSize: '0.9rem', color: 'var(--text-3)', fontFamily: 'var(--font-num)', textTransform: 'uppercase' }}>Attention on active erosion front</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-num)' }}>14</div>
-                  <div style={{ fontSize: '0.9rem', color: 'var(--text-3)', fontFamily: 'var(--font-num)', textTransform: 'uppercase' }}>Transformer layers deep</div>
-                </div>
-              </div>
-            </div>
-
-            <div style={{ flex: '1 1 400px', position: 'relative', height: '300px', background: 'var(--panel)', borderRadius: '12px', border: '1px solid var(--line)', overflow: 'hidden' }}>
-              {/* Simulated SAR Image Base */}
-              <div style={{ position: 'absolute', inset: 0, background: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.65\' numOctaves=\'3\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\' opacity=\'0.15\'/%3E%3C/svg%3E")', backgroundSize: 'cover', opacity: 0.5 }}></div>
-              
-              {/* River path */}
-              <svg width="100%" height="100%" viewBox="0 0 400 300" style={{ position: 'absolute', inset: 0 }}>
-                <path d="M 0 50 Q 150 150 250 100 T 400 250" fill="none" stroke="rgba(var(--water-rgb), 0.1)" strokeWidth="80" />
-                <path d="M 0 50 Q 150 150 250 100 T 400 250" fill="none" stroke="rgba(var(--water-rgb), 0.2)" strokeWidth="60" />
-                
-                {/* Heatmap Attention Overlay */}
-                <defs>
-                  <radialGradient id="attentionHeat" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
-                    <stop offset="0%" stopColor="var(--erosion)" stopOpacity="0.9" />
-                    <stop offset="30%" stopColor="var(--warn)" stopOpacity="0.7" />
-                    <stop offset="70%" stopColor="var(--water)" stopOpacity="0.3" />
-                    <stop offset="100%" stopColor="transparent" stopOpacity="0" />
-                  </radialGradient>
-                </defs>
-                
-                {/* Erosion focus points */}
-                <circle cx="160" cy="130" r="40" fill="url(#attentionHeat)" className="attention-pulse" style={{ animationDelay: '0s' }} />
-                <circle cx="280" cy="150" r="50" fill="url(#attentionHeat)" className="attention-pulse" style={{ animationDelay: '1s' }} />
-                <circle cx="350" cy="220" r="30" fill="url(#attentionHeat)" className="attention-pulse" style={{ animationDelay: '0.5s' }} />
-                
-                {/* Scanning grid overlay */}
-                <path d="M 0 0 L 400 0 L 400 300 L 0 300 Z" fill="none" stroke="rgba(var(--water-rgb), 0.2)" strokeWidth="1" strokeDasharray="10 10" />
-              </svg>
-              
-              <div className="hud-dark" style={{ position: 'absolute', bottom: '1rem', right: '1rem', background: 'rgba(var(--shadow-rgb), 0.8)', padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--line)', fontSize: '0.82rem', fontFamily: 'var(--font-num)', color: 'var(--text-2)' }}>
-                HEAD_4_ACTIVATION_MAP
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Section 8c: Real-time Pipeline Telemetry */}
-        <section className="glass-panel" style={{ padding: '3rem', marginBottom: '4rem', borderRadius: '16px', display: 'flex', flexDirection: 'column' }}>
-          <h2 style={{ margin: '0 0 0.5rem 0', fontSize: '2rem' }}>Live Inference Telemetry</h2>
-          <p style={{ color: 'var(--text-2)', marginBottom: '2rem' }}>Raw ML processing stream. The model autonomously filters anomalies before computing erosion vectors.</p>
-          
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--line-strong)', borderRadius: '8px', padding: '1rem', height: '250px', overflowY: 'hidden', position: 'relative', fontFamily: 'var(--font-num)', fontSize: '0.92rem' }}>
-            <div ref={telemetryFeedRef} className="telemetry-feed" style={{ color: 'var(--text-3)', display: 'flex', flexDirection: 'column', gap: '8px', height: '100%', overflowY: 'auto' }}>
-              {telemetryLines.map((line, i) => {
-                const timestamp = line.match(/\[.*?\]/)?.[0] || '';
-                const text = line.replace(timestamp, '');
-                let color = 'var(--text-3)';
-                if (text.includes('ANOMALY')) color = 'var(--warn)';
-                else if (text.includes('FILTER')) color = 'var(--fail)';
-                else if (text.includes('COMMIT')) color = 'var(--pass)';
-                
-                return (
-                  <div key={i} style={{ color }}>
-                    <span style={{ color: 'var(--water)' }}>{timestamp}</span>
-                    {text}
-                  </div>
-                );
-              })}
-              <div className="typing-cursor" style={{ display: 'inline-block', width: '8px', height: '15px', background: 'var(--water)', animation: 'blink 1s step-end infinite' }}></div>
-            </div>
-            {/* Fade out top */}
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '40px', background: 'linear-gradient(to bottom, var(--surface) 0%, transparent 100%)' }}></div>
-          </div>
-        </section>
-
-        {/* Section 9: Model Architecture Diagram */}
-        <section className="glass-panel" style={{ padding: '3rem', marginBottom: '4rem', borderRadius: '16px' }}>
-          <h2 style={{ margin: '0 0 0.5rem 0', fontSize: '2rem' }}>4D-SAR Transformer Architecture</h2>
-          <p style={{ color: 'var(--text-2, #94A3B8)', margin: '0 0 3rem 0' }}>End-to-end differentiable pipeline processing complex multi-temporal polarimetric features.</p>
-          
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-            {[
-              { name: 'Inputs', desc: 'Time-series Tensors', param: 'N × C × H × W' },
-              { name: 'Spatial Encoder', desc: 'ResNet-50 backbone', param: 'Dilated Convs' },
-              { name: 'Temporal Attention', desc: 'Transformer Encoder', param: '8 Attention Heads' },
-              { name: 'Fusion Layer', desc: 'Feature Concatenation', param: '1024 Channels' },
-              { name: 'Decoder', desc: 'U-Net structure', param: 'Skip Connections' },
-              { name: 'Output', desc: 'Probability Map', param: 'Softmax Activation' },
-            ].map((block, i, arr) => (
-              <React.Fragment key={i}>
-                <div style={{ flex: '1 1 120px', backgroundColor: 'rgba(var(--fg-rgb), 0.03)', border: '1px solid rgba(var(--fg-rgb), 0.1)', borderRadius: '8px', padding: '1.5rem 1rem', textAlign: 'center', position: 'relative' }}>
-                  <div style={{ fontWeight: 600, marginBottom: '0.5rem', color: 'var(--water, #39C4D9)' }}>{block.name}</div>
-                  <div style={{ fontSize: '0.875rem', marginBottom: '0.5rem' }}>{block.desc}</div>
-                  <div style={{ fontSize: '0.86rem', color: 'var(--text-3)', fontFamily: 'var(--font-num)' }}>{block.param}</div>
-                </div>
-                {i < arr.length - 1 && (
-                  <div style={{ color: 'var(--text-3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                  </div>
-                )}
-              </React.Fragment>
-            ))}
-          </div>
-        </section>
-
-        {/* Section 10: Per-Site Prediction Results */}
-        <section className="glass-panel" style={{ padding: '3rem', marginBottom: '4rem', borderRadius: '16px' }}>
-          <h2 style={{ margin: '0 0 0.5rem 0', fontSize: '2rem' }}>Global Site Prediction Summary</h2>
-          <p style={{ color: 'var(--text-2, #94A3B8)', margin: '0 0 2rem 0' }}>Live inference results generated by the cluster over the last 24 hours.</p>
-          
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.5rem' }}>
-            {[
-              { id: 'jamuna', site: 'Jamuna-Chilmari', event: 'Erosion', val: '1,247 ha', conf: 72, verdict: 'INCONCLUSIVE', vColor: 'var(--erosion, #E4572E)' },
-              { id: 'glacier-bay', site: 'Glacier Bay Alaska', event: 'Terminus retreat', val: '47 ha', conf: 84, verdict: 'SUPPORTED', vColor: 'var(--pass, #7FBF8E)' },
-              { id: 'park-fire', site: 'Park Fire NorCal', event: 'Burn scar', val: '892 ha', conf: 68, verdict: 'SUPPORTED', vColor: 'var(--pass, #7FBF8E)' },
-              { id: 'sundarbans', site: 'Sundarbans', event: 'Mangrove loss', val: '156 ha', conf: 61, verdict: 'LIMITED', vColor: 'var(--accretion, #D9B26A)' },
-            ].map((site, i) => {
-              const isActive = reachId === site.id;
-              return (
-              <div key={i} style={{ backgroundColor: isActive ? 'rgba(var(--water-rgb), 0.1)' : 'rgba(var(--fg-rgb), 0.02)', border: isActive ? '1px solid var(--water)' : '1px solid rgba(var(--fg-rgb), 0.05)', boxShadow: isActive ? '0 0 15px rgba(var(--water-rgb), 0.2)' : 'none', borderRadius: '12px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', transition: 'all 0.3s ease' }}>
-              
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div>
-                    <h3 style={{ margin: '0 0 0.25rem 0', fontSize: '1.25rem' }}>{site.site}</h3>
-                    <div style={{ fontSize: '0.875rem', color: 'var(--text-3)' }}>{site.event} detected: <span style={{ color: 'var(--text)', fontWeight: 600 }}>{site.val}</span></div>
-                  </div>
-                  <div style={{ fontSize: '0.86rem', fontWeight: 700, padding: '0.25rem 0.75rem', borderRadius: '9999px', backgroundColor: `rgba(${site.vColor === 'var(--pass, #7FBF8E)' ? '127,191,142' : site.vColor === 'var(--erosion, #E4572E)' ? '228,87,46' : '217,178,106'}, 0.1)`, color: site.vColor, border: `1px solid ${site.vColor}` }}>
-                    {site.verdict}
-                  </div>
-                </div>
-                
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', marginBottom: '0.5rem', fontFamily: 'var(--font-num)' }}>
-                    <span>Model Confidence</span>
-                    <span>{site.conf}%</span>
-                  </div>
-                  <div style={{ height: '6px', backgroundColor: 'rgba(var(--fg-rgb), 0.05)', borderRadius: '3px', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: mounted ? `${site.conf}%` : '0%', backgroundColor: site.vColor, transition: 'width 1.5s ease-out' }} />
-                  </div>
-                </div>
-              </div>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* Section 10b: SBAS Network Graph */}
-        <section className="glass-panel" style={{ padding: '3rem', marginBottom: '4rem', borderRadius: '16px' }}>
-          <h2 style={{ margin: '0 0 0.5rem 0', fontSize: '2rem' }}>SBAS (Small Baseline Subset) Network Graph</h2>
-          <p style={{ color: 'var(--text-2, #94A3B8)', margin: '0 0 2rem 0' }}>Visualizing the network of interferogram pairs formed from satellite acquisitions over time and perpendicular baseline.</p>
-          
-          <div style={{ height: '350px', position: 'relative', borderBottom: '1px solid var(--line)', borderLeft: '1px solid var(--line)', marginTop: '2rem', marginLeft: '3rem', marginRight: '9rem', paddingLeft: '20px', paddingBottom: '20px' }}>
-            <svg width="100%" height="100%" viewBox="0 0 800 350" preserveAspectRatio="none" style={{ overflow: 'visible' }}>
-              <text x="-40" y="20" fill="var(--text-3)" fontSize="14" transform="rotate(-90 -40 20)">Perp Baseline (m)</text>
-              <text x="400" y="380" fill="var(--text-3)" fontSize="14" textAnchor="middle">Temporal Baseline (Days)</text>
-              
-              {/* Axes lines */}
-              <line x1="0" y1="175" x2="800" y2="175" stroke="var(--line)" strokeDasharray="4,4" />
-              <text x="-25" y="179" fill="var(--text-3)" fontSize="14">0</text>
-              <text x="-35" y="30" fill="var(--text-3)" fontSize="14">200</text>
-              <text x="-40" y="330" fill="var(--text-3)" fontSize="14">-200</text>
-
-              {/* Lines (Interferograms) */}
-              <g stroke="rgba(var(--water-rgb), 0.4)" strokeWidth="2">
-                <line x1="50" y1="200" x2="150" y2="150" />
-                <line x1="50" y1="200" x2="250" y2="220" />
-                <line x1="150" y1="150" x2="250" y2="220" />
-                <line x1="150" y1="150" x2="350" y2="100" />
-                <line x1="250" y1="220" x2="350" y2="100" />
-                <line x1="250" y1="220" x2="450" y2="180" />
-                <line x1="350" y1="100" x2="450" y2="180" />
-                <line x1="350" y1="100" x2="550" y2="50" />
-                <line x1="450" y1="180" x2="550" y2="50" />
-                <line x1="450" y1="180" x2="650" y2="210" />
-                <line x1="550" y1="50" x2="650" y2="210" />
-                <line x1="550" y1="50" x2="750" y2="160" />
-                <line x1="650" y1="210" x2="750" y2="160" />
-              </g>
-
-              {/* Nodes */}
-              <g fill="var(--water, #39C4D9)">
-                <circle cx="50" cy="200" r="6" />
-                <circle cx="150" cy="150" r="6" />
-                <circle cx="250" cy="220" r="6" />
-                <circle cx="350" cy="100" r="6" />
-                <circle cx="450" cy="180" r="6" />
-                <circle cx="550" cy="50" r="6" />
-                <circle cx="650" cy="210" r="6" />
-                <circle cx="750" cy="160" r="6" />
-              </g>
-
-              <g fill="var(--text)" fontSize="14" fontWeight="600">
-                <text x="40" y="225">t0</text>
-                <text x="140" y="135">t1</text>
-                <text x="240" y="240">t2</text>
-                <text x="340" y="85">t3</text>
-                <text x="440" y="200">t4</text>
-                <text x="540" y="35">t5</text>
-                <text x="640" y="230">t6</text>
-                <text x="740" y="145">t7</text>
-              </g>
-            </svg>
-          </div>
-        </section>
-
-        {/* Section 10c: Ionospheric Faraday Rotation */}
-        <section className="glass-panel" style={{ padding: '3rem', marginBottom: '4rem', borderRadius: '16px', background: 'linear-gradient(135deg, rgba(var(--fg-rgb), 0.02) 0%, rgba(127,191,142,0.1) 100%)', border: '1px solid rgba(127,191,142,0.3)' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '2rem' }}>
-            <div style={{ flexShrink: 0, fontSize: '3.5rem' }}><Brain size={18} style={{ display: 'inline', verticalAlign: 'text-bottom', margin: '0 4px' }} /></div>
-            <div>
-              <h2 style={{ margin: '0 0 0.5rem 0', fontSize: '2rem', color: 'var(--pass, #7FBF8E)' }}>AI Ionospheric Faraday Rotation Compensation</h2>
-              <p style={{ color: 'var(--text-2, #94A3B8)', margin: '0 0 1rem 0', lineHeight: 1.6, fontSize: '1.1rem' }}>
-                L-band SAR signals are highly susceptible to Faraday rotation as they pass through the Earth's ionosphere, 
-                causing polarization shifts and phase unwrapping errors. Our neural network architecture incorporates a specialized 
-                <strong> Total Electron Content (TEC)</strong> estimation module that dynamically compensates for these atmospheric anomalies 
-                using quad-polarimetric signatures.
-              </p>
-              <div style={{ display: 'inline-block', padding: '0.75rem 1.25rem', background: 'rgba(var(--shadow-rgb), 0.4)', borderRadius: '8px', border: '1px solid rgba(127,191,142,0.3)', fontSize: '0.95rem', color: '#fff' }}>
-                <span style={{ color: 'var(--pass)', marginRight: '8px' }}><Check size={18} style={{ display: 'inline', verticalAlign: 'text-bottom', margin: '0 4px' }} /></span> Phase Unwrapping Error reduced by <strong>42%</strong> globally.
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Section 11: Methodology & Data Provenance */}
-        <section className="glass-panel" style={{ padding: '3rem', borderRadius: '16px' }}>
-          <h2 style={{ margin: '0 0 1.5rem 0', fontSize: '2rem' }}>Methodology &amp; Reproducibility</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '2rem' }}>
-            <div>
-              <h4 style={{ color: 'var(--water, #39C4D9)', marginBottom: '0.5rem' }}>Input Data &amp; Preprocessing</h4>
-              <ul style={{ color: 'var(--text-2)', paddingLeft: '1.25rem', lineHeight: 1.6, margin: 0 }}>
-                <li>NISAR L2 GCOV Provisional (L-band, 12m resolution)</li>
-                <li>Radiometric terrain correction using Copernicus 30m DEM</li>
-                <li>Temporal multi-looking and Lee Sigma speckle filtering</li>
-              </ul>
-            </div>
-            <div>
-              <h4 style={{ color: 'var(--water, #39C4D9)', marginBottom: '0.5rem' }}>Modeling Strategy</h4>
-              <ul style={{ color: 'var(--text-2)', paddingLeft: '1.25rem', lineHeight: 1.6, margin: 0 }}>
-                <li>Ensemble: Random Forest + Gradient Boosting + 4D-SAR Transformer</li>
-                <li>Validation: 5-fold stratified cross-validation</li>
-                <li>Evaluation on geographically distinct held-out test set</li>
-              </ul>
-            </div>
-          </div>
-          <div style={{ marginTop: '2rem', padding: '1rem', backgroundColor: 'rgba(var(--fg-rgb), 0.02)', borderRadius: '8px', border: '1px solid rgba(var(--fg-rgb), 0.05)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--pass, #7FBF8E)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            <div style={{ fontSize: '0.875rem', color: 'var(--text-2)' }}>
-              <strong>Provenance Verified:</strong> Every metric on this dashboard traces mathematically back to the <code>manifest.json</code> inference pipeline and the raw NASA NISAR granules.
-            </div>
-          </div>
-        </section>
-
-      </main>
-    </div>
-  );
+  const loadBundle=useStore((s)=>s.loadBundle);
+  const [tab,setTab]=useState<'lab'|'case'>('lab');
+  const [bundle,setBundle]=useState<ReachBundle|null>(null);
+  const [error,setError]=useState<string|null>(null);
+  const model=useMemo(()=>{
+    const samples=createSyntheticSamples(2609,180);
+    const split=splitSyntheticSamples(samples,2031);
+    const forest=trainSyntheticForest(split.train,941,31);
+    const temporal=trainTemporalMlp(split.train,split.validation,4021);
+    return {forest,neural:temporal.model,history:temporal.history,bestEpoch:temporal.bestEpoch,testSamples:split.test};
+  },[]);
+  useEffect(()=>{
+    let active=true;
+    loadReachBundle('jamuna-chilmari').then((loaded)=>{if(!active)return;setBundle(loaded);loadBundle('jamuna-chilmari',loaded);}).catch((cause:unknown)=>{if(active)setError(cause instanceof Error?cause.message:'Bundle unavailable');});
+    return()=>{active=false;};
+  },[loadBundle]);
+  return <div className="page-container ml-page"><Navbar transparent={false}/><main className="ml-shell">
+    <header className="ml-hero"><div className="ml-hero-radar"><i/><i/><i/><span/></div><div className="ml-hero-copy"><div className="ml-eyebrow"><span className="ml-eyebrow-dot"/> SAR CHANGE INTELLIGENCE <b>MODEL WORKBENCH</b></div><h1>Follow radar change through time, then check what the evidence supports.</h1><p>Explore a temporal neural network and Random Forest on interactive scenarios, then inspect the real Jamuna NISAR evidence and its validation limits.</p><div className="ml-hero-meta"><span><Radio size={14}/> NISAR L-BAND GCOV</span><span><BrainCircuit size={14}/> RANDOM FOREST + TEMPORAL MLP</span><span><ShieldCheck size={14}/> REAL CASE EVIDENCE</span></div></div><div className="ml-hero-orbit"><div className="ml-orbit-ring ml-orbit-ring--one"/><div className="ml-orbit-ring ml-orbit-ring--two"/><div className="ml-orbit-center"><BrainCircuit size={31}/><small>RF + DL</small></div><b>MODEL<br/>WORKBENCH</b></div></header>
+    <div className="ml-tabbar" role="tablist" aria-label="ML intelligence views"><button role="tab" aria-selected={tab==='lab'} className={tab==='lab'?'is-active':''} onClick={()=>setTab('lab')}><BrainCircuit size={16}/> ML Scenario Lab <span>MODEL BEHAVIOR</span></button><button role="tab" aria-selected={tab==='case'} className={tab==='case'?'is-active':''} onClick={()=>setTab('case')}><Radio size={16}/> Real Jamuna Evidence <span>2 ACQUISITIONS</span></button></div>
+    {tab==='lab'?<ScenarioLab {...model} onShowReal={()=>setTab('case')}/>:<RealCaseTab bundle={bundle} error={error}/>}
+    <footer className="ml-bottomline"><span>FLUVISAR / MODEL TRANSPARENCY</span><span>Scenario outputs are not NISAR measurements or validated case predictions.</span></footer><div className="ml-footer-sources"><a href="https://hyp3-docs.asf.alaska.edu/nisar-docs/products-overview/" target="_blank" rel="noreferrer">NISAR GCOV product guide <ExternalLink size={13}/></a><a href="https://nisar.jpl.nasa.gov/mission/get-to-know-sar/overview/" target="_blank" rel="noreferrer">NASA/JPL SAR interpretation <ExternalLink size={13}/></a><a href="/methods">FluviSAR methods and case limits <ExternalLink size={13}/></a></div>
+  </main></div>;
 }
-// @ts-nocheck
