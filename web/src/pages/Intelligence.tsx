@@ -227,6 +227,19 @@ function NisarEvidenceWorkbench({ bundle }: { bundle: ReachBundle }) {
   </section>;
 }
 
+function EvidenceGate({ checks, bundle }: { checks: QCCheck[]; bundle: ReachBundle }) {
+  const byId=(id:string)=>checks.find((check)=>check.id===id);
+  const items=[
+    {id:'threshold_sensitivity',title:'Threshold stability',detail:'Area response to the pipeline’s ±1 dB threshold perturbation.'},
+    {id:'rfi',title:'Swath-edge / RFI screening',detail:'Flagged edge band is not excluded from classification.'},
+    {id:'persistence',title:'Later-pass persistence',detail:'A later same-track observation is needed to test whether the transition persists.'},
+    {id:'dswx_agreement',title:'Independent water reference',detail:'OPERA DSWx-S1 agreement is not evaluated in this bundle.'},
+  ];
+  const blocking=items.filter((item)=>byId(item.id)?.status!=='PASS').length;
+  const rainfall=byId('rainfall_anomaly');
+  return <section className="ml-evidence-gate"><div className="ml-evidence-gate-head"><div><span className="ml-overline">SAR QUALITY CONTROL · EVIDENCE GATE</span><h2>{blocking?'Withhold a confirmed erosion label':'Evidence gates passed for review'}</h2><p>This rule-based gate checks recorded quality evidence. It is not an ML probability or a substitute for reference validation.</p></div><b>{blocking} / {items.length} GATES OPEN</b></div><div className="ml-evidence-gate-grid">{items.map((item)=>{const check=byId(item.id);const status=check?.status??'NOT_EVALUATED';return <details className={`ml-evidence-gate-item is-${status.toLowerCase()}`} key={item.id}><summary><span><i/>{item.title}</span><b>{status==='NOT_EVALUATED'?'Not evaluated':status==='PASS'?'Pass':status==='WARN'?'Review':'Fail'}</b></summary><p>{item.detail} {check?.explanation??'No check result recorded.'}</p>{check?.value!=null&&<small>Recorded value: {fmt(check.value,1)} {check.unit??''}</small>}</details>;})}</div><div className="ml-evidence-context"><span><b>PAIR</b> {compactDate(bundle.reach.primary_pair.t0)} → {compactDate(bundle.reach.primary_pair.t1)} · {bundle.reach.primary_pair.dh_m.toFixed(3)} m stage difference (proxy)</span>{rainfall&&<span><b>RAINFALL CONTEXT</b> {rainfall.value?.toFixed(2)??'—'}× seasonal norm · contextual evidence only, not causal attribution</span>}</div></section>;
+}
+
 function RealCaseTab({ bundle, error }: { bundle: ReachBundle | null; error: string | null }) {
   if (error) return <div className="ml-case-error">Could not load the Jamuna source bundle: {error}</div>;
   if (!bundle) return <div className="ml-case-loading">Loading the real NISAR evidence bundle…</div>;
@@ -238,6 +251,7 @@ function RealCaseTab({ bundle, error }: { bundle: ReachBundle | null; error: str
   return <section className="ml-real-case" id="real-case">
     <div className="ml-real-verdict"><div className="ml-real-verdict__icon"><AlertTriangle size={20}/></div><div><span>REAL NISAR CASE · {bundle.reach.verdict}</span><h2>The current observations do not support a confirmed erosion estimate.</h2><p>These values come from the Jamuna source bundle. The transition area is a threshold-based candidate, not verified ground truth.</p></div></div>
     <section className="ml-validation-gate"><div className="ml-validation-gate__head"><BrainCircuit size={20}/><div><span>MODEL PERFORMANCE · REAL DATA</span><h2>Accuracy and F1: not evaluated</h2></div><b>NO REFERENCE LABELS</b></div><p>The available pair has {acquisitions.length} usable acquisitions, no independent labeled erosion reference, and no later-pass persistence evidence. A percentage here would imply validation this data does not provide.</p><div className="ml-validation-grid"><article><span>USABLE ACQUISITIONS</span><strong>{acquisitions.length}</strong><small>Two dates do not establish persistence</small></article><article><span>INDEPENDENT LABELS</span><strong>Unavailable</strong><small>Needed for supervised accuracy and F1</small></article><article><span>INDEPENDENT TEST SET</span><strong>Unavailable</strong><small>Needs spatially separate reference samples</small></article><article><span>QC NOT EVALUATED</span><strong>{unevaluated}</strong><small>Recorded in this data bundle</small></article></div></section>
+    <EvidenceGate checks={checks} bundle={bundle}/>
     <NisarEvidenceWorkbench bundle={bundle}/>
     <div className="ml-real-summary"><article><span>USABLE ACQUISITIONS</span><strong>{acquisitions.length}</strong><small>Relative orbit {bundle.reach.track.relative_orbit} / frame {bundle.reach.track.frame}</small></article><article><span>POLARIZATION</span><strong>{channels.join(', ')||'HHHH'}</strong><small>NISAR L-band GCOV input</small></article><article><span>THRESHOLD CANDIDATE AREA</span><strong>{metric?`${fmt(metric.value)} ha`:'Not reported'}</strong><small>Not a verified erosion estimate</small></article><article><span>QC WARNINGS / FAILS</span><strong>{checks.filter((check)=>check.status==='WARN'||check.status==='FAIL').length}</strong><small>{unevaluated} checks not evaluated</small></article></div>
     <div className="ml-real-dates">{bundle.reach.dates.map((date)=><article key={date.date}><span className="ml-real-dot"/><div><b>{utcDate(date.acq_utc)}</b><small>{metric?.inputs?.find((input)=>input.acq_utc?.slice(0,10)===date.acq_utc.slice(0,10))?.granule??'Granule reference unavailable'}</small><em>{date.stage_source==='proxy'?'Stage context is imagery-derived; not gauge data.':`${date.stage_source} stage context`}</em></div></article>)}</div>
