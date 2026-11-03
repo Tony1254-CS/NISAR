@@ -26,7 +26,7 @@ function shuffled<T>(items: T[], random: () => number) {
 }
 
 function neuralFeatures(features: SarFeatures) {
-  const followup = features[0] * (1 - features[3]) + features[1] * features[3];
+  const followup = 10 * Math.log10(10 ** (features[0] / 10) * (1 - features[3]) + 10 ** (features[1] / 10) * features[3]);
   return [(features[0] + 15) / 10, (features[1] + 15) / 10, (followup + 15) / 10, features[2] * 2 - 1];
 }
 
