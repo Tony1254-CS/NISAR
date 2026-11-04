@@ -266,7 +266,8 @@ export function DecisionDesk() {
   const accretionCount = bundle?.accretion?.features.length ?? 0;
   const erosionMetric = latestMetric;
   const thresholds = erosionMetric?.params ?? null;
-  const stagePair = bundle!.reach.primary_pair;
+  // The first render happens before the evidence bundle loads; keep derived values safe until then.
+  const stagePair = bundle?.reach.primary_pair;
   const centroidOf = selected ? featureCentroid(selected) : null;
   const scenarioRing = scenario ? scenario.geometry.coordinates[0] : null;
   const pairWindow = firstDate && lastDate
@@ -483,7 +484,7 @@ export function DecisionDesk() {
                   </button>
                 ))}
               </div>
-              <div className="desk-passes-note">Pair rule {stagePair.type === 'later_lower' ? 'later/lower' : 'equal stage'} · Δstage {formatNumber(stagePair.dh_m, 3)} proxy · {pairWindow} days apart. Play cycles the map imagery between real passes.</div>
+              <div className="desk-passes-note">Pair rule {stagePair?.type === 'later_lower' ? 'later/lower' : 'equal stage'} · Δstage {formatNumber(stagePair?.dh_m, 3)} proxy · {pairWindow} days apart. Play cycles the map imagery between real passes.</div>
             </div>
           </div>
 
