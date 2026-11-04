@@ -28,7 +28,7 @@ function normal(random:()=>number) {
 }
 
 // Unit-mean Gamma(L, 1/L) intensity speckle; valid for homogeneous targets.
-function unitMeanGamma(looks:number,random:()=>number) {
+export function drawUnitMeanGamma(looks:number,random:()=>number) {
   if(looks===1)return -Math.log(Math.max(random(),1e-12));
   const d=looks-1/3,c=1/Math.sqrt(9*d);
   for(;;){
@@ -44,8 +44,8 @@ export function simulateSpeckleStress(model:DemoClassifier,features:SarFeatures,
   const deltas:number[]=[];
   const t0Power=10**(features[0]/10),t1Power=10**(features[1]/10);
   for(let index=0;index<trials;index+=1){
-    const observedT0=10*Math.log10(t0Power*unitMeanGamma(looks,random));
-    const observedT1=10*Math.log10(t1Power*unitMeanGamma(looks,random));
+    const observedT0=10*Math.log10(t0Power*drawUnitMeanGamma(looks,random));
+    const observedT1=10*Math.log10(t1Power*drawUnitMeanGamma(looks,random));
     deltas.push(observedT1-observedT0);
     const noisy:SarFeatures=[observedT0,observedT1,features[2],features[3]];
     const scores=model.predict(noisy);
