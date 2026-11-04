@@ -1,0 +1,37 @@
+{
+  "id": "opera-dswx-s1-20260617",
+  "title": "OPERA DSWx-S1 water extent",
+  "sensor": "Sentinel-1 C-band SAR",
+  "acquired": "2026-06-17T12:13:17Z",
+  "processed": "2026-08-25T22:17:22Z",
+  "product": "OPERA_L3_DSWx-S1 V1 B02_BWTR",
+  "classification": "BWTR class 1 (water); valid non-water and masked/no-data classes are transparent",
+  "resolution_m": [
+    30.0,
+    30.0
+  ],
+  "crs_source": "WGS 84 / UTM zone 45N|WGS 84|",
+  "source_file": "OPERA_L3_DSWx-S1_T45RYJ_20260617T121317Z_20260825T221722Z_S1A_30_v1.0_B02_BWTR.tif",
+  "source_provider": "NASA/JPL OPERA, distributed by NASA Earthdata",
+  "attribution": "NASA/JPL OPERA DSWx-S1; Sentinel-1 data",
+  "coordinates": [
+    [
+      89.5824523733345,
+      25.770884493829264
+    ],
+    [
+      89.92760493540385,
+      25.764346428346244
+    ],
+    [
+      89.9182429707391,
+      25.37907218706021
+    ],
+    [
+      89.57419096908076,
+      25.385498751795115
+    ]
+  ],
+  "interpretation": "Dated contextual water observation. It is not a same-date validation of the August/September NISAR pair.",
+  "source_band": "B02_BWTR"
+}

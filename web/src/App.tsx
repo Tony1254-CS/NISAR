@@ -6,6 +6,7 @@ import { AboutPage } from './pages/About';
 import MainApp from './pages/MainApp';
 import { IntelligencePage } from './pages/Intelligence';
 import { SARLabPage } from './pages/SARLab';
+import { DecisionDesk } from './pages/DecisionDesk';
 import { ImpactPage } from './pages/Impact';
 import { ReportPage } from './pages/Report';
 
@@ -36,7 +37,8 @@ export default function App() {
           if (path === '/about') return <AboutPage />;
           if (path === '/intelligence') return <IntelligencePage />;
           if (path === '/sar-lab') return <SARLabPage />;
-          if (path === '/impact') return <ImpactPage />;
+          if (path === '/impact') return <DecisionDesk />;
+          if (path === '/insights') return <ImpactPage />;
           if (path === '/report') return <ReportPage />;
           if (path === '/app') return <MainApp />;
           return <Landing />;

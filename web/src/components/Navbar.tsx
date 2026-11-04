@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { AlertTriangle, Brain, Microscope, FileText, Volume2, Wrench, Sun, Moon, Menu, MapPin, BookOpen, Users, LogIn } from 'lucide-react';
+import { AlertTriangle, Brain, Microscope, FileText, Volume2, Wrench, Sun, Moon, Menu, MapPin, BookOpen, Users, LogIn, ClipboardList } from 'lucide-react';
 import { useStore } from '../state/store';
 import { TABS } from '../panels/EvidenceTabs';
 import '../styles/navbar.css';
@@ -108,8 +108,11 @@ export function Navbar({
           {/* Nav links (hidden on /app to save space on laptops) */}
           {!showReachInfo && (
             <div className={`navbar__nav${mobileOpen ? ' navbar__nav--open' : ''}`}>
-              <a href="/impact" className={linkClass('/impact')} style={{ color: '#E4572E', textShadow: '0 0 10px rgba(228,87,46,0.3)', fontWeight: 'bold' }}>
+              <a href="/insights" className={linkClass('/insights')} style={{ color: '#E4572E', textShadow: '0 0 10px rgba(228,87,46,0.3)', fontWeight: 'bold' }}>
                 <AlertTriangle size={18} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> Insights
+              </a>
+              <a href="/impact" className={linkClass('/impact')}>
+                <ClipboardList size={17} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> Decision Desk
               </a>
               <a href="/cases" className={linkClass('/cases')}>
                 Investigations
@@ -139,7 +142,8 @@ export function Navbar({
                 <Menu size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> Menu ▾
               </button>
               <div className="navbar__dropdown-content">
-                <a href="/impact"><AlertTriangle size={16} /> Insights</a>
+                <a href="/insights"><AlertTriangle size={16} /> Insights</a>
+                <a href="/impact"><ClipboardList size={16} /> Decision Desk</a>
                 <a href="/cases"><MapPin size={16} /> Investigations</a>
                 <a href="/intelligence"><Brain size={16} /> ML Intelligence</a>
                 <a href="/sar-lab"><Microscope size={16} /> SAR Lab</a>
