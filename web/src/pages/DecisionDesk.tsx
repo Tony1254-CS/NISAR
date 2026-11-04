@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  ArrowUpRight, BookOpen, Check, ChevronRight, CircleHelp,
-  ClipboardList, Compass, Copy, ExternalLink, Eye, FileJson2, Layers3,
-  MapPinned, Radar, Search, ShieldAlert, Sparkles, Target, Waves,
+  ArrowUpRight, BookOpen, Check, ChevronRight, CircleHelp, ClipboardList,
+  Copy, Crosshair, ExternalLink, Eye, FileJson2, GitCompareArrows,
+  Layers3, Pause, Play, Search, ShieldAlert, SlidersHorizontal,
+  Sparkles, Target, TrendingDown, Waves, Workflow,
 } from 'lucide-react';
 import { Navbar } from '../components/Navbar';
 import { DecisionMap, featureCentroid } from '../map/DecisionMap';
 import { loadReachBundle, type ReachBundle } from '../data/load';
-import type { ChangeFeature, QCCheck } from '../data/types';
+import type { QCCheck } from '../data/types';
 import { useStore } from '../state/store';
 import '../styles/decision-desk.css';
 
@@ -18,22 +19,26 @@ const OSM_URL = 'https://www.openstreetmap.org/copyright';
 type DeskView = 'ledger' | 'context' | 'scenario';
 type Audience = 'analyst' | 'planner' | 'public';
 type ReviewState = 'Unreviewed' | 'Field review queued' | 'Observation received' | 'Closed';
+type ClassFilter = 'all' | 'erosion' | 'accretion';
 
-const VIEW_COPY: Record<Audience, { label: string; title: string; body: string }> = {
+const VIEW_COPY: Record<Audience, { label: string; title: string; body: string; step: string }> = {
   analyst: {
     label: 'Researcher',
-    title: 'Candidate transitions need more evidence.',
-    body: 'This two-date HH comparison is sensitive to the classification threshold. Stage matching, persistence, and independent water-product agreement are not established for this result.',
+    title: 'Candidate transitions need more evidence before either number is trusted.',
+    body: 'This two-date HH comparison is threshold-sensitive: a ±1 dB perturbation moves the erosion estimate from roughly 1,769 ha to 8,477 ha. Stage matching, persistence, and independent water-product agreement are not yet established, and the mapped totals sit an order of magnitude above CEGIS reference rates for this reach.',
+    step: 'Add observed gauge levels, a peak-bounded pair, and a third same-track pass before comparing against CEGIS district statistics.',
   },
   planner: {
     label: 'Resource manager',
-    title: 'Use this map to prioritize review, not trigger a response.',
-    body: 'The ledger keeps each mapped candidate, its evidence gaps, and local follow-up status together. No evacuation, damage, or erosion warning is inferred from this scene.',
+    title: 'Prioritize review with this map — do not trigger a response with it.',
+    body: 'Every mapped polygon is an unverified candidate. The ledger keeps each one, its evidence gaps, and local follow-up status together, so field checks can be queued where mapped change, settlements, and previous closures intersect.',
+    step: 'Queue the 24 largest erosion candidates for field review; keep evacuation and damage decisions offline until verification exists.',
   },
   public: {
     label: 'Community',
-    title: 'The satellite found places worth checking.',
-    body: 'Radar images from two days show areas where the land and water classes changed. The evidence is not strong enough to say those places were permanently lost to the river.',
+    title: 'The satellite found places worth checking — not losses that are official.',
+    body: 'Radar images from two dates in August and September show where the land and water classes seem to switch. The evidence is not strong enough yet to say those places were permanently lost to the river, so nothing here is a warning.',
+    step: 'Community observations, photos, and local knowledge are real evidence: share them with your local office to help close the open cases.',
   },
 };
 
@@ -41,6 +46,16 @@ function formatDate(date: string | null | undefined) {
   if (!date) return '—';
   const parsed = new Date(date.length === 8 ? `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}T00:00:00Z` : date);
   return Number.isNaN(parsed.valueOf()) ? date : new Intl.DateTimeFormat('en', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(parsed);
+}
+
+function formatNumber(value: number | null | undefined, digits = 1) {
+  if (value === null || value === undefined) return '—';
+  return value.toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+}
+
+function formatCoord(point: [number, number]) {
+  const [lon, lat] = point;
+  return `${Math.abs(lat).toFixed(2)}°N ${Math.abs(lon).toFixed(2)}°E`;
 }
 
 function makeScenario(center: [number, number], lengthM: number, depthM: number, bearing: number): GeoJSON.Feature<GeoJSON.Polygon> {
@@ -123,10 +138,9 @@ function downloadJson(filename: string, data: unknown) {
   URL.revokeObjectURL(href);
 }
 
-function candidateLabel(feature: ChangeFeature) {
-  const kind = feature.properties.class === 'erosion' ? 'Land-to-water candidate' : 'Water-to-land candidate';
-  return `${kind} · ${feature.properties.id}`;
-}
+const QC_STYLE: Record<string, string> = {
+  FAIL: 'fail', WARN: 'warn', INFO: 'info', PASS: 'pass', NOT_EVALUATED: 'off',
+};
 
 export function DecisionDesk() {
   const [bundle, setBundle] = useState<ReachBundle | null>(null);
@@ -147,6 +161,10 @@ export function DecisionDesk() {
   const [osmError, setOsmError] = useState('');
   const [review, setReview] = useState<Record<string, ReviewState>>({});
   const [notice, setNotice] = useState('');
+  const [noticeOk, setNoticeOk] = useState(true);
+  const [classFilter, setClassFilter] = useState<ClassFilter>('all');
+  const [query, setQuery] = useState('');
+  const [playing, setPlaying] = useState(false);
   const setReachId = useStore((s) => s.setReachId);
 
   useEffect(() => {
@@ -172,19 +190,48 @@ export function DecisionDesk() {
   }, [bundle]);
   const selected = candidates.find((feature) => String(feature.properties.id) === selectedFeatureId) ?? candidates[0] ?? null;
   useEffect(() => {
+    if (selected && selectedFeatureId && selectedFeatureId !== String(selected.properties.id) && !candidates.some((feature) => String(feature.properties.id) === selectedFeatureId)) {
+      setSelectedFeatureId(String(selected.properties.id));
+    }
+  }, [selected, selectedFeatureId, candidates]);
+  useEffect(() => {
     if (selected && !selectedFeatureId) setSelectedFeatureId(String(selected.properties.id));
   }, [selected, selectedFeatureId]);
   const firstDate = bundle?.reach.dates[0]?.date ?? '';
   const lastDate = bundle?.reach.dates[bundle.reach.dates.length - 1]?.date ?? '';
+  const passDates = useMemo(
+    () => bundle?.reach.dates.filter((item) => item.status === 'ok').map((item) => item.date) ?? [],
+    [bundle],
+  );
+  useEffect(() => {
+    if (!playing || passDates.length < 2) return;
+    const id = setInterval(() => {
+      setSelectedDate((current) => {
+        const index = passDates.indexOf(current);
+        return passDates[(index + 1) % passDates.length];
+      });
+    }, 1500);
+    return () => clearInterval(id);
+  }, [playing, passDates]);
   const scenario = selected ? makeScenario(featureCentroid(selected), lengthM, depthM, bearing) : null;
   const areaHa = lengthM * depthM / 10000;
   const selectedReview = selected ? review[String(selected.properties.id)] ?? 'Unreviewed' : 'Unreviewed';
   const latestMetric = bundle?.manifest.metrics.find((metric) => metric.id === 'erosion_area');
+  const accretionMetric = bundle?.manifest.metrics.find((metric) => metric.id === 'accretion_area');
   const qcChecks = bundle?.qc?.checks ?? [];
   const failedChecks = qcChecks.filter((check: QCCheck) => check.status === 'FAIL').length;
   const warningChecks = qcChecks.filter((check: QCCheck) => check.status === 'WARN').length;
   const notEvaluated = qcChecks.filter((check: QCCheck) => check.status === 'NOT_EVALUATED').length;
-  const maxArea = candidates.slice(0, 5).reduce((sum, feature) => sum + feature.properties.area_ha, 0);
+  const priorityFeatures = candidates.slice(0, 24);
+  const reviewedCount = priorityFeatures.filter((feature) => (review[String(feature.properties.id)] ?? 'Unreviewed') !== 'Unreviewed').length;
+  const filteredLists = useMemo(() => {
+    const text = query.trim().toLowerCase();
+    return candidates.filter((feature) => {
+      if (classFilter !== 'all' && feature.properties.class !== classFilter) return false;
+      if (text && !String(feature.properties.id).toLowerCase().includes(text)) return false;
+      return true;
+    });
+  }, [candidates, classFilter, query]);
   const osmBuildings = osm?.features.filter((feature) => Boolean(feature.properties?.building) && scenario && featureTouchesEnvelope(feature, scenario)).length ?? 0;
   const osmRoads = osm?.features.filter((feature) => Boolean(feature.properties?.highway) && scenario && featureTouchesEnvelope(feature, scenario)).length ?? 0;
 
@@ -202,12 +249,12 @@ export function DecisionDesk() {
     const lons = ring.map((point) => point[0]);
     const lats = ring.map((point) => point[1]);
     const west = Math.min(...lons), east = Math.max(...lons), south = Math.min(...lats), north = Math.max(...lats);
-    const query = `[out:json][timeout:25];(way[building](${south},${west},${north},${east});way[highway](${south},${west},${north},${east}););out geom;`;
+    const queryText = `[out:json][timeout:25];(way[building](${south},${west},${north},${east});way[highway](${south},${west},${north},${east}););out geom;`;
     try {
       const response = await fetch('https://overpass-api.de/api/interpreter', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-        body: new URLSearchParams({ data: query }),
+        body: new URLSearchParams({ data: queryText }),
       });
       if (!response.ok) throw new Error(`OpenStreetMap query returned ${response.status}.`);
       const payload = await response.json() as { elements?: Array<{ id: number; type: string; tags?: Record<string, string>; geometry?: Array<{ lon: number; lat: number }> }> };
@@ -249,7 +296,8 @@ export function DecisionDesk() {
       },
       trace_field_note: 'A field record is independent evidence for human review. It must not automatically change the satellite finding to verified.',
     });
-    setNotice('Case packet exported for TRACE Field handoff.');
+    setNoticeOk(true);
+    setNotice('TRACE Field case packet exported.');
   };
 
   const copyCaseLink = async () => {
@@ -257,51 +305,94 @@ export function DecisionDesk() {
     const href = `${window.location.origin}/app?reach=${REACH_ID}&feature=${encodeURIComponent(String(selected.properties.id))}`;
     try {
       await navigator.clipboard.writeText(href);
+      setNoticeOk(true);
       setNotice('Investigation link copied.');
     } catch {
       setNotice(href);
     }
   };
 
-  if (error) return <div className="decision-page"><Navbar /><main className="decision-error"><ShieldAlert /><h1>Investigation unavailable</h1><p>{error}</p><a href="/methods">Open methods and data sources</a></main></div>;
-  if (!bundle) return <div className="decision-page"><Navbar /><main className="decision-loading"><span className="decision-kicker">FLUVISAR / DECISION DESK</span><div className="decision-loader" /><p>Loading the Jamuna evidence bundle…</p></main></div>;
-  if (!candidates.length) return <div className="decision-page"><Navbar /><main className="decision-error"><Target /><h1>No mapped candidates in this bundle</h1><p>The evidence bundle loaded, but it contains no transition features to review. Check the reach bundle and analysis window before creating a scenario.</p><a href="/methods">Open methods and data sources</a></main></div>;
+  if (error) return <div className="desk-page"><Navbar transparent={false} /><main className="desk-standby error"><ShieldAlert size={30} /><h1>Investigation unavailable</h1><p>{error}</p><a href="/methods">Open methods and data sources <ChevronRight size={14} /></a></main></div>;
+  if (!bundle) return <div className="desk-page"><Navbar transparent={false} /><main className="desk-standby"><span className="desk-kicker">FLUVISAR / DECISION DESK</span><div className="desk-loader" /><p>Loading the Jamuna evidence bundle…</p></main></div>;
+  if (!candidates.length) return <div className="desk-page"><Navbar transparent={false} /><main className="desk-standby error"><Target size={30} /><h1>No mapped candidates in this bundle</h1><p>The evidence bundle loaded, but it contains no transition features to review. Check the reach bundle and analysis window before creating a scenario.</p><a href="/methods">Open methods and data sources <ChevronRight size={14} /></a></main></div>;
 
   const viewButtons: Array<{ id: DeskView; label: string; icon: React.ReactNode }> = [
-    { id: 'ledger', label: 'Review ledger', icon: <ClipboardList size={16} /> },
-    { id: 'context', label: 'Radar to reality', icon: <Radar size={16} /> },
-    { id: 'scenario', label: 'Impact scenario', icon: <Target size={16} /> },
+    { id: 'ledger', label: 'Review ledger', icon: <ClipboardList size={15} /> },
+    { id: 'context', label: 'Radar → reality', icon: <GitCompareArrows size={15} /> },
+    { id: 'scenario', label: 'Impact scenario', icon: <Target size={15} /> },
   ];
-  const candidateMetric = latestMetric?.value;
-  const sensitivity = qcChecks.find((check: QCCheck) => check.id === 'threshold_sensitivity');
-  const dswxCheck = qcChecks.find((check: QCCheck) => check.id === 'dswx_agreement');
+  const erosionMetric = latestMetric;
+  const stagePair = bundle.reach.primary_pair;
+  const thresholds = erosionMetric?.params ?? null;
+  const centroidOf = selected ? featureCentroid(selected) : null;
+  const scenarioRing = scenario ? scenario.geometry.coordinates[0] : null;
+  const pairWindow = firstDate && lastDate
+    ? Math.round((new Date(`${lastDate.slice(0, 4)}-${lastDate.slice(4, 6)}-${lastDate.slice(6, 8)}`).valueOf() - new Date(`${firstDate.slice(0, 4)}-${firstDate.slice(4, 6)}-${firstDate.slice(6, 8)}`).valueOf()) / 86400000)
+    : 0;
 
   return (
-    <div className="decision-page">
+    <div className="desk-page">
       <Navbar transparent={false} />
-      <main className="decision-shell">
-        <header className="decision-header">
-          <div>
-            <div className="decision-kicker"><span className="decision-kicker-line" /> FLUVISAR / JAMUNA INVESTIGATION</div>
-            <h1>From river signal to a decision worth trusting.</h1>
-            <p className="decision-deck">A field-review desk for researchers, planners, and the communities who live beside the river.</p>
+      <main className="desk-shell">
+
+        {/* ── Hero ─────────────────────────────────────────────────── */}
+        <header className="desk-hero">
+          <div className="desk-hero-lede">
+            <div className="desk-kicker"><span className="desk-kicker-rule" />FLUVISAR · DECISION DESK · JAMUNA</div>
+            <h1>Translated the river&rsquo;s radar shift into a desk&nbsp;—&nbsp;not a headline.</h1>
+            <p className="desk-deck">
+              Investigators, resource managers, and riverside communities all need something different from the same observation: a queue to work, a verdict that means what it says,
+              and places worth checking. This is that desk for the Chilmari–Roumari reach.
+            </p>
           </div>
-          <div className="decision-header-status">
-            <span className="decision-status-mark" />
-            <div><strong>INCONCLUSIVE</strong><small>Review required · no alert issued</small></div>
+          <div className="desk-verdict-card" role="status">
+            <div className="desk-verdict-head"><span className="desk-verdict-pulse"><i /></span>VERDICT OF THIS RUN</div>
+            <div className="desk-verdict-word">{bundle.reach.verdict}</div>
+            <p>No alert is issued from this scene. {failedChecks} check failed, {warningChecks} warned, {notEvaluated} were not evaluated — review before any use.</p>
+            <div className="desk-verdict-meta"><span>Reach {bundle.reach.track.relative_orbit}{bundle.reach.track.direction} · frame {bundle.reach.track.frame}</span><span>{formatDate(firstDate)} → {formatDate(lastDate)}</span></div>
           </div>
         </header>
 
-        <section className="decision-case-strip" aria-label="Investigation summary">
-          <div className="decision-case-place"><MapPinned size={18} /><div><strong>{bundle.reach.name}</strong><small>{bundle.reach.river} River · Bangladesh · Orbit {bundle.reach.track.relative_orbit} / frame {bundle.reach.track.frame}</small></div></div>
-          <div className="decision-case-fact"><span>OBSERVATIONS</span><strong>{bundle.reach.dates.length} dates</strong><small>{formatDate(firstDate)} → {formatDate(lastDate)}</small></div>
-          <div className="decision-case-fact"><span>QC TO REVIEW</span><strong>{failedChecks} fail · {warningChecks} warn</strong><small>{notEvaluated} checks not evaluated</small></div>
-          <a className="decision-source-link" href={NISAR_URL} target="_blank" rel="noreferrer">NISAR source <ExternalLink size={14} /></a>
+        {/* ── Metric band ──────────────────────────────────────────── */}
+        <section className="desk-metrics" aria-label="Headline metrics">
+          <article className="desk-metric is-erosion">
+            <div className="desk-metric-label">MAPPED EROSION CANDIDATES</div>
+            <div className="desk-metric-value">{formatNumber(erosionMetric?.value)} <small>ha</small></div>
+            <p>Land to water, {formatDate(firstDate)} → {formatDate(lastDate)}.</p>
+            {erosionMetric?.low != null && erosionMetric?.high != null && (
+              <div className="desk-range">
+                <i style={{ left: `${Math.max(2, Math.min(98, ((erosionMetric.value - erosionMetric.low) / (erosionMetric.high - erosionMetric.low)) * 100))}%` }} />
+                <span className="lo">{formatNumber(erosionMetric.low, 0)}</span>
+                <span className="hi">{formatNumber(erosionMetric.high, 0)}</span>
+              </div>
+            )}
+            {erosionMetric?.low != null && erosionMetric?.high != null && <small className="desk-range-note">±1 dB uncertainty band, ha</small>}
+          </article>
+          <article className="desk-metric is-accretion">
+            <div className="desk-metric-label">MAPPED ACCRETION CANDIDATES</div>
+            <div className="desk-metric-value">{formatNumber(accretionMetric?.value)} <small>ha</small></div>
+            <p>Water to land over the same pair.</p>
+            <div className="desk-metric-foot"><span>{accretionMetric?.pixel_count != null ? formatNumber(accretionMetric.pixel_count, 0) : '—'} px · 400 m² each</span><span>same two granules</span></div>
+          </article>
+          <article className="desk-metric is-net">
+            <div className="desk-metric-label">NET CANDIDATE SIGNAL</div>
+            <div className="desk-metric-value is-negative"><TrendingDown size={22} />−{formatNumber((erosionMetric?.value ?? 0) - (accretionMetric?.value ?? 0))} <small>ha</small></div>
+            <p>Candidate-only arithmetic — not a confirmed loss figure.</p>
+            <div className="desk-metric-foot"><span>parity rate: 1.4 : 1</span><span>still under review</span></div>
+          </article>
+          <article className="desk-metric is-queue">
+            <div className="desk-metric-label">FIELD REVIEW QUEUE</div>
+            <div className="desk-metric-value">{candidates.length.toLocaleString()} <small>features</small></div>
+            <p>{reviewedCount} of 24 priority candidates already triaged in this browser.</p>
+            <div className="desk-metric-bar"><i style={{ width: `${(reviewedCount / 24) * 100}%` }} /></div>
+            <div className="desk-metric-foot"><span>QC scorecard: {failedChecks} fail · {warningChecks} warn</span><span>{notEvaluated} not evaluated</span></div>
+          </article>
         </section>
 
-        <section className="decision-layout">
-          <div className="decision-map-column">
-            <div className="decision-map-frame">
+        {/* ── Workspace: map + rail ────────────────────────────────── */}
+        <section className="desk-layout">
+          <div className="desk-map-col">
+            <div className="desk-map-frame">
               <DecisionMap
                 reach={bundle.reach}
                 bounds={bundle.bounds}
@@ -316,111 +407,298 @@ export function DecisionDesk() {
                 scenario={activeView === 'scenario' ? scenario : null}
                 osm={activeView === 'scenario' ? osm : null}
               />
-              <div className="decision-map-title"><span className="decision-map-live" /> ACTIVE CASE LAYERS <span>· {formatDate(selectedDate)}</span></div>
-              <div className="decision-map-controls" aria-label="Map layers">
-                <button className={showRadar ? 'active' : ''} onClick={() => setShowRadar(!showRadar)}><Eye size={14} /> NISAR HH</button>
-                <button className={showWater ? 'active' : ''} onClick={() => setShowWater(!showWater)}><Waves size={14} /> Water mask</button>
-                <button className={showOpera ? 'active' : ''} onClick={() => setShowOpera(!showOpera)}><Layers3 size={14} /> OPERA · 17 Jun</button>
+              <div className="desk-map-chip"><span className="desk-live-dot" />LAYER STACK · <b>{formatDate(selectedDate)}</b></div>
+              <div className="desk-map-layers" aria-label="Map layers">
+                <button className={showRadar ? 'active' : ''} onClick={() => setShowRadar(!showRadar)}><Eye size={13} /> NISAR HH</button>
+                <button className={showWater ? 'active' : ''} onClick={() => setShowWater(!showWater)}><Waves size={13} /> Water mask</button>
+                <button className={showOpera ? 'active' : ''} onClick={() => setShowOpera(!showOpera)}><Layers3 size={13} /> OPERA DSWx</button>
               </div>
-              <div className="decision-map-legend"><span><i className="legend-land-water" /> Land → water candidate</span><span><i className="legend-water-land" /> Water → land candidate</span>{activeView === 'scenario' && <span><i className="legend-scenario" /> Hypothetical envelope</span>}</div>
+              <div className="desk-map-legend">
+                <span><i className="l-erosion" /> Land → water candidate</span>
+                <span><i className="l-accretion" /> Water → land candidate</span>
+                <span><i className="l-selected" /> Selected</span>
+                {activeView === 'scenario' && <span><i className="l-scenario" /> Envelope</span>}
+              </div>
             </div>
-            <div className="decision-date-track">
-              <div className="decision-date-track-title"><span>OBSERVED PASSES</span><span>same relative orbit · actual dates only</span></div>
-              <div className="decision-date-buttons">
+
+            <div className="desk-passes">
+              <div className="desk-passes-head">
+                <span className="desk-eyebrow-inline">OBSERVED PASSES · SAME RELATIVE ORBIT</span>
+                {passDates.length >= 2 && (
+                  <button className={`desk-play ${playing ? 'on' : ''}`} onClick={() => setPlaying(!playing)} aria-label={playing ? 'Stop time series' : 'Play time series'}>
+                    {playing ? <Pause size={13} /> : <Play size={13} />}{playing ? 'Pause cycle' : 'Cycle passes'}
+                  </button>
+                )}
+              </div>
+              <div className="desk-passes-grid">
                 {bundle.reach.dates.map((date, index) => (
                   <button key={date.date} className={selectedDate === date.date ? 'selected' : ''} onClick={() => setSelectedDate(date.date)}>
-                    <span className="decision-date-node" />
+                    <span className="desk-pass-node">{selectedDate === date.date && <i />}</span>
                     <strong>{formatDate(date.date)}</strong>
-                    <small>{date.status === 'ok' ? `NISAR L-band · ${date.stage_source === 'proxy' ? 'stage proxy' : 'observed stage'}` : `Not used · ${date.status}`}</small>
-                    {index < bundle.reach.dates.length - 1 && <span className="decision-date-connector" />}
+                    <small>{date.status === 'ok' ? `L-band HH · ${date.stage_source === 'proxy' ? 'stage proxy' : 'gauge stage'} · ${date.acq_utc.slice(11, 16)} UTC` : `not used · ${date.status}`}</small>
+                    {index < bundle.reach.dates.length - 1 && <span className="desk-pass-link" />}
                   </button>
                 ))}
               </div>
+              <div className="desk-passes-note">Pair rule {stagePair.type === 'later_lower' ? 'later/lower' : 'equal stage'} · Δstage {formatNumber(stagePair.dh_m, 3)} proxy · {pairWindow} days apart. Play cycles the map imagery between real passes.</div>
             </div>
           </div>
 
-          <aside className="decision-rail">
-            <div className="decision-rail-nav" role="tablist" aria-label="Decision desk views">
-              {viewButtons.map((view) => <button key={view.id} role="tab" aria-selected={activeView === view.id} className={activeView === view.id ? 'active' : ''} onClick={() => setActiveView(view.id)}>{view.icon}<span>{view.label}</span></button>)}
+          <aside className="desk-rail">
+            <div className="desk-rail-nav" role="tablist" aria-label="Decision desk views">
+              {viewButtons.map((view) => (
+                <button key={view.id} role="tab" aria-selected={activeView === view.id} className={activeView === view.id ? 'active' : ''} onClick={() => setActiveView(view.id)}>{view.icon}<span>{view.label}</span></button>
+              ))}
             </div>
 
-            {activeView === 'ledger' && selected && (
-              <div className="decision-rail-content">
-                <div className="decision-section-eyebrow"><ClipboardList size={14} /> FIELD REVIEW QUEUE</div>
+            {/* ── LEDGER ── */}
+            {activeView === 'ledger' && (
+              <div className="desk-rail-body" key="ledger">
+                <div className="desk-eyebrow"><ClipboardList size={13} /> FIELD REVIEW QUEUE</div>
                 <h2>Candidate ledger</h2>
-                <p className="decision-section-copy">Ranked by mapped candidate area. This is a review queue, not a hazard ranking.</p>
-                <div className="decision-ledger-summary"><div><strong>{candidates.length.toLocaleString()}</strong><span>mapped candidates</span></div><div><strong>{maxArea.toFixed(1)} ha</strong><span>largest five combined</span></div></div>
-                <div className="decision-ledger-list">
-                  {candidates.slice(0, 24).map((feature) => {
+                <p className="desk-copy">
+                  {filteredLists.length} transition{filteredLists.length === 1 ? '' : 's'} shown, ranked by mapped area. A candidate lineup — not a hazard ranking.
+                </p>
+                <div className="desk-chips">
+                  <span className="chip is-erosion"><strong>{(bundle.erosion?.features.length ?? 0).toLocaleString()}</strong>erosion</span>
+                  <span className="chip is-accretion"><strong>{(bundle.accretion?.features.length ?? 0).toLocaleString()}</strong>accretion</span>
+                  <span className="chip is-review"><strong>{reviewedCount}/24</strong>triaged</span>
+                </div>
+                <div className="desk-filter">
+                  <div className="desk-search"><Search size={13} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find candidate ID…" aria-label="Search candidates" /></div>
+                  <div className="desk-seg" role="group" aria-label="Filter by class">
+                    {(['all', 'erosion', 'accretion'] as ClassFilter[]).map((key) => (
+                      <button key={key} className={classFilter === key ? 'active' : ''} onClick={() => setClassFilter(key)}>{key === 'all' ? 'All' : key === 'erosion' ? 'Erosion' : 'Accretion'}</button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="desk-ledger">
+                  {filteredLists.length === 0 && <div className="desk-empty">No matching candidates. <button onClick={() => { setQuery(''); setClassFilter('all'); }}>Reset filters</button></div>}
+                  {filteredLists.slice(0, 40).map((feature) => {
                     const id = String(feature.properties.id);
                     const isSelected = selectedFeatureId === id;
-                    return <button key={id} className={`decision-candidate ${isSelected ? 'selected' : ''}`} onClick={() => setSelectedFeatureId(id)}>
-                      <span className={`candidate-swatch ${feature.properties.class}`} />
-                      <span className="candidate-main"><strong>{candidateLabel(feature)}</strong><small>{formatDate(feature.properties.t0)} → {formatDate(feature.properties.t1)} · {review[id] ?? 'Unreviewed'}</small></span>
-                      <span className="candidate-area">{feature.properties.area_ha.toFixed(2)}<small>ha</small></span>
-                    </button>;
+                    return (
+                      <button key={id} className={`desk-row ${isSelected ? 'selected' : ''}`} onClick={() => setSelectedFeatureId(id)}>
+                        <span className="row-rank">#{candidates.indexOf(feature) + 1}</span>
+                        <span className={`row-swatch ${feature.properties.class}`} />
+                        <span className="row-main">
+                          <strong>{feature.properties.class === 'erosion' ? 'Land → water' : 'Water → land'} · {feature.properties.id}</strong>
+                          <small>{formatDate(feature.properties.t0)} → {formatDate(feature.properties.t1)}</small>
+                        </span>
+                        <span className="row-status">{review[id] ?? 'Unreviewed'}</span>
+                        <span className="row-area">{feature.properties.area_ha.toFixed(2)}<small>ha</small></span>
+                      </button>
+                    );
                   })}
                 </div>
-                <div className="decision-selected-card">
-                  <div className="decision-selected-top"><div><span className="decision-section-eyebrow">SELECTED EVIDENCE</span><h3>{selected.properties.id}</h3></div><span className="candidate-unverified">UNVERIFIED</span></div>
-                  <div className="decision-data-pair"><span>Mapped transition</span><strong>{selected.properties.area_ha.toFixed(2)} ha</strong></div>
-                  <div className="decision-data-pair"><span>Review status</span><select value={selectedReview} onChange={(event) => updateReview(String(selected.properties.id), event.target.value as ReviewState)} aria-label="Review status"><option>Unreviewed</option><option>Field review queued</option><option>Observation received</option><option>Closed</option></select></div>
-                  <p className="decision-local-note"><CircleHelp size={14} /> Status is saved in this browser only; it is not synced to TRACE Field.</p>
-                  <div className="decision-action-row"><button className="decision-button primary" onClick={exportCasePacket}><FileJson2 size={15} /> Export TRACE packet</button><button className="decision-button quiet" onClick={copyCaseLink} aria-label="Copy investigation link"><Copy size={15} /></button></div>
-                </div>
+                {filteredLists.length > 40 && <div className="desk-ledger-foot">Showing the 40 largest of {filteredLists.length} matches — refine the search or filter to narrow the queue.</div>}
+
+                {selected && centroidOf && (
+                  <div className="desk-card desk-selected">
+                    <div className="desk-selected-head">
+                      <div>
+                        <span className="desk-eyebrow-soft">SELECTED EVIDENCE</span>
+                        <h3>{selected.properties.class === 'erosion' ? 'Land → water candidate' : 'Water → land candidate'} <b>{selected.properties.id}</b></h3>
+                      </div>
+                      <span className="desk-tag is-warn">UNVERIFIED</span>
+                    </div>
+                    <div className="desk-factlist">
+                      <div><span>Mapped transition</span><strong>{selected.properties.area_ha.toFixed(2)} ha</strong></div>
+                      <div><span>Observed between</span><strong>{formatDate(selected.properties.t0)} → {formatDate(selected.properties.t1)}</strong></div>
+                      <div><span>Centroid</span><strong><Crosshair size={12} /> {formatCoord(centroidOf)}</strong></div>
+                      <div><span>Review status</span>
+                        <select value={selectedReview} onChange={(event) => updateReview(String(selected.properties.id), event.target.value as ReviewState)} aria-label="Review status">
+                          <option>Unreviewed</option>
+                          <option>Field review queued</option>
+                          <option>Observation received</option>
+                          <option>Closed</option>
+                        </select>
+                      </div>
+                    </div>
+                    <p className="desk-note"><CircleHelp size={13} /> Status stays in this browser; it is not synced to TRACE Field.</p>
+                    <div className="desk-actions">
+                      <button className="desk-btn primary" onClick={exportCasePacket}><FileJson2 size={14} /> Export case packet</button>
+                      <button className="desk-btn" onClick={copyCaseLink} aria-label="Copy investigation link"><Copy size={14} /></button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
+            {/* ── RADAR TO REALITY ── */}
             {activeView === 'context' && (
-              <div className="decision-rail-content">
-                <div className="decision-section-eyebrow"><Radar size={14} /> OBSERVATION CONTEXT</div>
+              <div className="desk-rail-body" key="context">
+                <div className="desk-eyebrow"><GitCompareArrows size={13} /> OBSERVATION CONTEXT</div>
                 <h2>Radar to reality</h2>
-                <p className="decision-section-copy">Compare the two real HH quicklooks. The map below also includes a separately dated Sentinel‑1 water layer.</p>
-                <div className="decision-compare-images" style={{ '--compare-position': `${comparePosition}%` } as React.CSSProperties}>
-                  <img className="compare-image-after" src={`${`/data/v1/${REACH_ID}`}/img/radar_${lastDate}.png`} alt={`NISAR HH quicklook from ${formatDate(lastDate)}`} />
-                  <img className="compare-image-before" src={`${`/data/v1/${REACH_ID}`}/img/radar_${firstDate}.png`} alt={`NISAR HH quicklook from ${formatDate(firstDate)}`} />
-                  <div className="compare-divider"><span>⇆</span></div>
-                  <label className="sr-only" htmlFor="decision-compare">Compare NISAR dates</label>
-                  <input id="decision-compare" type="range" min="3" max="97" value={comparePosition} onChange={(event) => setComparePosition(Number(event.target.value))} aria-label="Swipe between the two NISAR dates" />
-                  <span className="compare-date before">{formatDate(firstDate)}</span><span className="compare-date after">{formatDate(lastDate)}</span>
+                <p className="desk-copy">Two real L-band HH quicklooks, {pairWindow} days apart. Drag the divider — quicklooks show signal patterns, they do not identify water on their own.</p>
+                <div className="desk-compare" style={{ '--compare-position': `${comparePosition}%` } as React.CSSProperties}>
+                  <img className="cmp-after" src={`${`/data/v1/${REACH_ID}`}/img/radar_${lastDate}.png`} alt={`NISAR HH quicklook from ${formatDate(lastDate)}`} />
+                  <img className="cmp-before" src={`${`/data/v1/${REACH_ID}`}/img/radar_${firstDate}.png`} alt={`NISAR HH quicklook from ${formatDate(firstDate)}`} />
+                  <div className="cmp-divider"><span>⇆</span></div>
+                  <label className="sr-only" htmlFor="desk-compare">Compare NISAR dates</label>
+                  <input id="desk-compare" type="range" min="3" max="97" value={comparePosition} onChange={(event) => setComparePosition(Number(event.target.value))} aria-label="Swipe between the two NISAR dates" />
+                  <span className="cmp-date before">{formatDate(firstDate)}</span>
+                  <span className="cmp-date after">{formatDate(lastDate)}</span>
                 </div>
-                <div className="decision-context-callout"><span className="context-icon"><Layers3 size={16} /></span><div><strong>Independent context · OPERA DSWx-S1</strong><p>Sentinel‑1 C-band water extent from 17 Jun 2026. It predates the NISAR pair and is shown as seasonal context, not same-date validation.</p><a href={QC_URL} target="_blank" rel="noreferrer">Product details <ArrowUpRight size={13} /></a></div></div>
-                <div className="decision-observation-facts"><div><span>PAIR WINDOW</span><strong>{Math.round((new Date(`${lastDate.slice(0,4)}-${lastDate.slice(4,6)}-${lastDate.slice(6,8)}`).valueOf() - new Date(`${firstDate.slice(0,4)}-${firstDate.slice(4,6)}-${firstDate.slice(6,8)}`).valueOf()) / 86400000)} days</strong></div><div><span>POLARIZATION</span><strong>HH only</strong></div><div><span>STAGE RECORD</span><strong>{bundle.stage.mode === 'proxy' ? 'Proxy values' : 'Gauge values'}</strong></div></div>
-                <p className="decision-science-note">Backscatter quicklooks reveal signal patterns; they do not uniquely identify water or permanent bank loss. The configured comparison remains inconclusive.</p>
+                <div className="desk-facts">
+                  <div><span>PAIR WINDOW</span><strong>{formatDate(firstDate)} → {formatDate(lastDate)}</strong></div>
+                  <div><span>POLARIZATION</span><strong>HH only</strong></div>
+                  <div><span>THRESHOLDS</span><strong>{thresholds?.threshold_db_t0 != null ? `${thresholds.threshold_db_t0.toFixed(2)} / ${thresholds.threshold_db_t1?.toFixed(2)} dB` : 'Otsu per pass'}</strong></div>
+                  <div><span>STAGE RECORD</span><strong>{bundle.stage.mode === 'proxy' ? 'Proxy levels' : 'Gauge levels'}</strong></div>
+                </div>
+                <div className="desk-callout">
+                  <span className="callout-ico"><Layers3 size={15} /></span>
+                  <div>
+                    <strong>Independent context · OPERA DSWx-S1</strong>
+                    <p>Sentinel‑1 C-band water extent from 17 Jun 2026 — predates the NISAR pair and is seasonal context only, not same-date validation.</p>
+                    <a href={QC_URL} target="_blank" rel="noreferrer">Product details <ArrowUpRight size={12} /></a>
+                  </div>
+                </div>
+                <p className="desk-note is-block"><ShieldAlert size={13} /> Backscatter splits at the configured threshold are inputs to a review, not conclusions. The run&rsquo;s verdict stays INCONCLUSIVE until the open checks close.</p>
               </div>
             )}
 
+            {/* ── SCENARIO ── */}
             {activeView === 'scenario' && selected && scenario && (
-              <div className="decision-rail-content">
-                <div className="decision-section-eyebrow"><Compass size={14} /> SCREENING SCENARIO</div>
+              <div className="desk-rail-body" key="scenario">
+                <div className="desk-eyebrow"><SlidersHorizontal size={13} /> SCREENING SCENARIO</div>
                 <h2>What could merit a field look?</h2>
-                <p className="decision-section-copy">Shape a hypothetical rectangular corridor around the selected candidate. This is a planning scenario, not an erosion forecast.</p>
-                <label className="decision-slider-label"><span>Along-bank length</span><strong>{lengthM} m</strong></label>
-                <input className="decision-range" type="range" min="100" max="2000" step="50" value={lengthM} onChange={(event) => setLengthM(Number(event.target.value))} aria-label="Hypothetical along-bank length in metres" />
-                <label className="decision-slider-label"><span>Hypothetical retreat depth</span><strong>{depthM} m</strong></label>
-                <input className="decision-range" type="range" min="20" max="800" step="10" value={depthM} onChange={(event) => setDepthM(Number(event.target.value))} aria-label="Hypothetical retreat depth in metres" />
-                <label className="decision-slider-label"><span>Envelope orientation</span><strong>{bearing}°</strong></label>
-                <input className="decision-range" type="range" min="0" max="180" step="5" value={bearing} onChange={(event) => setBearing(Number(event.target.value))} aria-label="Hypothetical corridor orientation in degrees" />
-                <div className="scenario-area-card"><span>SCENARIO AREA · LENGTH × DEPTH</span><strong>{areaHa.toFixed(2)} <small>ha</small></strong><div className="scenario-formula">{lengthM.toLocaleString()} m × {depthM.toLocaleString()} m ÷ 10,000</div></div>
-                <div className="scenario-assets">
-                  <div className="scenario-assets-heading"><div><strong>Mapped assets in envelope</strong><small>OpenStreetMap · queried on demand</small></div><button className="decision-button quiet" onClick={loadOpenMapContext} disabled={osmState === 'loading'}><Search size={14} /> {osmState === 'loading' ? 'Searching…' : osmState === 'ready' ? 'Refresh' : 'Load assets'}</button></div>
-                  {osmState === 'ready' ? <div className="scenario-asset-grid"><div><strong>{osmBuildings}</strong><span>mapped building ways</span></div><div><strong>{osmRoads}</strong><span>mapped road ways touched</span></div></div> : <p className={`scenario-asset-note ${osmState === 'error' ? 'error' : ''}`}>{osmState === 'error' ? osmError : 'Query a small area around this candidate to see mapped buildings and roads inside the scenario envelope.'}</p>}
-                  <div className="osm-credit">© OpenStreetMap contributors · <a href={OSM_URL} target="_blank" rel="noreferrer">ODbL attribution</a></div>
+                <p className="desk-copy">Shape a hypothetical corridor around the selected candidate. {scenarioRing && <span>Mapped at {formatCoord([scenarioRing[0][0], scenarioRing[0][1]])}–{formatCoord(featureCentroid(selected))} corner.</span>} This is planning geometry, not an erosion forecast.</p>
+                <label className="desk-slider"><span>Along-bank length</span><strong>{lengthM.toLocaleString()} m</strong></label>
+                <input className="desk-range-input" type="range" min="100" max="2000" step="50" value={lengthM} onChange={(event) => setLengthM(Number(event.target.value))} aria-label="Hypothetical along-bank length in metres" />
+                <label className="desk-slider"><span>Hypothetical retreat depth</span><strong>{depthM.toLocaleString()} m</strong></label>
+                <input className="desk-range-input" type="range" min="20" max="800" step="10" value={depthM} onChange={(event) => setDepthM(Number(event.target.value))} aria-label="Hypothetical retreat depth in metres" />
+                <label className="desk-slider"><span>Corridor orientation</span><strong>{bearing}°</strong></label>
+                <input className="desk-range-input" type="range" min="0" max="180" step="5" value={bearing} onChange={(event) => setBearing(Number(event.target.value))} aria-label="Hypothetical corridor orientation in degrees" />
+                <div className="desk-area">
+                  <span>SCENARIO AREA · LENGTH × DEPTH</span>
+                  <strong>{areaHa.toFixed(2)} <small>ha</small></strong>
+                  <div className="desk-area-formula">{lengthM.toLocaleString()} m × {depthM.toLocaleString()} m ÷ 10,000 — drawn by you, computed honestly.</div>
                 </div>
-                <div className="scenario-caveat"><ShieldAlert size={16} /><p>Counts describe mapped features intersecting this user-drawn envelope. OSM coverage is incomplete; these are not people at risk, damaged homes, or a forecast.</p></div>
+                <div className="desk-assets">
+                  <div className="desk-assets-head">
+                    <div><strong>Exposure inside the corridor</strong><small>OpenStreetMap · queried on demand</small></div>
+                    <button className="desk-btn slim" onClick={loadOpenMapContext} disabled={osmState === 'loading'}><Search size={13} /> {osmState === 'loading' ? 'Searching…' : osmState === 'ready' ? 'Refresh' : 'Load assets'}</button>
+                  </div>
+                  {osmState === 'ready' ? (
+                    <div className="desk-assets-grid">
+                      <div><strong>{osmBuildings}</strong><span>mapped building ways</span></div>
+                      <div><strong>{osmRoads}</strong><span>road ways touched</span></div>
+                    </div>
+                  ) : <p className={`desk-assets-note ${osmState === 'error' ? 'error' : ''}`}>{osmState === 'error' ? osmError : 'Query a small area around this candidate to list mapped buildings and roads inside the corridor.'}</p>}
+                  <div className="desk-osm-credit">© OpenStreetMap contributors · <a href={OSM_URL} target="_blank" rel="noreferrer">ODbL attribution</a></div>
+                </div>
+                <p className="desk-caveat"><ShieldAlert size={14} /> Counts describe mapped features intersecting this user-drawn envelope. OSM coverage is incomplete — these are not people at risk, damaged homes, or a forecast.</p>
               </div>
             )}
           </aside>
         </section>
 
-        <section className="decision-brief">
-          <div className="decision-brief-top"><div><div className="decision-section-eyebrow"><Sparkles size={14} /> SAME EVIDENCE · THREE READS</div><h2>Make the finding useful to the person reading it.</h2></div><div className="decision-audience-switch" role="tablist" aria-label="Choose audience"><button className={audience === 'analyst' ? 'active' : ''} onClick={() => setAudience('analyst')}>Researcher</button><button className={audience === 'planner' ? 'active' : ''} onClick={() => setAudience('planner')}>Planner</button><button className={audience === 'public' ? 'active' : ''} onClick={() => setAudience('public')}>Community</button></div></div>
-          <div className="decision-brief-copy"><div className="brief-audience-mark"><BookOpen size={18} /><span>{VIEW_COPY[audience].label.toUpperCase()}</span></div><div><h3>{VIEW_COPY[audience].title}</h3><p>{VIEW_COPY[audience].body}</p></div><div className="brief-next-step"><span>NEXT USEFUL STEP</span><strong>{bundle.stage.mode === 'proxy' ? 'Add observed gauge levels and another same-track pass.' : 'Review the disputed patches with independent field evidence.'}</strong></div></div>
-          <div className="decision-brief-foot"><span><ShieldAlert size={14} /> Candidate change is not confirmed erosion.</span><span>Area in manifest: {candidateMetric?.toLocaleString(undefined, { maximumFractionDigits: 1 }) ?? '—'} ha · threshold sensitivity: {sensitivity?.value ?? 'not available'} {sensitivity?.unit ?? ''} · OPERA check: {dswxCheck?.status ?? 'not evaluated'}</span></div>
+        {/* ── Verdict + QC ─────────────────────────────────────────── */}
+        <section className="desk-verdict-section">
+          <div className="desk-section-head">
+            <div className="desk-eyebrow"><Workflow size={13} /> EVIDENCE INTEGRITY</div>
+            <h2>Why this run stays {bundle.reach.verdict}</h2>
+            <p>The desk doesn&rsquo;t ship a confident number when its own gates say not to. Each item below either blocks, shades, or awaits evidence.</p>
+          </div>
+          <div className="desk-verdict-layout">
+            <div className="desk-reasons">
+              <div className="desk-eyebrow-soft">VERDICT REASONS · REACH RECORD</div>
+              <ol>
+                {bundle.reach.verdict_reasons.map((reason) => <li key={reason}>{reason}</li>)}
+              </ol>
+            </div>
+            <div className="desk-qc">
+              <div className="desk-eyebrow-soft">QC SCORECARD · {qcChecks.length} CHECKS</div>
+              <div className="desk-qc-grid">
+                {qcChecks.map((check: QCCheck) => (
+                  <div key={check.id} className={`desk-qc-chip chip-${QC_STYLE[check.status] ?? 'off'}`}>
+                    <div className="qc-top">
+                      <span className={`qc-status s-${QC_STYLE[check.status] ?? 'off'}`}>{check.status.replace(/_/g, ' ')}</span>
+                      <span className="qc-read">{check.value != null ? `${formatNumber(check.value, check.value < 10 ? 2 : 1)}${check.unit ? ` ${check.unit}` : ''}` : 'not measured'}</span>
+                    </div>
+                    <strong>{check.label ?? check.id}</strong>
+                    <p>{check.explanation}</p>
+                    {check.rule && <small>Rule: {check.rule}</small>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </section>
 
-        <footer className="decision-footer"><span>FLUVISAR · EVIDENCE FIRST</span><span>Local review statuses stay in this browser. Export a case packet to hand off to TRACE Field.</span><a href="/methods">Methods & provenance <ChevronRight size={13} /></a></footer>
-        {notice && <div className="decision-toast" role="status"><Check size={15} /> {notice}<button onClick={() => setNotice('')} aria-label="Dismiss notice">×</button></div>}
+        {/* ── Audience brief ───────────────────────────────────────── */}
+        <section className="desk-brief">
+          <div className="desk-brief-head">
+            <div>
+              <div className="desk-eyebrow"><Sparkles size={13} /> SAME EVIDENCE · THREE READS</div>
+              <h2>One finding, the version each reader actually needs.</h2>
+            </div>
+            <div className="desk-audience" role="tablist" aria-label="Choose audience">
+              {(['analyst', 'planner', 'public'] as Audience[]).map((key) => (
+                <button key={key} className={audience === key ? 'active' : ''} onClick={() => setAudience(key)}>{VIEW_COPY[key].label}</button>
+              ))}
+            </div>
+          </div>
+          <div className="desk-brief-body">
+            <div className="brief-mark"><BookOpen size={17} /><span>{VIEW_COPY[audience].label.toUpperCase()}</span></div>
+            <div className="brief-copy"><h3>{VIEW_COPY[audience].title}</h3><p>{VIEW_COPY[audience].body}</p></div>
+            <div className="brief-next"><span>NEXT USEFUL STEP</span><strong>{VIEW_COPY[audience].step}</strong></div>
+          </div>
+          <div className="desk-brief-foot">
+            <span className="foot-flag"><ShieldAlert size={13} /> Candidate change is not confirmed erosion until named checks close.</span>
+            <span>Pipeline out: {erosionMetric?.label ?? 'erosion area'} {formatNumber(erosionMetric?.value)}{erosionMetric?.unit ? ` ${erosionMetric.unit}` : ''}{erosionMetric?.low != null && erosionMetric?.high != null ? ` (low ${formatNumber(erosionMetric.low, 0)} – high ${formatNumber(erosionMetric.high, 0)})` : ''}</span>
+            <span>Sensitivity {(() => { const s = qcChecks.find((check: QCCheck) => check.id === 'threshold_sensitivity'); return s?.value != null ? `${formatNumber(s.value, 1)}% on a 30% gate` : 'n/a'; })()} · persistence {(qcChecks.find((p: QCCheck) => p.id === 'persistence')?.status ?? 'n/a').replace(/_/g, ' ').toLowerCase()}</span>
+          </div>
+        </section>
+
+        {/* ── Provenance ───────────────────────────────────────────── */}
+        <section className="desk-provenance">
+          <div className="desk-eyebrow-soft">PROVENANCE · WHAT PRODUCED EVERYTHING ABOVE</div>
+          <div className="desk-prov-grid">
+            <div>
+              <span className="prov-k">NISAR GCOV GRANULES</span>
+              <ul className="prov-list mono">
+                {(erosionMetric?.inputs ?? []).filter((input) => input.kind === 'NISAR_GCOV').map((input) => (
+                  <li key={input.granule}>{input.granule}</li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <span className="prov-k">PIPELINE PARAMETERS</span>
+              <ul className="prov-list">
+                <li>Otsu water threshold t0 <b>{thresholds?.threshold_db_t0 != null ? `${thresholds.threshold_db_t0.toFixed(2)} dB` : '—'}</b>, t1 <b>{thresholds?.threshold_db_t1 != null ? `${thresholds.threshold_db_t1.toFixed(2)} dB` : '—'}</b></li>
+                <li>Median filter <b>{thresholds?.median_filter ?? '—'}×{thresholds?.median_filter ?? '—'}</b> · MMU <b>{thresholds?.mmu_px ?? '—'} px</b> · HAND mask <b>≤ {thresholds?.hand_max_m ?? '—'} m</b></li>
+                <li>Analysis grid <b>EPSG:32645</b> · pixel <b>{erosionMetric?.pixel_area_m2 ?? '—'} m²</b> · frozen <b>{formatDate(bundle.manifest.generated_at.slice(0, 10).replace(/-/g, ''))}</b></li>
+                <li>Rainfall context <b>GPM IMERG-D (doi 10.5067/GPM/IMERGDL/DAY/07)</b> — 64.5 mm in the week before t1 vs 37.4 mm norm (1.72 ×)</li>
+              </ul>
+            </div>
+            <div>
+              <span className="prov-k">SOURCE &amp; METHODS</span>
+              <ul className="prov-list">
+                <li><a href={NISAR_URL} target="_blank" rel="noreferrer">NISAR mission data access <ExternalLink size={11} /></a></li>
+                <li><a href={QC_URL} target="_blank" rel="noreferrer">OPERA DSWx-S1 product suite <ExternalLink size={11} /></a></li>
+                <li><a href={OSM_URL} target="_blank" rel="noreferrer">OpenStreetMap, ODbL <ExternalLink size={11} /></a></li>
+                <li><a href="/methods">Methods, thresholds, and caveats in full <ChevronRight size={11} /></a></li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <footer className="desk-footer">
+          <span className="desk-footer-mark">FLUVISAR · EVIDENCE FIRST</span>
+          <span>Review statuses stay in this browser. Export a case packet for a field handoff.</span>
+          <a href="/methods">Methods &amp; provenance <ChevronRight size={13} /></a>
+        </footer>
+
+        {notice && (
+          <div className="desk-toast" role="status">
+            <i className={noticeOk ? 'ok' : 'bad'}>{noticeOk ? <Check size={13} /> : <ShieldAlert size={13} />}</i>
+            {notice}
+            <button onClick={() => setNotice('')} aria-label="Dismiss notice">×</button>
+          </div>
+        )}
       </main>
     </div>
   );
