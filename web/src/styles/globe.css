@@ -191,28 +191,135 @@
   border-color: rgba(var(--water-rgb), 0.1);
 }
 
+/* ── SAR Lab footer: attribution + grouped reference links ── */
+.sar-lab__footer {
+  padding: clamp(2.5rem, 5vw, 3.75rem) var(--s4, 1.5rem) clamp(1rem, 3vw, 2rem);
+  border-top: 1px solid rgba(var(--fg-rgb), 0.06);
+  text-align: center;
+}
+
+.sar-lab__footer-note {
+  max-width: 680px;
+  margin: 0 auto;
+  color: var(--text-3);
+  font-size: 0.84rem;
+  line-height: 1.7;
+}
+
+.sar-lab__footer-note strong {
+  color: var(--water);
+}
+
 .sar-lab__sources {
+  margin-top: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.1rem;
+}
+
+.sar-lab__sources-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.34rem 0.85rem;
+  border: 1px dashed rgba(var(--water-rgb), 0.42);
+  border-radius: 999px;
+  background: rgba(var(--water-rgb), 0.06);
+  color: var(--water);
+  font-family: var(--font-num);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.sar-lab__sources-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.55rem;
+  max-width: 100%;
+}
+
+.sar-lab__sources-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--water);
+  font-family: var(--font-num);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.sar-lab__sources-label::after {
+  content: '';
+  width: 1px;
+  height: 0.85rem;
+  background: rgba(var(--water-rgb), 0.45);
+}
+
+.sar-lab__sources-group {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 0.5rem;
-  margin: 1.25rem auto 0;
+  gap: 0.45rem 0.5rem;
 }
 
-.sar-lab__sources a {
-  padding: 0.45rem 0.75rem;
-  border: 1px solid rgba(var(--water-rgb), 0.14);
+.sar-lab__source {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  padding: 0.45rem 0.8rem 0.45rem 0.95rem;
+  border: 1px solid rgba(var(--water-rgb), 0.16);
   border-radius: 999px;
+  background: rgba(var(--panel-rgb), 0.45);
   color: var(--text-2);
   font-size: 0.78rem;
   text-decoration: none;
+  transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
 }
 
-.sar-lab__sources a:hover,
-.sar-lab__sources a:focus-visible {
-  border-color: rgba(var(--water-rgb), 0.5);
+.sar-lab__source svg {
+  flex: none;
   color: var(--water);
+  opacity: 0.55;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.sar-lab__source:hover,
+.sar-lab__source:focus-visible {
+  color: var(--text);
+  border-color: rgba(var(--water-rgb), 0.55);
+  background: rgba(var(--water-rgb), 0.1);
+  box-shadow: 0 0 18px rgba(var(--water-rgb), 0.18);
   outline: none;
+  transform: translateY(-1px);
+}
+
+.sar-lab__source:hover svg,
+.sar-lab__source:focus-visible svg {
+  opacity: 1;
+  transform: translate(1px, -1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sar-lab__source,
+  .sar-lab__source svg {
+    transition: none;
+  }
+  .sar-lab__source:hover,
+  .sar-lab__source:focus-visible {
+    transform: none;
+  }
+  .sar-lab__source:hover svg,
+  .sar-lab__source:focus-visible svg {
+    transform: none;
+  }
 }
 
 @media (max-width: 700px) {

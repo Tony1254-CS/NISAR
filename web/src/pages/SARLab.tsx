@@ -2,7 +2,7 @@
 import { useStore } from '../state/store';
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Navbar } from '../components/Navbar';
-import { Rocket, Globe, RefreshCw, Radio, Search, Ruler, Zap, Save, Clock, Handshake, Satellite, Target, Tornado, BarChart2, TrendingUp, Map, Star, XCircle, CheckCircle2, Leaf, Mountain, Antenna, Layers, Weight, Waves } from 'lucide-react';
+import { Rocket, Globe, RefreshCw, Radio, Search, Ruler, Zap, Save, Clock, Handshake, Satellite, Target, Tornado, BarChart2, TrendingUp, Map, Star, XCircle, CheckCircle2, Leaf, Mountain, Antenna, Layers, Weight, Waves, ExternalLink } from 'lucide-react';
 import '../styles/globe.css';
 
 /* ═══════════════════════════════════════════════════════════════
@@ -65,6 +65,17 @@ function SectionTitle({ title, subtitle }: { title: string; subtitle: string }) 
     </div>
   );
 }
+
+/* Footer reference pill — icon makes it unmistakably a live external link */
+function SourceChip({ href, children }: { href: string; children: string }) {
+  return (
+    <a className="sar-lab__source" href={href} target="_blank" rel="noreferrer">
+      <span>{children}</span>
+      <ExternalLink size={11} aria-hidden="true" />
+    </a>
+  );
+}
+
 
 
 function FeatureRadarViewer() {
@@ -1993,25 +2004,54 @@ export function SARLabPage() {
         </div>
 
         {/* Footer */}
-        <div style={{ textAlign: 'center', padding: 'var(--s8) 0', borderTop: '1px solid rgba(var(--fg-rgb), 0.05)' }}>
-          <p style={{ fontSize: '0.86rem', color: 'var(--text-3)', maxWidth: 600, margin: '0 auto', lineHeight: 1.6 }}>
+        <footer className="sar-lab__footer">
+          <p className="sar-lab__footer-note">
             This educational module is part of <strong>FluviSAR</strong> — built for NASA Space Apps Challenge 2026, "Dancing with the SARs".
             Mission facts link to NASA/JPL and ESA references. Interactive models are labeled where they are schematic.
           </p>
-          <div className="sar-lab__sources" aria-label="Scientific references">
-            <a href="https://science.nasa.gov/mission/nisar/mission-overview/" target="_blank" rel="noreferrer">NISAR mission overview</a>
-            <a href="https://science.nasa.gov/mission/nisar/sweepsar/" target="_blank" rel="noreferrer">SweepSAR</a>
-            <a href="https://nisar.jpl.nasa.gov/mission/get-to-know-sar/polarimetry/" target="_blank" rel="noreferrer">Polarimetry</a>
-            <a href="https://nisar.jpl.nasa.gov/documents/26/NISAR_FINAL_9-6-19.pdf" target="_blank" rel="noreferrer">NISAR Science Users’ Handbook</a>
-            <a href="https://svs.gsfc.nasa.gov/5661/" target="_blank" rel="noreferrer">NISAR flood example · Mozambique</a>
-            <a href="https://appliedsciences.nasa.gov/sites/default/files/2023-11/SAR_Part3.pdf" target="_blank" rel="noreferrer">NASA ARSET · Flood mapping limits</a>
-            <a href="https://www.mdpi.com/2072-4292/7/6/7447" target="_blank" rel="noreferrer">H/α decomposition method</a>
-            <a href="https://doi.org/10.1016/j.patrec.2025.02.021" target="_blank" rel="noreferrer">Gamma speckle model</a>
-            <a href="https://www.mdpi.com/2072-4292/12/16/2545" target="_blank" rel="noreferrer">Temporal decorrelation model</a>
-            <a href="https://science.nasa.gov/mission/nisar/interferometry/" target="_blank" rel="noreferrer">Interferometry</a>
-            <a href="https://www.esa.int/Applications/Observing_the_Earth/FutureEO/Biomass" target="_blank" rel="noreferrer">ESA BIOMASS</a>
+
+          <div className="sar-lab__sources" aria-label="Scientific references — every link opens the cited source in a new tab">
+            <span className="sar-lab__sources-hint">
+              <ExternalLink size={11} aria-hidden="true" />
+              Scientific references · all links live, open in a new tab
+            </span>
+
+            <div className="sar-lab__sources-row">
+              <span className="sar-lab__sources-label">NISAR mission</span>
+              <div className="sar-lab__sources-group">
+                <SourceChip href="https://science.nasa.gov/mission/nisar/mission-overview/">NISAR mission overview</SourceChip>
+                <SourceChip href="https://science.nasa.gov/mission/nisar/sweepsar/">SweepSAR</SourceChip>
+                <SourceChip href="https://nisar.jpl.nasa.gov/mission/get-to-know-sar/polarimetry/">Polarimetry</SourceChip>
+                <SourceChip href="https://nisar.jpl.nasa.gov/documents/26/NISAR_FINAL_9-6-19.pdf">NISAR Science Users’ Handbook</SourceChip>
+                <SourceChip href="https://science.nasa.gov/mission/nisar/interferometry/">Interferometry</SourceChip>
+              </div>
+            </div>
+
+            <div className="sar-lab__sources-row">
+              <span className="sar-lab__sources-label">Flood applications</span>
+              <div className="sar-lab__sources-group">
+                <SourceChip href="https://svs.gsfc.nasa.gov/5661/">NISAR flood example · Mozambique</SourceChip>
+                <SourceChip href="https://appliedsciences.nasa.gov/sites/default/files/2023-11/SAR_Part3.pdf">NASA ARSET · Flood mapping limits</SourceChip>
+              </div>
+            </div>
+
+            <div className="sar-lab__sources-row">
+              <span className="sar-lab__sources-label">Research papers</span>
+              <div className="sar-lab__sources-group">
+                <SourceChip href="https://www.mdpi.com/2072-4292/7/6/7447">H/α decomposition method</SourceChip>
+                <SourceChip href="https://doi.org/10.1016/j.patrec.2025.02.021">Gamma speckle model</SourceChip>
+                <SourceChip href="https://www.mdpi.com/2072-4292/12/16/2545">Temporal decorrelation model</SourceChip>
+              </div>
+            </div>
+
+            <div className="sar-lab__sources-row">
+              <span className="sar-lab__sources-label">ESA Biomass</span>
+              <div className="sar-lab__sources-group">
+                <SourceChip href="https://www.esa.int/Applications/Observing_the_Earth/FutureEO/Biomass">ESA BIOMASS</SourceChip>
+              </div>
+            </div>
           </div>
-        </div>
+        </footer>
       </main>
 
       <style dangerouslySetInnerHTML={{ __html: `
