@@ -183,6 +183,12 @@
   margin-bottom: clamp(3rem, 6vw, 5rem);
 }
 
+/* NISAR mission spec cards — standard compact sizing (icon svg override) */
+.sar-spec-card svg {
+  width: 17px;
+  height: 17px;
+}
+
 .sar-section > div:first-child h2 {
   letter-spacing: -0.035em !important;
 }

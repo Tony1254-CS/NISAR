@@ -1664,13 +1664,13 @@ export function SARLabPage() {
         {/* ═══ SECTION 1: NISAR MISSION SPECS ═══ */}
         <div id="mission" className="sar-section">
           <SectionTitle title="NISAR Mission" subtitle="A NASA–ISRO Earth-observing mission using L-band and S-band SAR to measure changes in land, ice, water, and vegetation." />
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))', gap: 'var(--s4)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 'var(--s3)' }}>
             {NISAR_SPECS.map((spec) => (
-              <div key={spec.param} className="glass-panel hover-lift" style={{ padding: 'var(--s5)', display: 'flex', gap: 'var(--s3)', alignItems: 'flex-start' }}>
-                <div style={{ fontSize: '1.5rem', flexShrink: 0, width: 40, textAlign: 'center' }}>{spec.icon}</div>
-                <div>
-                  <div style={{ fontSize: '0.82rem', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{spec.param}</div>
-                  <div style={{ fontSize: '1.2rem', color: 'var(--water)', fontWeight: 700, marginTop: 4 }}>{spec.value}</div>
+              <div key={spec.param} className="glass-panel hover-lift sar-spec-card" style={{ padding: '0.95rem 1.05rem', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                <div style={{ fontSize: '1.15rem', flexShrink: 0, width: 28, textAlign: 'center' }}>{spec.icon}</div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{spec.param}</div>
+                  <div style={{ fontSize: '1.02rem', color: 'var(--water)', fontWeight: 700, marginTop: 3 }}>{spec.value}</div>
                 </div>
               </div>
             ))}
