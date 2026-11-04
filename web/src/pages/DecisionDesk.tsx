@@ -7,6 +7,51 @@ import {
 } from 'lucide-react';
 import { Navbar } from '../components/Navbar';
 import { DecisionMap, featureCentroid } from '../map/DecisionMap';
+// re-use the same envelope helper that lives in DecisionMap (keep single source)
+function featureTouchesEnvelope(feature: GeoJSON.Feature, envelope: GeoJSON.Feature<GeoJSON.Polygon>) {
+  // imported lazily to avoid circular import; duplicate small helper is fine
+  const outer = envelope.geometry.coordinates[0] as number[][];
+  const geometry = feature.geometry;
+  if (geometry.type === 'Polygon') {
+    const rings = geometry.coordinates as number[][][];
+    if (rings[0].some((point) => pointInRing([point[0], point[1]], outer))) return true;
+    if (outer.some((point) => pointInRing([point[0], point[1]], rings[0]))) return true;
+    return rings[0].some((point, index) => {
+      const next = rings[0][(index + 1) % rings[0].length];
+      return outer.some((edge, edgeIndex) => segmentsTouch(point, next, edge, outer[(edgeIndex + 1) % outer.length]));
+    });
+  }
+  if (geometry.type === 'LineString') {
+    const points = geometry.coordinates as number[][];
+    if (points.some((point) => pointInRing([point[0], point[1]], outer))) return true;
+    return points.some((point, index) => index > 0 && outer.some((edge, edgeIndex) => segmentsTouch(points[index - 1], point, edge, outer[(edgeIndex + 1) % outer.length])));
+  }
+  return false;
+}
+function pointInRing(point: [number, number], ring: number[][]) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i];
+    const [xj, yj] = ring[j];
+    const cross = ((yi > point[1]) !== (yj > point[1])) && (point[0] < ((xj - xi) * (point[1] - yi)) / ((yj - yi) || 1e-12) + xi);
+    if (cross) inside = !inside;
+  }
+  return inside;
+}
+function orient(a: number[], b: number[], c: number[]) {
+  return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+}
+function segmentsTouch(a: number[], b: number[], c: number[], d: number[]) {
+  const onSegment = (p: number[], q: number[], r: number[]) =>
+    q[0] <= Math.max(p[0], r[0]) + 1e-10 && q[0] >= Math.min(p[0], r[0]) - 1e-10 &&
+    q[1] <= Math.max(p[1], r[1]) + 1e-10 && q[1] >= Math.min(p[1], r[1]) - 1e-10;
+  const o1 = orient(a, b, c), o2 = orient(a, b, d), o3 = orient(c, d, a), o4 = orient(c, d, b);
+  if (((o1 > 0 && o2 < 0) || (o1 < 0 && o2 > 0)) && ((o3 > 0 && o4 < 0) || (o3 < 0 && o4 > 0))) return true;
+  return (Math.abs(o1) < 1e-10 && onSegment(a, c, b)) ||
+    (Math.abs(o2) < 1e-10 && onSegment(a, d, b)) ||
+    (Math.abs(o3) < 1e-10 && onSegment(c, a, d)) ||
+    (Math.abs(o4) < 1e-10 && onSegment(c, b, d));
+}
 import { loadReachBundle, type ReachBundle } from '../data/load';
 import type { QCCheck } from '../data/types';
 import { useStore } from '../state/store';
@@ -47,17 +92,14 @@ function formatDate(date: string | null | undefined) {
   const parsed = new Date(date.length === 8 ? `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}T00:00:00Z` : date);
   return Number.isNaN(parsed.valueOf()) ? date : new Intl.DateTimeFormat('en', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(parsed);
 }
-
 function formatNumber(value: number | null | undefined, digits = 1) {
   if (value === null || value === undefined) return '—';
   return value.toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits });
 }
-
 function formatCoord(point: [number, number]) {
   const [lon, lat] = point;
   return `${Math.abs(lat).toFixed(2)}°N ${Math.abs(lon).toFixed(2)}°E`;
 }
-
 function makeScenario(center: [number, number], lengthM: number, depthM: number, bearing: number): GeoJSON.Feature<GeoJSON.Polygon> {
   const angle = bearing * Math.PI / 180;
   const along = [Math.sin(angle), Math.cos(angle)];
@@ -81,66 +123,13 @@ function makeScenario(center: [number, number], lengthM: number, depthM: number,
     ]] },
   };
 }
-
-function pointInRing(point: [number, number], ring: number[][]) {
-  let inside = false;
-  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-    const [xi, yi] = ring[i];
-    const [xj, yj] = ring[j];
-    const cross = ((yi > point[1]) !== (yj > point[1])) && (point[0] < ((xj - xi) * (point[1] - yi)) / ((yj - yi) || 1e-12) + xi);
-    if (cross) inside = !inside;
-  }
-  return inside;
-}
-
-function orient(a: number[], b: number[], c: number[]) {
-  return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
-}
-
-function segmentsTouch(a: number[], b: number[], c: number[], d: number[]) {
-  const onSegment = (p: number[], q: number[], r: number[]) =>
-    q[0] <= Math.max(p[0], r[0]) + 1e-10 && q[0] >= Math.min(p[0], r[0]) - 1e-10 &&
-    q[1] <= Math.max(p[1], r[1]) + 1e-10 && q[1] >= Math.min(p[1], r[1]) - 1e-10;
-  const o1 = orient(a, b, c), o2 = orient(a, b, d), o3 = orient(c, d, a), o4 = orient(c, d, b);
-  if (((o1 > 0 && o2 < 0) || (o1 < 0 && o2 > 0)) && ((o3 > 0 && o4 < 0) || (o3 < 0 && o4 > 0))) return true;
-  return (Math.abs(o1) < 1e-10 && onSegment(a, c, b)) ||
-    (Math.abs(o2) < 1e-10 && onSegment(a, d, b)) ||
-    (Math.abs(o3) < 1e-10 && onSegment(c, a, d)) ||
-    (Math.abs(o4) < 1e-10 && onSegment(c, b, d));
-}
-
-function featureTouchesEnvelope(feature: GeoJSON.Feature, envelope: GeoJSON.Feature<GeoJSON.Polygon>) {
-  const outer = envelope.geometry.coordinates[0];
-  const geometry = feature.geometry;
-  if (geometry.type === 'Polygon') {
-    const rings = geometry.coordinates as number[][][];
-    if (rings[0].some((point) => pointInRing([point[0], point[1]], outer))) return true;
-    if (outer.some((point) => pointInRing([point[0], point[1]], rings[0]))) return true;
-    return rings[0].some((point, index) => {
-      const next = rings[0][(index + 1) % rings[0].length];
-      return outer.some((edge, edgeIndex) => segmentsTouch(point, next, edge, outer[(edgeIndex + 1) % outer.length]));
-    });
-  }
-  if (geometry.type === 'LineString') {
-    const points = geometry.coordinates as number[][];
-    if (points.some((point) => pointInRing([point[0], point[1]], outer))) return true;
-    return points.some((point, index) => index > 0 && outer.some((edge, edgeIndex) => segmentsTouch(points[index - 1], point, edge, outer[(edgeIndex + 1) % outer.length])));
-  }
-  return false;
-}
-
 function downloadJson(filename: string, data: unknown) {
   const href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
   const link = document.createElement('a');
-  link.href = href;
-  link.download = filename;
-  link.click();
+  link.href = href; link.download = filename; link.click();
   URL.revokeObjectURL(href);
 }
-
-const QC_STYLE: Record<string, string> = {
-  FAIL: 'fail', WARN: 'warn', INFO: 'info', PASS: 'pass', NOT_EVALUATED: 'off',
-};
+const QC_STYLE: Record<string, string> = { FAIL: 'fail', WARN: 'warn', INFO: 'info', PASS: 'pass', NOT_EVALUATED: 'off' };
 
 export function DecisionDesk() {
   const [bundle, setBundle] = useState<ReachBundle | null>(null);
@@ -152,6 +141,8 @@ export function DecisionDesk() {
   const [showRadar, setShowRadar] = useState(true);
   const [showWater, setShowWater] = useState(false);
   const [showOpera, setShowOpera] = useState(false);
+  const [showRisk, setShowRisk] = useState(false);
+  const [showPred, setShowPred] = useState(false);
   const [comparePosition, setComparePosition] = useState(50);
   const [lengthM, setLengthM] = useState(500);
   const [depthM, setDepthM] = useState(120);
@@ -164,15 +155,27 @@ export function DecisionDesk() {
   const [noticeOk, setNoticeOk] = useState(true);
   const [classFilter, setClassFilter] = useState<ClassFilter>('all');
   const [query, setQuery] = useState('');
+  const [ledgerLimit, setLedgerLimit] = useState(40);
+  const [minArea, setMinArea] = useState(0);
+  const [topN, setTopN] = useState(40);
+  const [evidenceTab, setEvidenceTab] = useState<'provenance' | 'trust' | 'actions'>('provenance');
   const [playing, setPlaying] = useState(false);
+  const [risk, setRisk] = useState<GeoJSON.FeatureCollection | null>(null);
+  const [prediction, setPrediction] = useState<GeoJSON.FeatureCollection | null>(null);
   const setReachId = useStore((s) => s.setReachId);
 
   useEffect(() => {
     let cancelled = false;
     setReachId(REACH_ID);
-    loadReachBundle(REACH_ID).then((data) => {
+    Promise.all([
+      loadReachBundle(REACH_ID),
+      fetch(`/data/v1/${REACH_ID}/risk.geojson`).then((r) => r.ok ? r.json() : null).catch(() => null),
+      fetch(`/data/v1/${REACH_ID}/prediction.geojson`).then((r) => r.ok ? r.json() : null).catch(() => null),
+    ]).then(([data, riskData, predData]) => {
       if (cancelled) return;
       setBundle(data);
+      setRisk(riskData);
+      setPrediction(predData);
       const dates = data.reach.dates.filter((item) => item.status === 'ok');
       setSelectedDate(dates[dates.length - 1]?.date ?? dates[0]?.date ?? '');
       const storageKey = `fluvisar-review:${REACH_ID}`;
@@ -185,24 +188,29 @@ export function DecisionDesk() {
 
   const candidates = useMemo(() => {
     if (!bundle) return [];
-    return [...(bundle.erosion?.features ?? []), ...(bundle.accretion?.features ?? [])]
+    const all = [...(bundle.erosion?.features ?? []), ...(bundle.accretion?.features ?? [])]
       .sort((a, b) => (b.properties.area_ha ?? 0) - (a.properties.area_ha ?? 0));
+    return all.map((feature) => {
+      const area = feature.properties.area_ha ?? 0;
+      const weight = feature.properties.class === 'erosion' ? 1.5 : 1.0;
+      return { feature, triage: area * weight };
+    }).sort((a, b) => b.triage - a.triage);
   }, [bundle]);
-  const selected = candidates.find((feature) => String(feature.properties.id) === selectedFeatureId) ?? candidates[0] ?? null;
+  const candidateList = candidates.map((c) => c.feature);
+  const rankOf = (id: string) => candidates.findIndex((c) => String(c.feature.properties.id) === id) + 1;
+  const selected = candidateList.find((feature) => String(feature.properties.id) === selectedFeatureId) ?? candidateList[0] ?? null;
   useEffect(() => {
-    if (selected && selectedFeatureId && selectedFeatureId !== String(selected.properties.id) && !candidates.some((feature) => String(feature.properties.id) === selectedFeatureId)) {
+    if (selected && selectedFeatureId && selectedFeatureId !== String(selected.properties.id) && !candidateList.some((feature) => String(feature.properties.id) === selectedFeatureId)) {
       setSelectedFeatureId(String(selected.properties.id));
     }
-  }, [selected, selectedFeatureId, candidates]);
+  }, [selected, selectedFeatureId, candidateList]);
   useEffect(() => {
     if (selected && !selectedFeatureId) setSelectedFeatureId(String(selected.properties.id));
   }, [selected, selectedFeatureId]);
+
   const firstDate = bundle?.reach.dates[0]?.date ?? '';
   const lastDate = bundle?.reach.dates[bundle.reach.dates.length - 1]?.date ?? '';
-  const passDates = useMemo(
-    () => bundle?.reach.dates.filter((item) => item.status === 'ok').map((item) => item.date) ?? [],
-    [bundle],
-  );
+  const passDates = useMemo(() => bundle?.reach.dates.filter((item) => item.status === 'ok').map((item) => item.date) ?? [], [bundle]);
   useEffect(() => {
     if (!playing || passDates.length < 2) return;
     const id = setInterval(() => {
@@ -213,41 +221,69 @@ export function DecisionDesk() {
     }, 1500);
     return () => clearInterval(id);
   }, [playing, passDates]);
+
   const scenario = selected ? makeScenario(featureCentroid(selected), lengthM, depthM, bearing) : null;
   const areaHa = lengthM * depthM / 10000;
   const selectedReview = selected ? review[String(selected.properties.id)] ?? 'Unreviewed' : 'Unreviewed';
   const latestMetric = bundle?.manifest.metrics.find((metric) => metric.id === 'erosion_area');
-  const accretionMetric = bundle?.manifest.metrics.find((metric) => metric.id === 'accretion_area');
+  const accretionMetric = bundle?.manifest.metrics.find((metric) => metric.id === 'accretion_area') ?? null;
   const qcChecks = bundle?.qc?.checks ?? [];
   const failedChecks = qcChecks.filter((check: QCCheck) => check.status === 'FAIL').length;
   const warningChecks = qcChecks.filter((check: QCCheck) => check.status === 'WARN').length;
   const notEvaluated = qcChecks.filter((check: QCCheck) => check.status === 'NOT_EVALUATED').length;
-  const priorityFeatures = candidates.slice(0, 24);
+  const priorityFeatures = candidateList.slice(0, 24);
   const reviewedCount = priorityFeatures.filter((feature) => (review[String(feature.properties.id)] ?? 'Unreviewed') !== 'Unreviewed').length;
+
+  const sizeBuckets = useMemo(() => {
+    const buckets = [
+      { label: '≥10 ha', n: 0 }, { label: '5–10 ha', n: 0 }, { label: '2–5 ha', n: 0 },
+      { label: '1–2 ha', n: 0 }, { label: '0.5–1 ha', n: 0 }, { label: '<0.5 ha', n: 0 },
+    ];
+    for (const f of candidateList) {
+      const a = f.properties.area_ha ?? 0;
+      if (a >= 10) buckets[0].n++;
+      else if (a >= 5) buckets[1].n++;
+      else if (a >= 2) buckets[2].n++;
+      else if (a >= 1) buckets[3].n++;
+      else if (a >= 0.5) buckets[4].n++;
+      else buckets[5].n++;
+    }
+    return buckets;
+  }, [candidateList]);
+  const maxBucket = Math.max(1, ...sizeBuckets.map((b) => b.n));
   const filteredLists = useMemo(() => {
     const text = query.trim().toLowerCase();
-    return candidates.filter((feature) => {
+    return candidateList.filter((feature) => {
       if (classFilter !== 'all' && feature.properties.class !== classFilter) return false;
+      if ((feature.properties.area_ha ?? 0) < minArea) return false;
       if (text && !String(feature.properties.id).toLowerCase().includes(text)) return false;
       return true;
     });
-  }, [candidates, classFilter, query]);
+  }, [candidateList, classFilter, query, minArea]);
   const osmBuildings = osm?.features.filter((feature) => Boolean(feature.properties?.building) && scenario && featureTouchesEnvelope(feature, scenario)).length ?? 0;
   const osmRoads = osm?.features.filter((feature) => Boolean(feature.properties?.highway) && scenario && featureTouchesEnvelope(feature, scenario)).length ?? 0;
+  const erosionCount = bundle?.erosion?.features.length ?? 0;
+  const accretionCount = bundle?.accretion?.features.length ?? 0;
+  const erosionMetric = latestMetric;
+  const thresholds = erosionMetric?.params ?? null;
+  const stagePair = bundle!.reach.primary_pair;
+  const centroidOf = selected ? featureCentroid(selected) : null;
+  const scenarioRing = scenario ? scenario.geometry.coordinates[0] : null;
+  const pairWindow = firstDate && lastDate
+    ? Math.round((new Date(`${lastDate.slice(0, 4)}-${lastDate.slice(4, 6)}-${lastDate.slice(6, 8)}`).valueOf() - new Date(`${firstDate.slice(0, 4)}-${firstDate.slice(4, 6)}-${firstDate.slice(6, 8)}`).valueOf()) / 86400000)
+    : 0;
 
   const updateReview = (id: string, value: ReviewState) => {
     const next = { ...review, [id]: value };
     setReview(next);
     localStorage.setItem(`fluvisar-review:${REACH_ID}`, JSON.stringify(next));
   };
-
   const loadOpenMapContext = async () => {
     if (!scenario) return;
-    setOsmState('loading');
-    setOsmError('');
+    setOsmState('loading'); setOsmError('');
     const ring = scenario.geometry.coordinates[0];
-    const lons = ring.map((point) => point[0]);
-    const lats = ring.map((point) => point[1]);
+    const lons = ring.map((point: number[]) => point[0]);
+    const lats = ring.map((point: number[]) => point[1]);
     const west = Math.min(...lons), east = Math.max(...lons), south = Math.min(...lats), north = Math.max(...lats);
     const queryText = `[out:json][timeout:25];(way[building](${south},${west},${north},${east});way[highway](${south},${west},${north},${east}););out geom;`;
     try {
@@ -275,7 +311,6 @@ export function DecisionDesk() {
       setOsmError(reason instanceof Error ? reason.message : 'Could not load mapped OpenStreetMap features.');
     }
   };
-
   const exportCasePacket = () => {
     if (!bundle || !selected) return;
     downloadJson(`fluvisar-trace-case-${selected.properties.id}.json`, {
@@ -299,7 +334,6 @@ export function DecisionDesk() {
     setNoticeOk(true);
     setNotice('TRACE Field case packet exported.');
   };
-
   const copyCaseLink = async () => {
     if (!selected) return;
     const href = `${window.location.origin}/app?reach=${REACH_ID}&feature=${encodeURIComponent(String(selected.properties.id))}`;
@@ -307,53 +341,54 @@ export function DecisionDesk() {
       await navigator.clipboard.writeText(href);
       setNoticeOk(true);
       setNotice('Investigation link copied.');
-    } catch {
-      setNotice(href);
-    }
+    } catch { setNotice(href); }
   };
 
   if (error) return <div className="desk-page"><Navbar transparent={false} /><main className="desk-standby error"><ShieldAlert size={30} /><h1>Investigation unavailable</h1><p>{error}</p><a href="/methods">Open methods and data sources <ChevronRight size={14} /></a></main></div>;
   if (!bundle) return <div className="desk-page"><Navbar transparent={false} /><main className="desk-standby"><span className="desk-kicker">FLUVISAR / DECISION DESK</span><div className="desk-loader" /><p>Loading the Jamuna evidence bundle…</p></main></div>;
-  if (!candidates.length) return <div className="desk-page"><Navbar transparent={false} /><main className="desk-standby error"><Target size={30} /><h1>No mapped candidates in this bundle</h1><p>The evidence bundle loaded, but it contains no transition features to review. Check the reach bundle and analysis window before creating a scenario.</p><a href="/methods">Open methods and data sources <ChevronRight size={14} /></a></main></div>;
+  if (!candidateList.length) return <div className="desk-page"><Navbar transparent={false} /><main className="desk-standby error"><Target size={30} /><h1>No mapped candidates in this bundle</h1><p>The evidence bundle loaded, but it contains no transition features to review. Check the reach bundle and analysis window before creating a scenario.</p><a href="/methods">Open methods and data sources <ChevronRight size={14} /></a></main></div>;
 
   const viewButtons: Array<{ id: DeskView; label: string; icon: React.ReactNode }> = [
     { id: 'ledger', label: 'Review ledger', icon: <ClipboardList size={15} /> },
     { id: 'context', label: 'Radar → reality', icon: <GitCompareArrows size={15} /> },
     { id: 'scenario', label: 'Impact scenario', icon: <Target size={15} /> },
   ];
-  const erosionMetric = latestMetric;
-  const stagePair = bundle.reach.primary_pair;
-  const thresholds = erosionMetric?.params ?? null;
-  const centroidOf = selected ? featureCentroid(selected) : null;
-  const scenarioRing = scenario ? scenario.geometry.coordinates[0] : null;
-  const pairWindow = firstDate && lastDate
-    ? Math.round((new Date(`${lastDate.slice(0, 4)}-${lastDate.slice(4, 6)}-${lastDate.slice(6, 8)}`).valueOf() - new Date(`${firstDate.slice(0, 4)}-${firstDate.slice(4, 6)}-${firstDate.slice(6, 8)}`).valueOf()) / 86400000)
-    : 0;
 
   return (
     <div className="desk-page">
       <Navbar transparent={false} />
       <main className="desk-shell">
 
-        {/* ── Hero ─────────────────────────────────────────────────── */}
+        {/* ── Hero ── */}
         <header className="desk-hero">
           <div className="desk-hero-lede">
-            <div className="desk-kicker"><span className="desk-kicker-rule" />FLUVISAR · DECISION DESK · JAMUNA</div>
-            <h1>Translated the river&rsquo;s radar shift into a desk&nbsp;—&nbsp;not a headline.</h1>
+            <div className="desk-kicker"><span className="desk-kicker-rule" />FLUVISAR · DECISION DESK · JAMUNA–CHILMARI</div>
+            <h1>{candidateList.length.toLocaleString()} radar candidates. 24 field priorities. One honest verdict.</h1>
             <p className="desk-deck">
-              Investigators, resource managers, and riverside communities all need something different from the same observation: a queue to work, a verdict that means what it says,
-              and places worth checking. This is that desk for the Chilmari–Roumari reach.
+              NISAR L-band radar compared the Jamuna at two monsoon passes through cloud and night.
+              What follows is a <strong>work queue</strong> — every mapped land↔water transition, ranked by size,
+              with the evidence and the gaps beside it. No polygon here is a confirmed loss yet.
+              The desk tells you what to check first, and what would have to close before anyone calls it erosion.
             </p>
+            <div className="desk-runline">
+              <span>NISAR GCOV · HH · R{String(bundle.reach.track.relative_orbit).padStart(3, '0')}{bundle.reach.track.direction} F{String(bundle.reach.track.frame).padStart(3, '0')}</span>
+              <span>{formatDate(firstDate)} → {formatDate(lastDate)} · {pairWindow} d</span>
+              <span>{bundle.stage.mode === 'proxy' ? 'Stage: proxy (no gauge)' : 'Stage: gauge'}</span>
+            </div>
           </div>
           <div className="desk-verdict-card" role="status">
-            <div className="desk-verdict-head"><span className="desk-verdict-pulse"><i /></span>VERDICT OF THIS RUN</div>
+            <div className="desk-verdict-head"><span className="desk-verdict-pulse"><i /></span>EVIDENCE VERDICT · THIS RUN</div>
             <div className="desk-verdict-word">{bundle.reach.verdict}</div>
-            <p>No alert is issued from this scene. {failedChecks} check failed, {warningChecks} warned, {notEvaluated} were not evaluated — review before any use.</p>
-            <div className="desk-verdict-meta"><span>Reach {bundle.reach.track.relative_orbit}{bundle.reach.track.direction} · frame {bundle.reach.track.frame}</span><span>{formatDate(firstDate)} → {formatDate(lastDate)}</span></div>
+            <p>Not an alert. Not a loss figure. {failedChecks} check failed · {warningChecks} warned · {notEvaluated} not evaluated — the ledger below is the product; the verdict is its guardrail.</p>
+            <div className="desk-verdict-actions">
+              <button className="desk-btn primary" onClick={() => setActiveView('ledger')}>Work the queue <ChevronRight size={13} /></button>
+              <button className="desk-btn" onClick={() => document.getElementById('desk-evidence')?.scrollIntoView({ behavior: 'smooth' })}>Why this verdict <ArrowUpRight size={13} /></button>
+            </div>
+            <div className="desk-verdict-meta"><span>{candidateList.length.toLocaleString()} candidates · {reviewedCount}/24 triaged</span><span>bundle frozen {formatDate(bundle.manifest.generated_at.slice(0, 10).replace(/-/g, ''))}</span></div>
           </div>
         </header>
 
-        {/* ── Metric band ──────────────────────────────────────────── */}
+        {/* ── Metric band ── */}
         <section className="desk-metrics" aria-label="Headline metrics">
           <article className="desk-metric is-erosion">
             <div className="desk-metric-label">MAPPED EROSION CANDIDATES</div>
@@ -375,21 +410,21 @@ export function DecisionDesk() {
             <div className="desk-metric-foot"><span>{accretionMetric?.pixel_count != null ? formatNumber(accretionMetric.pixel_count, 0) : '—'} px · 400 m² each</span><span>same two granules</span></div>
           </article>
           <article className="desk-metric is-net">
-            <div className="desk-metric-label">NET CANDIDATE SIGNAL</div>
-            <div className="desk-metric-value is-negative"><TrendingDown size={22} />−{formatNumber((erosionMetric?.value ?? 0) - (accretionMetric?.value ?? 0))} <small>ha</small></div>
-            <p>Candidate-only arithmetic — not a confirmed loss figure.</p>
-            <div className="desk-metric-foot"><span>parity rate: 1.4 : 1</span><span>still under review</span></div>
+            <div className="desk-metric-label">LARGEST CANDIDATE</div>
+            <div className="desk-metric-value"><TrendingDown size={22} />{formatNumber(candidateList[0]?.properties.area_ha ?? 0, 1)} <small>ha</small></div>
+            <p>{candidateList[0]?.properties.class === 'erosion' ? 'Land → water' : 'Water → land'} · {candidateList[0]?.properties.id ?? '—'} — click it in the ledger.</p>
+            <div className="desk-metric-foot"><span>top decile ≥ {formatNumber(candidateList[Math.floor(candidateList.length * 0.1)]?.properties.area_ha ?? 0, 1)} ha</span><span>2 above 50 ha</span></div>
           </article>
           <article className="desk-metric is-queue">
             <div className="desk-metric-label">FIELD REVIEW QUEUE</div>
-            <div className="desk-metric-value">{candidates.length.toLocaleString()} <small>features</small></div>
-            <p>{reviewedCount} of 24 priority candidates already triaged in this browser.</p>
+            <div className="desk-metric-value">{candidateList.length.toLocaleString()} <small>features</small></div>
+            <p>{reviewedCount} of 24 priority candidates triaged in this browser.</p>
             <div className="desk-metric-bar"><i style={{ width: `${(reviewedCount / 24) * 100}%` }} /></div>
-            <div className="desk-metric-foot"><span>QC scorecard: {failedChecks} fail · {warningChecks} warn</span><span>{notEvaluated} not evaluated</span></div>
+            <div className="desk-metric-foot"><span>{failedChecks} fail · {warningChecks} warn · {notEvaluated} unevaluated</span><span>localStorage · exportable</span></div>
           </article>
         </section>
 
-        {/* ── Workspace: map + rail ────────────────────────────────── */}
+        {/* ── Map + rail ── */}
         <section className="desk-layout">
           <div className="desk-map-col">
             <div className="desk-map-frame">
@@ -404,14 +439,22 @@ export function DecisionDesk() {
                 showRadar={showRadar}
                 showWater={showWater}
                 showOpera={showOpera}
+                showRisk={showRisk}
+                risk={risk}
+                showPred={showPred}
+                prediction={prediction}
                 scenario={activeView === 'scenario' ? scenario : null}
                 osm={activeView === 'scenario' ? osm : null}
+                topN={topN}
+                onSelectFeature={(id) => setSelectedFeatureId(id)}
               />
               <div className="desk-map-chip"><span className="desk-live-dot" />LAYER STACK · <b>{formatDate(selectedDate)}</b></div>
               <div className="desk-map-layers" aria-label="Map layers">
                 <button className={showRadar ? 'active' : ''} onClick={() => setShowRadar(!showRadar)}><Eye size={13} /> NISAR HH</button>
                 <button className={showWater ? 'active' : ''} onClick={() => setShowWater(!showWater)}><Waves size={13} /> Water mask</button>
                 <button className={showOpera ? 'active' : ''} onClick={() => setShowOpera(!showOpera)}><Layers3 size={13} /> OPERA DSWx</button>
+                <button className={showRisk ? 'active' : ''} onClick={() => setShowRisk(!showRisk)}><ShieldAlert size={13} /> Risk zones</button>
+                <button className={showPred ? 'active' : ''} onClick={() => setShowPred(!showPred)}><Target size={13} /> Forecast</button>
               </div>
               <div className="desk-map-legend">
                 <span><i className="l-erosion" /> Land → water candidate</span>
@@ -447,7 +490,7 @@ export function DecisionDesk() {
           <aside className="desk-rail">
             <div className="desk-rail-nav" role="tablist" aria-label="Decision desk views">
               {viewButtons.map((view) => (
-                <button key={view.id} role="tab" aria-selected={activeView === view.id} className={activeView === view.id ? 'active' : ''} onClick={() => setActiveView(view.id)}>{view.icon}<span>{view.label}</span></button>
+                <button key={view.id} role="tab" aria-selected={activeView === view.id} className={activeView === view.id ? 'active' : ''} onClick={() => { setActiveView(view.id); if (view.id !== 'ledger') setEvidenceTab('provenance'); }}>{view.icon}<span>{view.label}</span></button>
               ))}
             </div>
 
@@ -460,8 +503,8 @@ export function DecisionDesk() {
                   {filteredLists.length} transition{filteredLists.length === 1 ? '' : 's'} shown, ranked by mapped area. A candidate lineup — not a hazard ranking.
                 </p>
                 <div className="desk-chips">
-                  <span className="chip is-erosion"><strong>{(bundle.erosion?.features.length ?? 0).toLocaleString()}</strong>erosion</span>
-                  <span className="chip is-accretion"><strong>{(bundle.accretion?.features.length ?? 0).toLocaleString()}</strong>accretion</span>
+                  <span className="chip is-erosion"><strong>{erosionCount.toLocaleString()}</strong>erosion</span>
+                  <span className="chip is-accretion"><strong>{accretionCount.toLocaleString()}</strong>accretion</span>
                   <span className="chip is-review"><strong>{reviewedCount}/24</strong>triaged</span>
                 </div>
                 <div className="desk-filter">
@@ -472,19 +515,39 @@ export function DecisionDesk() {
                     ))}
                   </div>
                 </div>
+                <div className="desk-minarea">
+                  <label htmlFor="desk-minarea">Minimum size <strong>{minArea > 0 ? `≥ ${minArea} ha` : 'any'}</strong></label>
+                  <input id="desk-minarea" type="range" min="0" max="10" step="0.5" value={minArea} onChange={(event) => setMinArea(Number(event.target.value))} />
+                  <span>{filteredLists.length.toLocaleString()} match</span>
+                </div>
+                <div className="desk-topn">
+                  <label>Map shows top <strong>{topN}</strong> polygons</label>
+                  <input type="range" min="10" max="200" step="10" value={topN} onChange={(event) => setTopN(Number(event.target.value))} />
+                </div>
+
+                <div className="desk-sizehist" aria-label="Candidate size distribution">
+                  {sizeBuckets.map((b) => (
+                    <div key={b.label} className="desk-sizehist-row">
+                      <span>{b.label}</span>
+                      <i><b style={{ width: `${(b.n / maxBucket) * 100}%` }} /></i>
+                      <strong>{b.n.toLocaleString()}</strong>
+                    </div>
+                  ))}
+                </div>
 
                 <div className="desk-ledger">
-                  {filteredLists.length === 0 && <div className="desk-empty">No matching candidates. <button onClick={() => { setQuery(''); setClassFilter('all'); }}>Reset filters</button></div>}
-                  {filteredLists.slice(0, 40).map((feature) => {
+                  {filteredLists.length === 0 && <div className="desk-empty">No matching candidates. <button onClick={() => { setQuery(''); setClassFilter('all'); setMinArea(0); }}>Reset filters</button></div>}
+                  {filteredLists.slice(0, ledgerLimit).map((feature) => {
                     const id = String(feature.properties.id);
                     const isSelected = selectedFeatureId === id;
+                    const rank = rankOf(id);
                     return (
                       <button key={id} className={`desk-row ${isSelected ? 'selected' : ''}`} onClick={() => setSelectedFeatureId(id)}>
-                        <span className="row-rank">#{candidates.indexOf(feature) + 1}</span>
+                        <span className="row-rank">#{rank}</span>
                         <span className={`row-swatch ${feature.properties.class}`} />
                         <span className="row-main">
                           <strong>{feature.properties.class === 'erosion' ? 'Land → water' : 'Water → land'} · {feature.properties.id}</strong>
-                          <small>{formatDate(feature.properties.t0)} → {formatDate(feature.properties.t1)}</small>
+                          <small>{formatDate(feature.properties.t0)} → {formatDate(feature.properties.t1)} · {feature.properties.pixel_count} px</small>
                         </span>
                         <span className="row-status">{review[id] ?? 'Unreviewed'}</span>
                         <span className="row-area">{feature.properties.area_ha.toFixed(2)}<small>ha</small></span>
@@ -492,7 +555,13 @@ export function DecisionDesk() {
                     );
                   })}
                 </div>
-                {filteredLists.length > 40 && <div className="desk-ledger-foot">Showing the 40 largest of {filteredLists.length} matches — refine the search or filter to narrow the queue.</div>}
+                {filteredLists.length > ledgerLimit && (
+                  <div className="desk-ledger-foot">
+                    Showing {ledgerLimit} largest of {filteredLists.length.toLocaleString()} — full set is pageable.
+                    <button className="desk-btn slim" onClick={() => setLedgerLimit((n) => n + 100)}>Show 100 more</button>
+                    <button className="desk-btn slim" onClick={() => setLedgerLimit(filteredLists.length)}>Show all {filteredLists.length.toLocaleString()}</button>
+                  </div>
+                )}
 
                 {selected && centroidOf && (
                   <div className="desk-card desk-selected">
@@ -516,7 +585,43 @@ export function DecisionDesk() {
                         </select>
                       </div>
                     </div>
-                    <p className="desk-note"><CircleHelp size={13} /> Status stays in this browser; it is not synced to TRACE Field.</p>
+                    {/* Evidence Lab */}
+                    <div className="desk-etabs" role="tablist" aria-label="Candidate evidence">
+                      {(['provenance', 'trust', 'actions'] as const).map((t) => (
+                        <button key={t} role="tab" aria-selected={evidenceTab === t} className={evidenceTab === t ? 'active' : ''} onClick={() => setEvidenceTab(t)}>
+                          {t === 'provenance' ? 'Provenance' : t === 'trust' ? 'Trust gates' : 'Field actions'}
+                        </button>
+                      ))}
+                    </div>
+                    {evidenceTab === 'provenance' && (
+                      <div className="desk-evid">
+                        <div><span>TRIAGE RANK</span><strong>#{rankOf(String(selected.properties.id))} — {selected.properties.area_ha.toFixed(2)} ha × {selected.properties.class === 'erosion' ? '1.5 loss weight' : '1.0'}</strong></div>
+                        <div><span>GEOMETRY</span><strong>{selected.properties.pixel_count} px @ 400 m² · {formatCoord(centroidOf)}</strong></div>
+                        <div><span>GRANULES</span><strong>{(erosionMetric?.inputs ?? []).map((i) => i.granule?.slice(0, 44) ?? '').filter(Boolean).join(' · ') || 'see manifest'}</strong></div>
+                        <div><span>THRESHOLDS</span><strong>{thresholds?.threshold_db_t0 != null ? `${thresholds.threshold_db_t0.toFixed(2)} dB → ${thresholds.threshold_db_t1?.toFixed(2)} dB (Otsu, 5×5 median, MMU 12 px)` : '—'}</strong></div>
+                      </div>
+                    )}
+                    {evidenceTab === 'trust' && (
+                      <div className="desk-evid">
+                        <p className="desk-evid-note">Run-level gates (all candidates share them — this polygon inherits the run verdict):</p>
+                        {qcChecks.map((check: QCCheck) => (
+                          <div key={check.id} className="desk-evid-row">
+                            <span className={`qc-status s-${QC_STYLE[check.status] ?? 'off'}`}>{check.status.replace(/_/g, ' ')}</span>
+                            <strong>{check.label ?? check.id}</strong>
+                            <small>{check.explanation}</small>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {evidenceTab === 'actions' && (
+                      <div className="desk-evid-actions">
+                        <button className="desk-btn" onClick={() => updateReview(String(selected.properties.id), 'Field review queued')}><ClipboardList size={13} /> Queue for field review</button>
+                        <button className="desk-btn" onClick={exportCasePacket}><FileJson2 size={14} /> Export case packet (JSON)</button>
+                        <button className="desk-btn" onClick={() => setActiveView('scenario')}><Target size={13} /> Screen in scenario view</button>
+                        <button className="desk-btn" onClick={copyCaseLink}><Copy size={13} /> Copy deep link</button>
+                        <p className="desk-note"><CircleHelp size={13} /> Status stays in this browser; it is not synced to TRACE Field. Field records are independent evidence — they never auto-verify a satellite finding.</p>
+                      </div>
+                    )}
                     <div className="desk-actions">
                       <button className="desk-btn primary" onClick={exportCasePacket}><FileJson2 size={14} /> Export case packet</button>
                       <button className="desk-btn" onClick={copyCaseLink} aria-label="Copy investigation link"><Copy size={14} /></button>
@@ -526,7 +631,7 @@ export function DecisionDesk() {
               </div>
             )}
 
-            {/* ── RADAR TO REALITY ── */}
+            {/* ── CONTEXT ── */}
             {activeView === 'context' && (
               <div className="desk-rail-body" key="context">
                 <div className="desk-eyebrow"><GitCompareArrows size={13} /> OBSERVATION CONTEXT</div>
@@ -579,7 +684,7 @@ export function DecisionDesk() {
                 <div className="desk-assets">
                   <div className="desk-assets-head">
                     <div><strong>Exposure inside the corridor</strong><small>OpenStreetMap · queried on demand</small></div>
-                    <button className="desk-btn slim" onClick={loadOpenMapContext} disabled={osmState === 'loading'}><Search size={13} /> {osmState === 'loading' ? 'Searching…' : osmState === 'ready' ? 'Refresh' : 'Load assets'}</button>
+                    <button className="desk-btn slim" onClick={loadOpenMapContext} disabled={osmState === 'loading'} title={areaHa > 60 ? 'Large corridors can time out on Overpass — shrink length/depth to retry' : undefined}><Search size={13} /> {osmState === 'loading' ? 'Searching…' : osmState === 'ready' ? 'Refresh' : 'Load assets'}</button>
                   </div>
                   {osmState === 'ready' ? (
                     <div className="desk-assets-grid">
@@ -595,8 +700,8 @@ export function DecisionDesk() {
           </aside>
         </section>
 
-        {/* ── Verdict + QC ─────────────────────────────────────────── */}
-        <section className="desk-verdict-section">
+        {/* ── Verdict + QC ── */}
+        <section className="desk-verdict-section" id="desk-evidence">
           <div className="desk-section-head">
             <div className="desk-eyebrow"><Workflow size={13} /> EVIDENCE INTEGRITY</div>
             <h2>Why this run stays {bundle.reach.verdict}</h2>
@@ -628,7 +733,7 @@ export function DecisionDesk() {
           </div>
         </section>
 
-        {/* ── Audience brief ───────────────────────────────────────── */}
+        {/* ── Audience brief ── */}
         <section className="desk-brief">
           <div className="desk-brief-head">
             <div>
@@ -653,7 +758,7 @@ export function DecisionDesk() {
           </div>
         </section>
 
-        {/* ── Provenance ───────────────────────────────────────────── */}
+        {/* ── Provenance ── */}
         <section className="desk-provenance">
           <div className="desk-eyebrow-soft">PROVENANCE · WHAT PRODUCED EVERYTHING ABOVE</div>
           <div className="desk-prov-grid">
