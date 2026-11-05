@@ -1,5 +1,7 @@
 # FluviSAR — Complete Platform Encyclopedia
 
+https://nasa-2026-web.vercel.app/
+
 **Challenge:** NASA Space Apps 2026 — *Dancing with the SARs*
 **Stack:** React 18 + TypeScript + Vite + MapLibre GL + D3.js + Zustand + Python (Backend Pipeline)
 
