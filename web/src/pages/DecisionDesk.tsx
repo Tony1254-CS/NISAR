@@ -112,6 +112,11 @@ export function DecisionDesk() {
   const [noticeOk, setNoticeOk] = useState(true);
   const [judgeStep, setJudgeStep] = useState(0); // 0 = off, 1..3 = walk steps
   const [printTarget, setPrintTarget] = useState<PrintTarget>('brief');
+  // V3 workspace chrome: left-rail tabs, inspector tabs, site search, verdict popover
+  const [leftTab, setLeftTab] = useState<'sites' | 'screening'>('sites');
+  const [rightTab, setRightTab] = useState<'evidence' | 'field' | 'pack' | 'bulletin'>('evidence');
+  const [siteQuery, setSiteQuery] = useState('');
+  const [verdictOpen, setVerdictOpen] = useState(false);
   // drawer form drafts
   const [obsRole, setObsRole] = useState('');
   const [obsAt, setObsAt] = useState('');
@@ -272,10 +277,15 @@ export function DecisionDesk() {
     setPrintTarget(target);
     window.setTimeout(() => window.print(), 90);
   };
-  const selectSite = (site: InvestigationSite, scroll = true) => {
+  const selectSite = (site: InvestigationSite, focusInspector = true) => {
     setSelectedSiteId(site.id);
     setSelectedFeatureId(site.anchorId);
-    if (scroll) scrollTo('desk-drawer');
+    if (focusInspector) setRightTab('evidence');
+  };
+  const focusCandidate = (id: string, siteId?: string | null) => {
+    setSelectedFeatureId(id);
+    if (siteId) setSelectedSiteId(siteId);
+    setRightTab('evidence');
   };
 
   const exportCasePacket = () => {
@@ -359,9 +369,9 @@ export function DecisionDesk() {
 
   const personaDef = PERSONA_BY_ID[persona];
   const personaExport = () => {
-    if (persona === 'char') { scrollTo('desk-bulletin'); printSheet('bulletin'); }
-    else if (persona === 'ngo') { scrollTo('desk-pack'); printSheet('pack'); }
-    else { scrollTo('desk-brief'); printSheet('brief'); }
+    if (persona === 'char') { setRightTab('bulletin'); printSheet('bulletin'); }
+    else if (persona === 'ngo') { setRightTab('pack'); printSheet('pack'); }
+    else { setRightTab('pack'); printSheet('brief'); }
   };
 
   const selMaturity = candidateMaturity(selRecord, qcChecks, formatDate(nextPass));
@@ -370,14 +380,15 @@ export function DecisionDesk() {
   const judgeTopSite = sitesByArea[0] ?? null;
   const judgeGo = (step: number) => {
     setJudgeStep(step);
-    if (step === 1) scrollTo('desk-hero');
+    if (step === 1) { setVerdictOpen(true); scrollTo('desk-hero'); }
     if (step === 2 && judgeTopSite) {
       setSelectedSiteId(judgeTopSite.id);
       setSelectedFeatureId(judgeTopSite.anchorId);
       setExpandedSite(judgeTopSite.id);
-      scrollTo('desk-sites');
+      setLeftTab('sites');
+      setRightTab('evidence');
     }
-    if (step === 3) scrollTo('desk-pack');
+    if (step === 3) setRightTab('pack');
   };
   const JUDGE_CAPTIONS = [
     '',
@@ -393,640 +404,686 @@ export function DecisionDesk() {
   return (
     <div className="desk-page" data-print={printTarget}>
       <Navbar transparent={false} />
-      <main className="desk-shell">
+      <main className="desk-shell dd3-shell">
 
-        {/* ── §0 Activation bar + NISAR trust badge ── */}
-        <div className="dd-activation" role="note">
-          <span>FLUVISAR · ACTIVATION <strong>CHILMARI-2026-01</strong></span>
-          <span>NISAR L-BAND GCOV HH · TRACK {bundle.reach.track.relative_orbit} FRAME {bundle.reach.track.frame}</span>
-          <span>PAIR {formatDate(firstDate)} → {formatDate(lastDate)} · {pairWindow} DAYS = 2 CYCLES</span>
-          <span>PRODUCT V2 · STATUS: FIELD VERIFICATION OPEN</span>
-          <span>NEXT SAME-TRACK PASS: {formatDate(nextPass)} <Stamp kind="derived">DERIVED · +12 d cycle</Stamp></span>
-          <span className="dd-trust">NISAR PROVISIONAL · CRID P05023 · CALIBRATED, VALIDATION ONGOING · RFI-SCREENED <em>validated reprocessing expected Q4 2026 (ASF)</em></span>
-        </div>
-
-        {/* ── §1 Hero: the stage story + verdict ── */}
-        <header className={`desk-hero dd-hero ${judgeStep === 1 ? 'is-judge-focus' : ''}`} id="desk-hero">
-          <div className="desk-hero-lede">
-            <div className="desk-kicker"><span className="desk-kicker-rule" />FLUVISAR · DECISION DESK · JAMUNA–CHILMARI</div>
-            <p className="dd-mission">WHERE SHOULD WE LOOK NEXT?</p>
-            <h1>Separating the river falling from the bank failing.</h1>
-            <p className="desk-deck">
-              Between the two NISAR passes the Jamuna’s stage moved and its bars emerged — most apparent change in
-              this pair is falling water exposing the river’s own bed, not proven bank loss. The radar mapped
-              {' '}<strong>{candidates.length.toLocaleString()} transition candidates</strong>; this desk groups them into
-              {' '}<strong>{sites.length} investigation sites</strong> a field team can actually visit, and refuses to call
-              any of them erosion until evidence — not area — says so. <strong>None justify action on radar alone.</strong>
-            </p>
-            <div className="dd-hero-numbers" aria-label="Qualified headline numbers">
-              <div className="dd-num">
-                <strong>{sites.length}</strong><span>INVESTIGATION SITES</span>
-                <small>grouped from {candidates.length.toLocaleString()} candidates <Stamp kind="derived">DERIVED · method on page</Stamp></small>
-              </div>
-              <div className="dd-num">
-                <strong>{formatNumber(erosionMetric?.value)} ha</strong><span>LAND→WATER CANDIDATES</span>
-                <small>range {formatNumber(erosionMetric?.low, 0)}–{formatNumber(erosionMetric?.high, 0)} ha at ±1 dB <Stamp kind="real">REAL · manifest</Stamp></small>
-              </div>
-              <div className="dd-num">
-                <strong>{verifiedCount}</strong><span>CONFIRMED LOSSES</span>
-                <small>a loss exists only when a reviewed field observation closes it</small>
-              </div>
+        {/* ── Row 1 · Desk bar ── */}
+        <div className={`dd3-bar ${judgeStep === 1 ? 'is-judge-focus' : ''}`} id="desk-hero">
+          <div className="dd3-bar-main">
+            <div className="dd3-bar-lede">
+              <p className="dd-mission">WHERE SHOULD WE LOOK NEXT?</p>
+              <h1 className="dd3-headline">Separating the river falling from the bank failing.</h1>
             </div>
-            <div className="desk-verdict-actions">
-              <button className="desk-btn primary" onClick={() => scrollTo('desk-sites')}>Open investigation sites <ChevronRight size={13} /></button>
-              <button className="desk-btn" onClick={() => scrollTo('desk-hydro')}>Why we can’t conclude <ArrowUpRight size={13} /></button>
-              <button className="desk-btn" onClick={() => judgeGo(1)}>Judge view · 30-second walk</button>
+            <div className="dd-activation dd3-activation" role="note">
+              <span>FLUVISAR · ACTIVATION <strong>CHILMARI-2026-01</strong></span>
+              <span>NISAR L-BAND GCOV HH · TRACK {bundle.reach.track.relative_orbit} FRAME {bundle.reach.track.frame}</span>
+              <span>PAIR {formatDate(firstDate)} → {formatDate(lastDate)} · {pairWindow} DAYS = 2 CYCLES</span>
+              <span>PRODUCT V2 · STATUS: FIELD VERIFICATION OPEN</span>
+              <span>NEXT SAME-TRACK PASS: {formatDate(nextPass)} <Stamp kind="derived">DERIVED · +12 d cycle</Stamp></span>
+              <span className="dd-trust">NISAR PROVISIONAL · CRID P05023 · CALIBRATED, VALIDATION ONGOING · RFI-SCREENED <em>validated reprocessing expected Q4 2026 (ASF)</em></span>
             </div>
-          </div>
-          <div className="desk-verdict-card" role="status">
-            <div className="desk-verdict-head"><span className="desk-verdict-pulse"><i /></span>EVIDENCE VERDICT · THIS RUN</div>
-            <div className="desk-verdict-word dd-verdict-word">STAGE-CONFOUNDED PAIR</div>
-            <p>Bundle run verdict: {bundle.reach.verdict} · {failedChecks} check failed · {warningChecks} warned · {notEvaluated} not evaluated. Safe to task. Unsafe to conclude.</p>
-            <div className="dd-allowed">
-              <div><strong>ALLOWED NOW</strong><span>Task field verification of the investigation sites · compare against historic banklines · carry the OPERA DSWx layer (17 Jun 2026) as pre-pair context only</span></div>
-              <div><strong>NOT ALLOWED</strong><span>Publish a candidate area as erosion fact · claim displacement or loss · trigger a response from this map alone</span></div>
-              <div><strong>RESOLVES IT</strong><span>Next same-track pass ({formatDate(nextPass)}) at comparable stage, with Sentinel-1 as tie-breaker — persistence separates emergence from bank loss</span></div>
-            </div>
-            <div className="desk-verdict-meta"><span>{taskedCount}/24 screening candidates tasked or beyond</span><span>bundle frozen {formatDate(bundle.manifest.generated_at.slice(0, 10).replace(/-/g, ''))}</span></div>
-          </div>
-        </header>
-
-        {/* ── §1b Stage panel — the confound, plotted from the bundle ── */}
-        <div id="desk-hydro">
-          <StageHydro stage={bundle.stage} t0Label={formatDate(firstDate)} t1Label={formatDate(lastDate)} />
-        </div>
-
-        {/* ── Persona switcher ── */}
-        <section className="dd-persona" aria-label="Persona switcher">
-          <div className="dd-persona-tabs" role="tablist" aria-label="Choose your desk">
-            {PERSONAS.map((p) => (
-              <button key={p.id} role="tab" aria-selected={persona === p.id} className={persona === p.id ? 'active' : ''} onClick={() => setPersona(p.id)}>
-                {p.label}{p.labelBn ? <small>{p.labelBn}</small> : null}
+            <div className="dd3-bar-controls">
+              <button className={`dd3-verdict-chip ${verdictOpen ? 'open' : ''}`} onClick={() => setVerdictOpen(!verdictOpen)} aria-expanded={verdictOpen} aria-haspopup="true">
+                <span className="desk-verdict-pulse"><i /></span>
+                <span><strong>STAGE-CONFOUNDED PAIR</strong> — do not issue as erosion</span>
+                <ChevronRight size={13} className="dd3-chip-caret" />
               </button>
-            ))}
-          </div>
-          <div className="dd-persona-body">
-            <div className="dd-persona-job"><span>YOUR JOB HERE</span><strong>{personaDef.job}</strong></div>
-            <ol className="dd-persona-actions">
-              {personaDef.actions.map((a) => <li key={a}>{a}</li>)}
-            </ol>
-            <div className="dd-persona-side">
-              <button className="desk-btn primary" onClick={personaExport}><Printer size={13} /> {personaDef.exportLabel}</button>
-              <small>{personaDef.sliceNote}</small>
-            </div>
-          </div>
-        </section>
-
-        {/* ── §2 Map: full-bleed, in-canvas swipe, site markers ── */}
-        <section className="dd-map-section" aria-label="NISAR map">
-          <div className="desk-map-frame dd-map-frame">
-            <DecisionMap
-              reach={bundle.reach}
-              bounds={bundle.bounds}
-              dates={bundle.reach.dates.map((item) => item.date)}
-              selectedDate={selectedDate}
-              selectedFeatureId={selected ? String(selected.properties.id) : null}
-              erosion={bundle.erosion}
-              accretion={bundle.accretion}
-              showRadar={showRadar}
-              showWater={showWater}
-              showOpera={showOpera}
-              scenario={null}
-              osm={null}
-              topN={24}
-              onSelectFeature={(id) => { setSelectedFeatureId(id); scrollTo('desk-drawer'); }}
-              swipe={swipeOn && firstDate && lastDate ? { t0: firstDate, t1: lastDate, position: swipePosition, onPositionChange: setSwipePosition } : null}
-              siteMarkers={sites.map((s) => ({ id: s.id, label: s.id.replace('SITE-', 'S'), centroid: s.centroid, active: selSite?.id === s.id }))}
-              onSelectSite={(siteId) => { const s = sites.find((x) => x.id === siteId); if (s) selectSite(s); }}
-            />
-            <div className="desk-map-chip"><span className="desk-live-dot" />{swipeOn ? <>IN-CANVAS SWIPE · <b>t0 {formatDate(firstDate)}</b> ⟷ <b>t1 {formatDate(lastDate)}</b></> : <>NISAR PASS · <b>{formatDate(selectedDate)}</b></>}</div>
-            <div className="desk-map-layers" aria-label="Map layers">
-              <button className={swipeOn ? 'active' : ''} onClick={() => setSwipeOn(!swipeOn)}>⇆ Swipe t0/t1</button>
-              <button className={showRadar ? 'active' : ''} onClick={() => setShowRadar(!showRadar)}><Eye size={13} /> NISAR HH</button>
-              <button className={showWater ? 'active' : ''} onClick={() => setShowWater(!showWater)}><Waves size={13} /> Water mask</button>
-              <button className={showOpera ? 'active' : ''} onClick={() => setShowOpera(!showOpera)}><Layers3 size={13} /> OPERA · 17 JUN 2026 (context)</button>
-            </div>
-            <div className="desk-map-legend">
-              <span><i className="l-erosion" /> Land → water candidate</span>
-              <span><i className="l-accretion" /> Water → land candidate</span>
-              <span><i className="l-selected" /> Selected</span>
-              <span><i className="l-site" /> Investigation site anchor</span>
-              <span className="dd-map-note">Candidates drawn: top 24 per class · drag the divider inside the map to compare passes · OPERA layer predates the pair — context only</span>
-            </div>
-          </div>
-
-          <div className="desk-passes">
-            <div className="desk-passes-head">
-              <span className="desk-eyebrow-inline">OBSERVED PASSES · SAME RELATIVE ORBIT</span>
-              {passDates.length >= 2 && (
-                <button className={`desk-play ${playing ? 'on' : ''}`} onClick={() => setPlaying(!playing)} aria-label={playing ? 'Stop time series' : 'Play time series'}>
-                  {playing ? <Pause size={13} /> : <Play size={13} />}{playing ? 'Pause cycle' : 'Cycle passes'}
-                </button>
-              )}
-            </div>
-            <div className="desk-passes-grid">
-              {bundle.reach.dates.map((date) => (
-                <button key={date.date} className={selectedDate === date.date ? 'selected' : ''} onClick={() => setSelectedDate(date.date)}>
-                  <span className="desk-pass-node">{selectedDate === date.date && <i />}</span>
-                  <strong>{formatDate(date.date)}</strong>
-                  <small>{date.status === 'ok' ? `L-band HH · ${date.stage_source === 'proxy' ? 'stage proxy' : 'gauge stage'} · ${date.acq_utc.slice(11, 16)} UTC` : `not used · ${date.status}`}</small>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="dd-threshold">
-            <div className="dd-threshold-head">
-              <span>THRESHOLD SENSITIVITY · TOUCH THE UNCERTAINTY</span>
-              <Stamp kind="derived">DERIVED · reading of the manifest range, not a re-run</Stamp>
-            </div>
-            <label htmlFor="dd-threshold-slider">Water threshold perturbation <strong>{thresholdDb > 0 ? '+' : ''}{thresholdDb.toFixed(1)} dB</strong></label>
-            <input id="dd-threshold-slider" type="range" min={-1} max={1} step={0.1} value={thresholdDb} onChange={(e) => setThresholdDb(Number(e.target.value))} />
-            <div className="dd-threshold-read">
-              <span>Land→water candidates at this threshold:</span>
-              <strong>{formatNumber(sliderArea, 0)} ha</strong>
-              <span className="dd-threshold-range">published range {formatNumber(erosionMetric?.low, 0)} ha (−1 dB) · {formatNumber(erosionMetric?.value, 0)} ha (as run) · {formatNumber(erosionMetric?.high, 0)} ha (+1 dB) — the range is the headline; it spans ~4.8×.</span>
-            </div>
-          </div>
-        </section>
-
-        {/* ── §3 Investigation Sites — the main surface ── */}
-        <section className={`dd-sites ${judgeStep === 2 ? 'is-judge-focus' : ''}`} id="desk-sites" aria-label="Investigation sites">
-          <div className="dd-section-head">
-            <div>
-              <div className="desk-eyebrow"><MapPin size={13} /> INVESTIGATION SITES · WHERE A TEAM CAN ACTUALLY GO</div>
-              <h2>{sites.length} named places — not {candidates.length.toLocaleString()} polygons.</h2>
-              <p className="dd-method">
-                Grouping method (deterministic, from bundle centroids): the 24 screening anchors, in area order, each claim every
-                still-unclaimed candidate within <strong>{SITE_RADIUS_M.toLocaleString()} m</strong> (haversine); the largest anchor wins ties.
-                Every original candidate id stays listed inside its site — grouping organises the work, it never deletes evidence.
-                {' '}{sitesResult.unassignedCount.toLocaleString()} candidates lie outside every site radius and remain in the full ledger.
-                <strong> There is no composite score on this desk, by design:</strong> a mapped change earns a ranking signal only when
-                its magnitude exceeds the pair’s measurement / co-registration uncertainty (Level-of-Detection logic), and that gate
-                is not yet evaluated in this bundle — so orders here are labelled screening orders, never risk rankings.
-              </p>
-            </div>
-            <div className="dd-queue-meta">
-              <span><strong>{verifiedCount}</strong> candidates field-verified (reviewed)</span>
-              <span><strong>{taskedCount}/24</strong> screening candidates tasked or beyond</span>
-              <span>Display order: largest grouped transition area first — a screening order, not a risk ranking.</span>
-            </div>
-          </div>
-          <div className="dd-site-list">
-            {sitesByArea.map((site) => {
-              const verifiedInSite = site.members.filter((f) => statusOf(f) === 'VERIFIED').length;
-              const taskedInSite = site.members.filter((f) => statusOf(f) !== 'UNREVIEWED').length;
-              const open = expandedSite === site.id;
-              return (
-                <article key={site.id} className={`dd-site ${selSite?.id === site.id ? 'selected' : ''}`}>
-                  <button className="dd-site-main" onClick={() => selectSite(site)}>
-                    <span className="dd-site-id">{site.id}</span>
-                    <span className="dd-site-body">
-                      <strong>{site.reachPart} · anchor {site.anchorId}</strong>
-                      <small>
-                        {site.members.length} candidates · {site.erosionCount} land→water ({formatNumber(site.erosionArea)} ha) · {site.accretionCount} water→land ({formatNumber(site.accretionArea)} ha)
-                        {' '}· centroid {formatCoord(site.centroid)}
-                      </small>
-                    </span>
-                    <span className="dd-site-area"><strong>{formatNumber(site.totalArea)} ha</strong><small>grouped candidates</small></span>
-                    <span className="dd-site-state">{verifiedInSite > 0 ? `${verifiedInSite} verified` : taskedInSite > 0 ? `${taskedInSite} in workflow` : 'unreviewed'}</span>
+              <div className="dd3-persona-seg" role="tablist" aria-label="Choose your desk">
+                {PERSONAS.map((p) => (
+                  <button key={p.id} role="tab" aria-selected={persona === p.id} className={persona === p.id ? 'active' : ''} onClick={() => setPersona(p.id)}>
+                    {p.label}{p.labelBn ? <small>{p.labelBn}</small> : null}
                   </button>
-                  <button className="dd-site-expand" onClick={() => setExpandedSite(open ? null : site.id)} aria-expanded={open}>
-                    {open ? 'Hide members' : `Members (${site.members.length})`}
-                  </button>
-                  {open && (
-                    <div className="dd-site-members">
-                      {site.members.slice(0, 12).map((f) => {
-                        const id = String(f.properties.id);
-                        return (
-                          <button key={id} className={`dd-member ${selectedFeatureId === id ? 'selected' : ''}`} onClick={() => { setSelectedSiteId(site.id); setSelectedFeatureId(id); scrollTo('desk-drawer'); }}>
-                            <span className={`row-swatch ${f.properties.class}`} />{id} · {formatNumber(f.properties.area_ha, 2)} ha · {STATUS_LABEL[persona][statusOf(f)]}
-                          </button>
-                        );
-                      })}
-                      {site.members.length > 12 && <span className="dd-member-more">+{site.members.length - 12} more — full list in the Researcher ledger and in the site’s Investigation Pack (JSON).</span>}
-                    </div>
-                  )}
-                </article>
-              );
-            })}
-          </div>
-
-          {/* Screening list — the 24, honestly labelled */}
-          <div className="dd-screening" id="desk-queue">
-            <div className="dd-screening-head">
-              <div>
-                <div className="desk-eyebrow"><ClipboardList size={13} /> SCREENING LIST · THE 24 ANCHORS</div>
-                <h3>Screening order — largest mapped area first.</h3>
-                <p>An inspection order, not a risk ranking: area is the only per-candidate signal this bundle carries
-                  (population, nearest place and CEGIS-reach fields are null for every candidate).
-                  {persona === 'bwdb' && ' BWDB mode re-orders erosion first.'}{persona === 'ngo' && ' NGO mode orders the 24 as a north→south field route.'}
-                  {persona === 'char' && ' বড় পরিবর্তন আগে — যাচাইয়ের জন্য।'}</p>
+                ))}
               </div>
-              {persona === 'researcher'
-                ? <button className="desk-btn slim" onClick={() => setShowLedger(!showLedger)}>{showLedger ? 'Hide full ledger' : `Full ledger (${candidates.length.toLocaleString()})`}</button>
-                : <span className="dd-ledger-note">{(candidates.length - 24).toLocaleString()} further candidates sit below the screening cut — full ledger in Researcher mode.</span>}
+              <button className="desk-btn slim" onClick={() => judgeGo(1)}>Judge view · 30-second walk</button>
             </div>
-            <div className="dd-qgrid">
-              {queue.map((feature, i) => {
-                const id = String(feature.properties.id);
-                const st = statusOf(feature);
-                const site = siteOfFeature.get(id);
-                return (
-                  <button key={id} className={`dd-qcard ${selectedFeatureId === id ? 'selected' : ''}`} onClick={() => { setSelectedFeatureId(id); if (site) setSelectedSiteId(site.id); scrollTo('desk-drawer'); }}>
-                    <span className="dd-qrank">#{i + 1}</span>
-                    <span className={`row-swatch ${feature.properties.class}`} />
-                    <span className="dd-qmain">
-                      <strong>{CLASS_LABEL[persona][feature.properties.class]} · {id}</strong>
-                      <small>{formatNumber(feature.properties.area_ha, 2)} ha · {feature.properties.pixel_count} px · {site ? site.id : 'no site'} · DSWx: {feature.properties.confirmed_by_dswx == null ? 'not evaluated' : feature.properties.confirmed_by_dswx ? 'agrees' : 'disagrees'}</small>
-                    </span>
-                    <span className={`dd-status s-${st.toLowerCase()}`}>{STATUS_LABEL[persona][st]}</span>
-                  </button>
-                );
-              })}
+          </div>
+          <div className="dd3-persona-strip">
+            <span className="dd3-ps-job"><span className="dd3-ps-label">YOUR JOB HERE</span><strong>{personaDef.job}</strong></span>
+            <span className="dd3-ps-actions">{personaDef.actions.join('  ·  ')}</span>
+            <span className="dd3-ps-side">
+              <button className="desk-btn slim primary" onClick={personaExport}><Printer size={13} /> {personaDef.exportLabel}</button>
+              <small>{personaDef.sliceNote}</small>
+            </span>
+          </div>
+          {verdictOpen && (
+            <div className="dd3-verdict-pop" role="dialog" aria-label="Evidence verdict — this run">
+              <div className="desk-verdict-head"><span className="desk-verdict-pulse"><i /></span>EVIDENCE VERDICT · THIS RUN</div>
+              <div className="desk-verdict-word dd-verdict-word">STAGE-CONFOUNDED PAIR</div>
+              <p className="dd3-pop-line">Bundle run verdict: {bundle.reach.verdict} · {failedChecks} check failed · {warningChecks} warned · {notEvaluated} not evaluated. Safe to task. Unsafe to conclude.</p>
+              <p className="desk-deck dd3-pop-deck">
+                Between the two NISAR passes the Jamuna’s stage moved and its bars emerged — most apparent change in
+                this pair is falling water exposing the river’s own bed, not proven bank loss. The radar mapped
+                {' '}<strong>{candidates.length.toLocaleString()} transition candidates</strong>; this desk groups them into
+                {' '}<strong>{sites.length} investigation sites</strong> a field team can actually visit, and refuses to call
+                any of them erosion until evidence — not area — says so. <strong>None justify action on radar alone.</strong>
+              </p>
+              <div className="dd-hero-numbers" aria-label="Qualified headline numbers">
+                <div className="dd-num">
+                  <strong>{sites.length}</strong><span>INVESTIGATION SITES</span>
+                  <small>grouped from {candidates.length.toLocaleString()} candidates <Stamp kind="derived">DERIVED · method on page</Stamp></small>
+                </div>
+                <div className="dd-num">
+                  <strong>{formatNumber(erosionMetric?.value)} ha</strong><span>LAND→WATER CANDIDATES</span>
+                  <small>range {formatNumber(erosionMetric?.low, 0)}–{formatNumber(erosionMetric?.high, 0)} ha at ±1 dB <Stamp kind="real">REAL · manifest</Stamp></small>
+                </div>
+                <div className="dd-num">
+                  <strong>{verifiedCount}</strong><span>CONFIRMED LOSSES</span>
+                  <small>a loss exists only when a reviewed field observation closes it</small>
+                </div>
+              </div>
+              <div className="dd-allowed">
+                <div><strong>ALLOWED NOW</strong><span>Task field verification of the investigation sites · compare against historic banklines · carry the OPERA DSWx layer (17 Jun 2026) as pre-pair context only</span></div>
+                <div><strong>NOT ALLOWED</strong><span>Publish a candidate area as erosion fact · claim displacement or loss · trigger a response from this map alone</span></div>
+                <div><strong>RESOLVES IT</strong><span>Next same-track pass ({formatDate(nextPass)}) at comparable stage, with Sentinel-1 as tie-breaker — persistence separates emergence from bank loss</span></div>
+              </div>
+              <div className="dd3-pop-foot">
+                <div className="desk-verdict-meta"><span>{taskedCount}/24 screening candidates tasked or beyond</span><span>bundle frozen {formatDate(bundle.manifest.generated_at.slice(0, 10).replace(/-/g, ''))}</span></div>
+                <button className="desk-btn slim" onClick={() => { setVerdictOpen(false); setRightTab('evidence'); window.setTimeout(() => scrollTo('desk-hydro'), 60); }}>Why we can’t conclude <ArrowUpRight size={13} /></button>
+              </div>
             </div>
-            {persona === 'researcher' && showLedger && (
-              <div className="dd-ledger">
-                <div className="desk-search"><input value={ledgerQuery} onChange={(e) => setLedgerQuery(e.target.value)} placeholder="Find candidate ID in the full ledger…" aria-label="Search full ledger" /></div>
-                <p className="dd-ledger-note">Showing {Math.min(200, ledgerFiltered.length)} of {ledgerFiltered.length.toLocaleString()} (render cap 200 — the full set ships in the bundle GeoJSON).</p>
-                <div className="desk-ledger">
-                  {ledgerFiltered.slice(0, 200).map((feature) => {
-                    const id = String(feature.properties.id);
-                    return (
-                      <button key={id} className={`desk-row ${selectedFeatureId === id ? 'selected' : ''}`} onClick={() => setSelectedFeatureId(id)}>
-                        <span className={`row-swatch ${feature.properties.class}`} />
-                        <span className="row-main"><strong>{feature.properties.class === 'erosion' ? 'Land → water' : 'Water → land'} · {id}</strong><small>{feature.properties.pixel_count} px · {siteOfFeature.get(id)?.id ?? 'no site'}</small></span>
-                        <span className="row-area">{feature.properties.area_ha.toFixed(2)}<small>ha</small></span>
-                      </button>
-                    );
-                  })}
+          )}
+        </div>
+
+        {/* ── Row 2 · Workspace ── */}
+        <div className={`dd3-work ${judgeStep === 2 ? 'is-judge-focus' : ''}`}>
+
+          {/* LEFT RAIL — sites / screening */}
+          <aside className="dd3-rail dd3-rail-left" id="desk-sites" aria-label="Investigation sites and screening list">
+            <div className="dd3-ltabs" role="tablist" aria-label="Left rail views">
+              <button role="tab" aria-selected={leftTab === 'sites'} className={leftTab === 'sites' ? 'active' : ''} onClick={() => setLeftTab('sites')}><MapPin size={12} /> Sites · {sites.length}</button>
+              <button role="tab" aria-selected={leftTab === 'screening'} className={leftTab === 'screening' ? 'active' : ''} onClick={() => setLeftTab('screening')}><ClipboardList size={12} /> Screening · 24</button>
+            </div>
+
+            {leftTab === 'sites' && (
+              <div className="dd3-lpanel">
+                <div className="desk-search dd3-search"><input value={siteQuery} onChange={(e) => setSiteQuery(e.target.value)} placeholder="Search sites — id, reach, anchor…" aria-label="Search investigation sites" /></div>
+                <div className="dd3-rail-scroll">
+                  {sitesByArea
+                    .filter((s) => {
+                      const q = siteQuery.trim().toLowerCase();
+                      return !q || s.id.toLowerCase().includes(q) || s.reachPart.toLowerCase().includes(q) || s.anchorId.toLowerCase().includes(q);
+                    })
+                    .map((site) => {
+                      const verifiedInSite = site.members.filter((f) => statusOf(f) === 'VERIFIED').length;
+                      const taskedInSite = site.members.filter((f) => statusOf(f) !== 'UNREVIEWED').length;
+                      const open = expandedSite === site.id;
+                      const dotState = verifiedInSite > 0 ? 'verified' : taskedInSite > 0 ? 'active' : 'idle';
+                      return (
+                        <article key={site.id} className={`dd3-site ${selSite?.id === site.id ? 'selected' : ''}`}>
+                          <button className="dd3-site-main" onClick={() => selectSite(site)}>
+                            <span className={`dd3-site-dot is-${dotState}`} aria-hidden="true" />
+                            <span className="dd3-site-body">
+                              <span className="dd3-site-top"><strong>{site.id}</strong><span className="dd3-site-area">{formatNumber(site.totalArea)} ha</span></span>
+                              <span className="dd3-site-sub">{site.reachPart} · {site.members.length} candidates</span>
+                              <span className="dd3-site-sub is-state">{verifiedInSite > 0 ? `${verifiedInSite} verified` : taskedInSite > 0 ? `${taskedInSite} in workflow` : 'unreviewed'}</span>
+                            </span>
+                          </button>
+                          <button className="dd3-site-expand" onClick={() => setExpandedSite(open ? null : site.id)} aria-expanded={open}>
+                            {open ? 'Hide members' : `Members (${site.members.length})`}
+                          </button>
+                          {open && (
+                            <div className="dd-site-members">
+                              {site.members.slice(0, 12).map((f) => {
+                                const id = String(f.properties.id);
+                                return (
+                                  <button key={id} className={`dd-member ${selectedFeatureId === id ? 'selected' : ''}`} onClick={() => { setSelectedSiteId(site.id); focusCandidate(id, site.id); }}>
+                                    <span className={`row-swatch ${f.properties.class}`} />{id} · {formatNumber(f.properties.area_ha, 2)} ha · {STATUS_LABEL[persona][statusOf(f)]}
+                                  </button>
+                                );
+                              })}
+                              {site.members.length > 12 && <span className="dd-member-more">+{site.members.length - 12} more — full list in the Researcher ledger and in the site’s Investigation Pack (JSON).</span>}
+                            </div>
+                          )}
+                        </article>
+                      );
+                    })}
+                  {sitesByArea.filter((s) => { const q = siteQuery.trim().toLowerCase(); return !q || s.id.toLowerCase().includes(q) || s.reachPart.toLowerCase().includes(q) || s.anchorId.toLowerCase().includes(q); }).length === 0 && (
+                    <p className="dd3-empty">No site matches “{siteQuery}”.</p>
+                  )}
+                </div>
+                <div className="dd3-rail-foot">
+                  <span><strong>{verifiedCount}</strong> candidates field-verified (reviewed)</span>
+                  <span><strong>{taskedCount}/24</strong> screening candidates tasked or beyond</span>
+                  <span>FLUVISAR · EVIDENCE FIRST — Decision Desk only: look → verify → issue. Records stay in this browser; print the brief or a site pack for the field handoff.</span>
+                  <details className="dd3-method">
+                    <summary>Grouping method · why there is no score</summary>
+                    <p className="dd-method">
+                      Grouping method (deterministic, from bundle centroids): the 24 screening anchors, in area order, each claim every
+                      still-unclaimed candidate within <strong>{SITE_RADIUS_M.toLocaleString()} m</strong> (haversine); the largest anchor wins ties.
+                      Every original candidate id stays listed inside its site — grouping organises the work, it never deletes evidence.
+                      {' '}{sitesResult.unassignedCount.toLocaleString()} candidates lie outside every site radius and remain in the full ledger.
+                      <strong> There is no composite score on this desk, by design:</strong> a mapped change earns a ranking signal only when
+                      its magnitude exceeds the pair’s measurement / co-registration uncertainty (Level-of-Detection logic), and that gate
+                      is not yet evaluated in this bundle — so orders here are labelled screening orders, never risk rankings.
+                      Display order: largest grouped transition area first — a screening order, not a risk ranking.
+                    </p>
+                  </details>
                 </div>
               </div>
             )}
-          </div>
-        </section>
 
-        {/* ── §4 Evidence drawer ── */}
-        {selected && centroidOf && (
-          <section className="dd-drawer" id="desk-drawer" aria-label="Evidence drawer">
-            <div className="desk-selected-head">
-              <div>
-                <span className="desk-eyebrow-soft">EVIDENCE DRAWER · SELECTED CANDIDATE</span>
-                <h3>{CLASS_LABEL[persona][selected.properties.class]} candidate <b>{selId}</b>{selSite && <> · member of <b>{selSite.id}</b></>}</h3>
-              </div>
-              <span className="desk-tag is-warn">{selRecord.status === 'VERIFIED' ? 'FIELD-VERIFIED (REVIEWED)' : 'UNVERIFIED'}</span>
-            </div>
-            <div className="desk-factlist">
-              <div><span>Mapped transition</span><strong>{selected.properties.area_ha.toFixed(2)} ha <Stamp kind="real">REAL</Stamp></strong></div>
-              <div><span>Observed between</span><strong>{formatDate(selected.properties.t0)} → {formatDate(selected.properties.t1)}</strong></div>
-              <div><span>Centroid</span><strong><Crosshair size={12} /> {formatCoord(centroidOf)}</strong></div>
-              <div><span>Evidence maturity</span><strong>{maturityHeadline(selRecord)}</strong></div>
-            </div>
-
-            <div className="dd-dims" aria-label="Three separate dimensions — deliberately not a score">
-              <div className="dd-dim">
-                <strong>EVIDENCE QUALITY</strong>
-                <p>Run-level only in this bundle — every candidate inherits the pair’s gates: {failedChecks} FAIL · {warningChecks} WARN · {notEvaluated} NOT EVALUATED.
-                  Per-candidate DSWx confirmation: <b>{selected.properties.confirmed_by_dswx == null ? 'NOT EVALUATED (null in bundle)' : String(selected.properties.confirmed_by_dswx)}</b>.
-                  Per-candidate QC does not exist in this data yet — claiming otherwise would be fabrication.</p>
-              </div>
-              <div className="dd-dim">
-                <strong>OPERATIONAL CONTEXT</strong>
-                <p>Nearest settlement (bundle field): <b>{selected.properties.nearest_place ?? 'UNAVAILABLE — null in bundle'}</b>.<br />
-                  CEGIS reach membership: <b>{selected.properties.in_cegis_reach ?? 'UNAVAILABLE — null in bundle'}</b>.<br />
-                  Absence of a layer is shown, never filled in.</p>
-              </div>
-              <div className="dd-dim">
-                <strong>VERIFICATION STATUS</strong>
-                <p><b>{STATUS_LABEL[persona][selRecord.status]}</b>
-                  {selRecord.owner && <> · owner: {selRecord.owner}</>}
-                  {selRecord.deadline && <> · deadline: {selRecord.deadline}</>}
-                  {selRecord.review && <> · review: {selRecord.review.conclusion} by {selRecord.review.reviewerRole}</>}
-                  <br />Status lives in this browser (localStorage) and prints into the brief and the pack.</p>
-              </div>
-            </div>
-
-            <div className="dd-ladder" aria-label="FluviSAR evidence protocol">
-              <strong>FLUVISAR EVIDENCE PROTOCOL <span>— our own protocol, informed by Leonard et al. (2020) and Olofsson et al. (2014); not a NISAR/USGS standard</span></strong>
-              <ol>
-                {selMaturity.map((rung) => (
-                  <li key={rung.n} className={`rung is-${rung.state}`}>
-                    <span className="rung-n">{rung.n}</span>
-                    <span className="rung-body"><b>{rung.label}</b> <em>{rung.state.replace(/_/g, ' ').toUpperCase()}</em><small>{rung.note}</small></span>
-                  </li>
-                ))}
-              </ol>
-            </div>
-
-            <div className="dd-realkill">
-              <div className="dd-realkill-col is-real">
-                <strong>WHAT WOULD MAKE THIS REAL</strong>
-                <ul>
-                  <li>Persists in the next same-track pass ({formatDate(nextPass)}) at comparable stage</li>
-                  <li>A same-date independent water product agrees the bank material is gone (the bundle’s OPERA layer is 17 Jun — too early to count)</li>
-                  <li>A recorded field observation of a fresh scarp / collapsed bank, confirmed by a reviewer</li>
-                </ul>
-              </div>
-              <div className="dd-realkill-col is-kill">
-                <strong>WHAT WOULD KILL IT</strong>
-                <ul>
-                  <li>Re-floods next pass → it was stage emergence, not bank loss</li>
-                  <li>Shift sits inside co-registration tolerance (that check is not yet evaluated)</li>
-                  <li>Polygon lies on a low bar inside the HAND mask (≤ {thresholds?.hand_max_m ?? '—'} m)</li>
-                </ul>
-              </div>
-            </div>
-
-            <div className="dd-lifecycle">
-              <strong>FIELD VERIFICATION · STATUS IS A VERB, WITH AN OWNER AND A REVIEW</strong>
-              <p className="dd-lifecycle-flow">
-                UNREVIEWED → TASKED → MONITORING → OBSERVATION RECEIVED → REVIEWED → VERIFIED / REJECTED / back to MONITORING.
-                A field visit records an observation; only a reviewer’s recorded conclusion can verify. There is no one-click verify on this desk.
-              </p>
-              {(selRecord.status === 'UNREVIEWED' || selRecord.status === 'TASKED' || selRecord.status === 'MONITORING') && (
-                <>
-                  <div className="dd-tasking-fields">
-                    <label>Owner / role<input value={selRecord.owner} onChange={(e) => patchRecord({ owner: e.target.value })} placeholder="e.g. Upazila field officer (role, not a name)" /></label>
-                    <label>Deadline<input type="date" value={selRecord.deadline} onChange={(e) => patchRecord({ deadline: e.target.value })} /></label>
-                    <label>Dismiss reason (required to dismiss)<input value={selRecord.dismissReason} onChange={(e) => patchRecord({ dismissReason: e.target.value })} placeholder="e.g. re-flooded on next pass — stage emergence" /></label>
-                  </div>
-                  <div className="dd-tasking-actions">
-                    <button className="desk-btn primary" onClick={doTask}><ClipboardList size={13} /> Task field verification</button>
-                    <button className="desk-btn" onClick={doMonitor}>Monitor next pass</button>
-                    <button className="desk-btn" onClick={doDismiss}>Dismiss</button>
-                  </div>
-                  <fieldset className="dd-obs-form">
-                    <legend>Record a field observation</legend>
-                    <div className="dd-tasking-fields">
-                      <label>Observer role (required)<input value={obsRole} onChange={(e) => setObsRole(e.target.value)} placeholder="e.g. NGO field enumerator" /></label>
-                      <label>Observation time<input type="datetime-local" value={obsAt} onChange={(e) => setObsAt(e.target.value)} /></label>
-                      <label>GPS / position note<input value={obsGps} onChange={(e) => setObsGps(e.target.value)} placeholder="e.g. stood at anchor point, ±5 m" /></label>
-                      <label>Observed bank condition
-                        <select value={obsCondition} onChange={(e) => setObsCondition(e.target.value as BankCondition)}>
-                          <option value="erosion">Active erosion / fresh scarp</option>
-                          <option value="deposition">Fresh deposition</option>
-                          <option value="stable">Bank stable</option>
-                          <option value="uncertain">Uncertain / could not reach</option>
-                        </select>
-                      </label>
-                      <label>Photo reference<input value={obsPhoto} onChange={(e) => setObsPhoto(e.target.value)} placeholder="e.g. IMG_2041–2043 (field phone)" /></label>
+            {leftTab === 'screening' && (
+              <div className="dd3-lpanel">
+                <div className="dd3-rail-scroll">
+                  <div className="dd-screening" id="desk-queue">
+                    <div className="dd-screening-head">
+                      <div>
+                        <div className="desk-eyebrow"><ClipboardList size={13} /> SCREENING LIST · THE 24 ANCHORS</div>
+                        <h3>Screening order — largest mapped area first.</h3>
+                        <p>An inspection order, not a risk ranking: area is the only per-candidate signal this bundle carries
+                          (population, nearest place and CEGIS-reach fields are null for every candidate).
+                          {persona === 'bwdb' && ' BWDB mode re-orders erosion first.'}{persona === 'ngo' && ' NGO mode orders the 24 as a north→south field route.'}
+                          {persona === 'char' && ' বড় পরিবর্তন আগে — যাচাইয়ের জন্য।'}</p>
+                      </div>
+                      {persona === 'researcher'
+                        ? <button className="desk-btn slim" onClick={() => setShowLedger(!showLedger)}>{showLedger ? 'Hide full ledger' : `Full ledger (${candidates.length.toLocaleString()})`}</button>
+                        : <span className="dd-ledger-note">{(candidates.length - 24).toLocaleString()} further candidates sit below the screening cut — full ledger in Researcher mode.</span>}
                     </div>
-                    <button className="desk-btn primary" onClick={doObservation}>Record observation → OBSERVATION RECEIVED</button>
-                  </fieldset>
-                </>
-              )}
-              {selRecord.status === 'OBSERVATION_RECEIVED' && selRecord.observation && (
-                <fieldset className="dd-obs-form">
-                  <legend>Observation on record — awaiting review</legend>
-                  <p className="dd-obs-summary">
-                    {selRecord.observation.observerRole} · {formatDate(selRecord.observation.observedAt)} · bank condition: <b>{selRecord.observation.bankCondition}</b>
-                    {selRecord.observation.gpsNote && <> · {selRecord.observation.gpsNote}</>}
-                    {selRecord.observation.photoRef && <> · photos: {selRecord.observation.photoRef}</>}
-                  </p>
-                  <div className="dd-tasking-fields">
-                    <label>Reviewer conclusion
-                      <select value={revConclusion} onChange={(e) => setRevConclusion(e.target.value as ReviewConclusion)}>
-                        <option value="CORROBORATES">Corroborates the candidate</option>
-                        <option value="CONTRADICTS">Contradicts the candidate</option>
-                        <option value="UNRESOLVED">Unresolved — keep monitoring</option>
-                      </select>
-                    </label>
-                    <label>Reviewer role (required)<input value={revRole} onChange={(e) => setRevRole(e.target.value)} placeholder="e.g. BWDB sub-divisional engineer" /></label>
-                    <label>Reason (required)<input value={revReason} onChange={(e) => setRevReason(e.target.value)} placeholder="what in the observation decides it" /></label>
+                    <div className="dd-qgrid">
+                      {queue.map((feature, i) => {
+                        const id = String(feature.properties.id);
+                        const st = statusOf(feature);
+                        const site = siteOfFeature.get(id);
+                        return (
+                          <button key={id} className={`dd-qcard ${selectedFeatureId === id ? 'selected' : ''}`} onClick={() => focusCandidate(id, site?.id)}>
+                            <span className="dd-qrank">#{i + 1}</span>
+                            <span className={`row-swatch ${feature.properties.class}`} />
+                            <span className="dd-qmain">
+                              <strong>{CLASS_LABEL[persona][feature.properties.class]} · {id}</strong>
+                              <small>{formatNumber(feature.properties.area_ha, 2)} ha · {feature.properties.pixel_count} px · {site ? site.id : 'no site'} · DSWx: {feature.properties.confirmed_by_dswx == null ? 'not evaluated' : feature.properties.confirmed_by_dswx ? 'agrees' : 'disagrees'}</small>
+                            </span>
+                            <span className={`dd-status s-${st.toLowerCase()}`}>{STATUS_LABEL[persona][st]}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {persona === 'researcher' && showLedger && (
+                      <div className="dd-ledger">
+                        <div className="desk-search"><input value={ledgerQuery} onChange={(e) => setLedgerQuery(e.target.value)} placeholder="Find candidate ID in the full ledger…" aria-label="Search full ledger" /></div>
+                        <p className="dd-ledger-note">Showing {Math.min(200, ledgerFiltered.length)} of {ledgerFiltered.length.toLocaleString()} (render cap 200 — the full set ships in the bundle GeoJSON).</p>
+                        <div className="desk-ledger">
+                          {ledgerFiltered.slice(0, 200).map((feature) => {
+                            const id = String(feature.properties.id);
+                            return (
+                              <button key={id} className={`desk-row ${selectedFeatureId === id ? 'selected' : ''}`} onClick={() => focusCandidate(id, siteOfFeature.get(id)?.id)}>
+                                <span className={`row-swatch ${feature.properties.class}`} />
+                                <span className="row-main"><strong>{feature.properties.class === 'erosion' ? 'Land → water' : 'Water → land'} · {id}</strong><small>{feature.properties.pixel_count} px · {siteOfFeature.get(id)?.id ?? 'no site'}</small></span>
+                                <span className="row-area">{feature.properties.area_ha.toFixed(2)}<small>ha</small></span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <button className="desk-btn primary" onClick={doReview}>Record review</button>
-                </fieldset>
-              )}
-              {(selRecord.status === 'VERIFIED' || selRecord.status === 'REJECTED') && (
-                <div className="dd-closed">
-                  <p>
-                    <b>{selRecord.status}</b>
-                    {selRecord.review
-                      ? <> — review {selRecord.review.conclusion} by {selRecord.review.reviewerRole}: “{selRecord.review.reason}”</>
-                      : selRecord.dismissReason
-                        ? <> — dismissed: “{selRecord.dismissReason}”</>
-                        : ''}
-                  </p>
-                  <button className="desk-btn" onClick={doReopen}>Reopen to monitoring</button>
+                </div>
+              </div>
+            )}
+          </aside>
+
+          {/* CENTRE — map */}
+          <section className="dd3-centre" aria-label="NISAR map">
+            <div className="desk-map-frame dd3-map-frame">
+              <DecisionMap
+                reach={bundle.reach}
+                bounds={bundle.bounds}
+                dates={bundle.reach.dates.map((item) => item.date)}
+                selectedDate={selectedDate}
+                selectedFeatureId={selected ? String(selected.properties.id) : null}
+                erosion={bundle.erosion}
+                accretion={bundle.accretion}
+                showRadar={showRadar}
+                showWater={showWater}
+                showOpera={showOpera}
+                scenario={null}
+                osm={null}
+                topN={24}
+                onSelectFeature={(id) => focusCandidate(id, siteOfFeature.get(id)?.id)}
+                swipe={swipeOn && firstDate && lastDate ? { t0: firstDate, t1: lastDate, position: swipePosition, onPositionChange: setSwipePosition } : null}
+                siteMarkers={sites.map((s) => ({ id: s.id, label: s.id.replace('SITE-', 'S'), centroid: s.centroid, active: selSite?.id === s.id }))}
+                onSelectSite={(siteId) => { const s = sites.find((x) => x.id === siteId); if (s) selectSite(s); }}
+              />
+              <div className="desk-map-chip"><span className="desk-live-dot" />{swipeOn ? <>IN-CANVAS SWIPE · <b>t0 {formatDate(firstDate)}</b> ⟷ <b>t1 {formatDate(lastDate)}</b></> : <>NISAR PASS · <b>{formatDate(selectedDate)}</b></>}</div>
+              <div className="desk-map-layers" aria-label="Map layers">
+                <button className={swipeOn ? 'active' : ''} onClick={() => setSwipeOn(!swipeOn)}>⇆ Swipe t0/t1</button>
+                <button className={showRadar ? 'active' : ''} onClick={() => setShowRadar(!showRadar)}><Eye size={13} /> NISAR HH</button>
+                <button className={showWater ? 'active' : ''} onClick={() => setShowWater(!showWater)}><Waves size={13} /> Water mask</button>
+                <button className={showOpera ? 'active' : ''} onClick={() => setShowOpera(!showOpera)}><Layers3 size={13} /> OPERA · 17 JUN 2026 (context)</button>
+              </div>
+              <div className="dd3-threshold">
+                <div className="dd3-threshold-head">
+                  <span>THRESHOLD SENSITIVITY · TOUCH THE UNCERTAINTY</span>
+                  <Stamp kind="derived">DERIVED · reading of the manifest range, not a re-run</Stamp>
+                </div>
+                <label htmlFor="dd-threshold-slider">Water threshold perturbation <strong>{thresholdDb > 0 ? '+' : ''}{thresholdDb.toFixed(1)} dB</strong></label>
+                <input id="dd-threshold-slider" type="range" min={-1} max={1} step={0.1} value={thresholdDb} onChange={(e) => setThresholdDb(Number(e.target.value))} />
+                <div className="dd-threshold-read">
+                  <span>Land→water candidates at this threshold:</span>
+                  <strong>{formatNumber(sliderArea, 0)} ha</strong>
+                  <span className="dd-threshold-range">published range {formatNumber(erosionMetric?.low, 0)} ha (−1 dB) · {formatNumber(erosionMetric?.value, 0)} ha (as run) · {formatNumber(erosionMetric?.high, 0)} ha (+1 dB) — the range is the headline; it spans ~4.8×.</span>
+                </div>
+              </div>
+              <div className="dd3-passes" aria-label="Observed passes">
+                <span className="dd3-passes-label" title="Observed passes · same relative orbit">OBSERVED PASSES</span>
+                {bundle.reach.dates.map((date) => (
+                  <button key={date.date} className={selectedDate === date.date ? 'selected' : ''} onClick={() => setSelectedDate(date.date)} title={date.status === 'ok' ? `L-band HH · ${date.stage_source === 'proxy' ? 'stage proxy' : 'gauge stage'} · ${date.acq_utc.slice(11, 16)} UTC` : `not used · ${date.status}`}>
+                    <strong>{formatDate(date.date)}</strong>
+                    <small>{date.status === 'ok' ? `HH · ${date.stage_source === 'proxy' ? 'proxy' : 'gauge'} · ${date.acq_utc.slice(11, 16)} UTC` : `not used · ${date.status}`}</small>
+                  </button>
+                ))}
+                {passDates.length >= 2 && (
+                  <button className={`desk-play ${playing ? 'on' : ''}`} onClick={() => setPlaying(!playing)} aria-label={playing ? 'Stop time series' : 'Play time series'}>
+                    {playing ? <Pause size={13} /> : <Play size={13} />}{playing ? 'Pause' : 'Cycle'}
+                  </button>
+                )}
+              </div>
+              <div className="desk-map-legend dd3-legend">
+                <span><i className="l-erosion" /> Land → water candidate</span>
+                <span><i className="l-accretion" /> Water → land candidate</span>
+                <span><i className="l-selected" /> Selected</span>
+                <span><i className="l-site" /> Investigation site anchor</span>
+                <span className="dd-map-note">Candidates drawn: top 24 per class · drag the divider inside the map to compare passes · OPERA layer predates the pair — context only</span>
+              </div>
+            </div>
+          </section>
+
+          {/* RIGHT RAIL — inspector */}
+          <aside className={`dd3-rail dd3-rail-right ${judgeStep === 3 ? 'is-judge-focus' : ''}`} id="desk-drawer" aria-label="Inspector">
+            <div className="dd3-insp-head">
+              {selSite && (
+                <div className="dd3-insp-site">
+                  <span className="desk-eyebrow-soft">INSPECTOR · INVESTIGATION SITE</span>
+                  <strong>{selSite.id} · {selSite.reachPart}</strong>
+                  <small>{selSite.members.length} candidates · {formatNumber(selSite.totalArea)} ha grouped · anchor {selSite.anchorId} · centroid {formatCoord(selSite.centroid)}</small>
                 </div>
               )}
-              <div className="dd-tasking-actions">
-                <button className="desk-btn" onClick={exportCasePacket}><FileJson2 size={14} /> Case packet (JSON · TRACE Field handoff)</button>
-                <button className="desk-btn" onClick={copyCaseLink}><Copy size={13} /> Copy deep link</button>
-              </div>
-              <p className="desk-note">{UNOSAT_LINE} Records stay in this browser (localStorage, labelled local-only) and print into the brief. A field record is independent evidence — it never edits the satellite finding.</p>
-            </div>
-          </section>
-        )}
-
-        {/* ── §5 Decision-readiness panel ── */}
-        <section className="dd-readiness" aria-label="Decision readiness">
-          <div className="dd-section-head">
-            <div>
-              <div className="desk-eyebrow"><ShieldAlert size={13} /> DECISION READINESS · WHY WE CANNOT CONCLUDE — GATE BY GATE</div>
-              <h2>Every gate, its status, and exactly what it blocks.</h2>
-            </div>
-            <div className="dd-queue-meta">
-              <span><strong>{failedChecks}</strong> failed · <strong>{warningChecks}</strong> warned · <strong>{notEvaluated}</strong> not evaluated</span>
-              <span>NOT EVALUATED means the evidence does not exist yet — it is never a pass.</span>
-            </div>
-          </div>
-          <div className="dd-ready-table" role="table" aria-label="QC gates and consequences">
-            <div className="dd-ready-row is-head" role="row">
-              <span>Gate</span><span>Status</span><span>Reading</span><span>What this blocks</span>
-            </div>
-            {qcChecks.map((check: QCCheck) => (
-              <div key={check.id} className="dd-ready-row" role="row">
-                <span className="dd-ready-gate"><strong>{check.label ?? check.id}</strong><small>{check.explanation}</small></span>
-                <span><span className={`qc-status s-${QC_STYLE[check.status] ?? 'off'}`}>{check.status.replace(/_/g, ' ')}</span></span>
-                <span className="dd-ready-val">{check.value == null ? '—' : `${check.value}${check.unit ? ` ${check.unit}` : ''}`}</span>
-                <span className="dd-ready-blocks">{BLOCKS[check.id] ?? 'Blocks any claim that depends on this gate until it is evaluated.'}</span>
-              </div>
-            ))}
-          </div>
-          <details className="dd-verdict-reasons">
-            <summary>Reach verdict reasons, as recorded in the bundle</summary>
-            <ul>{bundle.reach.verdict_reasons.map((r) => <li key={r.slice(0, 32)}>{r}</li>)}</ul>
-          </details>
-        </section>
-
-        {/* ── §6 Investigation Pack — the leave-with artefact ── */}
-        {selSite && (
-          <section className={`dd-pack ${judgeStep === 3 ? 'is-judge-focus' : ''} ${printTarget === 'pack' ? 'is-print-target' : ''}`} id="desk-pack" aria-label="Investigation pack">
-            <div className="dd-brief-top">
-              <div>
-                <div className="desk-eyebrow"><Package size={13} /> THE ARTEFACT YOU LEAVE WITH</div>
-                <h2>Investigation Pack · {selSite.id}</h2>
-                <p>One site, one document a field team can navigate by: coordinates, stage context, maturity, the ground-truth checklist, and the members to inspect. Print it, or take the GeoJSON into any GIS. {UNOSAT_LINE}</p>
-              </div>
-              <div className="dd-pack-actions">
-                <button className="desk-btn primary" onClick={() => printSheet('pack')}><Printer size={14} /> Print pack</button>
-                <button className="desk-btn" onClick={() => exportPackGeoJson(selSite)}><FileJson2 size={14} /> GeoJSON</button>
-                <button className="desk-btn" onClick={() => { downloadJson(`fluvisar-${selSite.id.toLowerCase()}-pack.json`, packJson(selSite)); setNoticeOk(true); setNotice(`${selSite.id} pack JSON exported.`); }}><FileJson2 size={14} /> Pack JSON</button>
-              </div>
-            </div>
-            <div className="dd-sheet">
-              <div className="dd-sheet-head">FLUVISAR · INVESTIGATION PACK · ACTIVATION CHILMARI-2026-01 · {selSite.id} · {selSite.reachPart.toUpperCase()} · VERDICT: STAGE-CONFOUNDED PAIR · {UNOSAT_LINE.toUpperCase()}</div>
-              <div className="dd-sheet-grid">
-                <div><span>Site anchor</span><strong>{selSite.anchorId} · {formatCoord(selSite.centroid)}</strong></div>
-                <div><span>Members</span><strong>{selSite.members.length} candidates ({selSite.erosionCount} land→water · {selSite.accretionCount} water→land)</strong></div>
-                <div><span>Grouped area</span><strong>{formatNumber(selSite.totalArea)} ha of candidates (not verified change)</strong></div>
-                <div><span>Stage context</span><strong>pair typed later/lower · stage proxy Δ +0.039 (tolerance ±0.02) · FFWC Chilmari context in brief</strong></div>
-                <div><span>Evidence maturity</span><strong>site anchor: {maturityHeadline(records[selSite.anchorId] ?? EMPTY_RECORD)} · rung 3 PENDING — resolves {formatDate(nextPass)}</strong></div>
-                <div><span>Readiness</span><strong>{failedChecks} FAIL · {warningChecks} WARN · {notEvaluated} NOT EVALUATED (run-level)</strong></div>
-              </div>
-              <table className="dd-brief-table">
-                <thead><tr><th>Candidate</th><th>Class</th><th>Area (ha)</th><th>Centroid</th><th>Field status</th></tr></thead>
-                <tbody>
-                  {selSite.members.slice(0, 15).map((f) => (
-                    <tr key={String(f.properties.id)}>
-                      <td>{String(f.properties.id)}</td>
-                      <td>{f.properties.class}</td>
-                      <td>{f.properties.area_ha.toFixed(2)}</td>
-                      <td>{formatCoord(featureCentroid(f))}</td>
-                      <td>{statusOf(f)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {selSite.members.length > 15 && <p className="dd-sheet-note">+{selSite.members.length - 15} further members in the Pack JSON / GeoJSON export.</p>}
-              <div className="dd-checklist">
-                <strong>GROUND-TRUTH CHECKLIST — WHAT TO DO AT THIS SITE</strong>
-                <ol>{GROUND_TRUTH_CHECKLIST.map((item) => <li key={item.slice(0, 24)}>{item}</li>)}</ol>
-              </div>
-              <footer className="dd-brief-footer">
-                <span>PROVENANCE · Granules: {(erosionMetric?.inputs ?? []).map((i) => i.granule ?? '').filter(Boolean).join(' · ') || 'see manifest'}</span>
-                <span>Product: NISAR L2 GCOV Provisional (CRID P05023) — calibrated, validation ongoing, RFI-screened · Otsu thresholds {thresholds?.threshold_db_t0 != null ? `${thresholds.threshold_db_t0.toFixed(2)} dB → ${thresholds.threshold_db_t1?.toFixed(2)} dB` : '—'} · median filter {thresholds?.median_filter ?? '—'} · MMU {thresholds?.mmu_px ?? '—'} px · HAND ≤ {thresholds?.hand_max_m ?? '—'} m · grid EPSG:32645 · pixel {erosionMetric?.pixel_area_m2 ?? '—'} m²</span>
-                <span>Context: GPM IMERG rainfall (doi 10.5067/GPM/IMERGDL/DAY/07) · OPERA DSWx-S1 (NASA/JPL, layer acquired 17 Jun 2026 — pre-pair context) · stage: bundle proxy (no gauge) · FFWC bulletin context dated 14 Oct 2026</span>
-              </footer>
-            </div>
-          </section>
-        )}
-
-        {/* ── §7 Community Evidence Bulletin ── */}
-        <section className={`dd-bulletin ${printTarget === 'bulletin' ? 'is-print-target' : ''}`} id="desk-bulletin" aria-label="Community evidence bulletin">
-          <div className="dd-brief-top">
-            <div>
-              <div className="desk-eyebrow"><Printer size={13} /> COMMUNITY EVIDENCE BULLETIN</div>
-              <h2>For the Union Parishad, Chilmari — print and pin it.</h2>
-              <p>One page, Bangla first: what the satellite saw, what it does <em>not</em> prove, and what happens next. Written to be read aloud at the Parishad office — not a warning, not a forecast.</p>
-            </div>
-            <button className="desk-btn primary" onClick={() => printSheet('bulletin')}><Printer size={14} /> Print bulletin</button>
-          </div>
-          <div className="dd-sheet dd-bulletin-sheet" lang="bn">
-            <div className="dd-sheet-head">ফ্লুভিসার · কমিউনিটি এভিডেন্স বুলেটিন · FLUVISAR · COMMUNITY EVIDENCE BULLETIN · প্রাপক: ইউনিয়ন পরিষদ, চিলমারী (কুড়িগ্রাম)</div>
-            <h3>জামুনা নদী — চিলমারী: উপগ্রহ যা দেখেছে, আর যা এখনও প্রমাণ হয়নি</h3>
-            <p className="dd-bulletin-sub">Jamuna River — Chilmari: what the satellite observed, and what it has NOT yet proven.</p>
-            <div className="dd-bulletin-cols">
-              <div>
-                <strong>যা দেখা গেছে · What was observed</strong>
-                <p>NISAR উপগ্রহ {formatDate(firstDate)} ও {formatDate(lastDate)} তারিখে এই এলাকার ছবি তুলেছে।
-                  রাডারে <b>{erosionCount.toLocaleString()}টি</b> জায়গায় জমি→পানি এবং <b>{accretionCount.toLocaleString()}টি</b> জায়গায় পানি→জমি
-                  ধরনের বদলের <em>সম্ভাব্য</em> চিহ্ন পাওয়া গেছে। দুটি তারিখের মধ্যে নদীর পানির স্তর বদলেছে — তাই এসব বদলের
-                  বড় অংশ হতে পারে পানি নেমে যাওয়ায় চর জেগে ওঠা।</p>
-                <p className="dd-bulletin-en">The NISAR satellite imaged this reach on {formatDate(firstDate)} and {formatDate(lastDate)}. Radar mapped
-                  {' '}{erosionCount.toLocaleString()} possible land→water and {accretionCount.toLocaleString()} possible water→land switches.
-                  The river’s water level changed between the two dates, so much of this may be falling water exposing sandbars.</p>
-              </div>
-              <div>
-                <strong>যা জানা যায়নি · What this does NOT establish</strong>
-                <p>এখনও <b>কোনো ভাঙন নিশ্চিত হয়নি</b>। কোনো বাড়ি, ফসল বা জমির ক্ষতি এই ছবি থেকে প্রমাণিত নয়।
-                  <b> এটি কোনো সরিয়ে নেওয়ার নির্দেশ নয় এবং বন্যার সতর্কবার্তাও নয়।</b></p>
-                <p className="dd-bulletin-en">No erosion is confirmed yet. No damage to any home, crop or plot is proven by these images.
-                  This bulletin is <b>not an evacuation notice and not a flood warning</b>.</p>
-              </div>
-              <div>
-                <strong>এরপর যা হবে · What happens next</strong>
-                <p>মাঠকর্মীরা তালিকাভুক্ত {sites.length}টি জায়গা (investigation sites) যাচাই করবেন। পরের উপগ্রহ ছবি আসবে
-                  {' '}{formatDate(nextPass)} — তখন বোঝা যাবে কোন বদল টিকে আছে। যাচাইয়ের পরেই কোনো সিদ্ধান্ত।</p>
-                <p className="dd-bulletin-en">Field teams will check the {sites.length} listed investigation sites. The next satellite pass
-                  ({formatDate(nextPass)}) will show which changes persist. Decisions come after verification — not before.</p>
-              </div>
-            </div>
-            <p className="dd-bulletin-foot">
-              সরকারি বন্যা তথ্যের জন্য: Flood Forecasting &amp; Warning Centre (FFWC) — <a href={FFWC_URL} target="_blank" rel="noreferrer">ffwc.gov.bd</a>
-              {' '}· Official flood information: FFWC (BWDB). · {UNOSAT_LINE} · প্রাথমিক বিশ্লেষণ — মাঠে এখনও যাচাই হয়নি।
-            </p>
-          </div>
-        </section>
-
-        {/* ── §8 CEGIS positioning ── */}
-        <section className="dd-cegis" aria-label="Position alongside CEGIS">
-          <div className="desk-eyebrow">WORKS ALONGSIDE CEGIS · NOT INSTEAD OF IT</div>
-          <h2>The annual prediction already exists. This desk fills the 12 days between.</h2>
-          <p>
-            CEGIS has published annual Jamuna erosion predictions since <strong>2004</strong> — multi-decadal bankline history,
-            vulnerable reaches classed at 70 / 50 / 30% probability, checked retrospectively each year, and used by BWDB.
-            FluviSAR does not compete with that and does not predict erosion. Its job is narrower and newer:
-            <strong> 12-day, cloud-independent NISAR screening inside the season</strong>, between CEGIS cycles — grouping fresh
-            candidates into visitable sites and closing the loop with field verification. Freihardt &amp; Frey (2023, NHESS)
-            showed real Jamuna erosion also occurs <em>outside</em> the previous CEGIS hotspot map — exactly the gap a
-            within-season triage exists to catch.
-          </p>
-        </section>
-
-        {/* ── §9 Field Verification Brief (run-level, printable) ── */}
-        <section className={`dd-brief ${printTarget === 'brief' ? 'is-print-target' : ''}`} id="desk-brief" aria-label="Field verification brief">
-          <div className="dd-brief-top">
-            <div>
-              <div className="desk-eyebrow"><Printer size={13} /> THE RUN-LEVEL ARTEFACT</div>
-              <h2>Field Verification Brief</h2>
-              <p>One click, one printed page-set: activation header, the qualified numbers, the screening 24 with their lifecycle
-                states, the Allowed / Not Allowed box, and the full audit footer. This is a verification request — <strong>not an evacuation order</strong>. {UNOSAT_LINE}</p>
-            </div>
-            <button className="desk-btn primary" onClick={() => printSheet('brief')}><Printer size={14} /> {personaDef.exportLabel}</button>
-          </div>
-          <div className="dd-sheet">
-            <div className="dd-sheet-head">FLUVISAR · ACTIVATION CHILMARI-2026-01 · NISAR L-BAND GCOV HH (PROVISIONAL, CRID P05023) · PAIR {formatDate(firstDate)} → {formatDate(lastDate)} · VERDICT: STAGE-CONFOUNDED PAIR · GENERATED {new Date().toLocaleDateString('en-GB')} · MODE: {personaDef.label.toUpperCase()}</div>
-            <div className="dd-sheet-grid">
-              <span><strong>{sites.length}</strong> investigation sites from {candidates.length.toLocaleString()} candidates screened</span>
-              <span><strong>{formatNumber(erosionMetric?.value)} ha</strong> land→water candidates (range {formatNumber(erosionMetric?.low, 0)}–{formatNumber(erosionMetric?.high, 0)} ha, ±1 dB)</span>
-              <span><strong>{formatNumber(accretionMetric?.value)} ha</strong> water→land candidates</span>
-              <span><strong>{verifiedCount}</strong> confirmed losses · rung 3 PENDING — resolves {formatDate(nextPass)}</span>
-            </div>
-            <table className="dd-brief-table">
-              <thead><tr><th>#</th><th>Candidate</th><th>Site</th><th>Class</th><th>Area (ha)</th><th>Field status</th><th>Review</th><th>Owner</th><th>Deadline</th></tr></thead>
-              <tbody>
-                {queue.map((f, i) => {
-                  const id = String(f.properties.id);
-                  const r = records[id] ?? EMPTY_RECORD;
-                  return (
-                    <tr key={id}>
-                      <td>{i + 1}</td><td>{id}</td><td>{siteOfFeature.get(id)?.id ?? '—'}</td><td>{f.properties.class}</td>
-                      <td>{f.properties.area_ha.toFixed(2)}</td><td>{r.status}</td>
-                      <td>{r.review ? r.review.conclusion : '—'}</td><td>{r.owner || '—'}</td><td>{r.deadline || '—'}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            <div className="dd-brief-allowed"><strong>ALLOWED:</strong> field verification only. <strong>NOT ALLOWED:</strong> response, evacuation, or loss claims on this pair alone. <strong>RESOLVES IT:</strong> next same-track pass {formatDate(nextPass)} at comparable stage + Sentinel-1 tie-breaker.</div>
-            <div className="dd-brief-audit">
-              <strong>AUDIT LOG ({audit.length} entr{audit.length === 1 ? 'y' : 'ies'}) — local to this browser, labelled local-only</strong>
-              {audit.length === 0 ? <p>No lifecycle decisions recorded yet in this browser.</p> : (
-                <ul>{audit.slice(0, 30).map((a, i) => <li key={i}>{a.ts} · {a.featureId} · {a.action} · {a.detail}</li>)}</ul>
+              {selected && (
+                <div className="dd3-insp-cand">
+                  <span className={`row-swatch ${selected.properties.class}`} />
+                  <span className="dd3-insp-cand-main">
+                    <strong>{selId}</strong>
+                    <small>{CLASS_LABEL[persona][selected.properties.class]} · {selected.properties.area_ha.toFixed(2)} ha{selSite && <> · member of {selSite.id}</>}</small>
+                  </span>
+                  <span className="desk-tag is-warn">{selRecord.status === 'VERIFIED' ? 'FIELD-VERIFIED (REVIEWED)' : 'UNVERIFIED'}</span>
+                </div>
               )}
             </div>
-            <footer className="dd-brief-footer">
-              <span>PROVENANCE · Granules: {(erosionMetric?.inputs ?? []).map((i) => i.granule ?? '').filter(Boolean).join(' · ') || 'see manifest'}</span>
-              <span>Pipeline: Otsu thresholds {thresholds?.threshold_db_t0 != null ? `${thresholds.threshold_db_t0.toFixed(2)} dB → ${thresholds.threshold_db_t1?.toFixed(2)} dB` : '—'} · median filter {thresholds?.median_filter ?? '—'} · MMU {thresholds?.mmu_px ?? '—'} px · HAND ≤ {thresholds?.hand_max_m ?? '—'} m · grid EPSG:32645 · pixel {erosionMetric?.pixel_area_m2 ?? '—'} m²</span>
-              <span>Context: GPM IMERG rainfall (doi 10.5067/GPM/IMERGDL/DAY/07) · OPERA DSWx-S1 (layer acquired 17 Jun 2026 — pre-pair context, not same-date confirmation) · stage: bundle proxy (no gauge); FFWC bulletin context 14 Oct 2026 · Methods: <a href={NISAR_URL} target="_blank" rel="noreferrer">NISAR data</a> · <a href={QC_URL} target="_blank" rel="noreferrer">OPERA DSWx</a> · <a href={OSM_URL} target="_blank" rel="noreferrer">OSM ODbL</a></span>
-            </footer>
-          </div>
-        </section>
+            <div className="dd3-rtabs" role="tablist" aria-label="Inspector views">
+              <button role="tab" aria-selected={rightTab === 'evidence'} className={rightTab === 'evidence' ? 'active' : ''} onClick={() => setRightTab('evidence')}>Evidence</button>
+              <button role="tab" aria-selected={rightTab === 'field'} className={rightTab === 'field' ? 'active' : ''} onClick={() => setRightTab('field')}>Field</button>
+              <button role="tab" aria-selected={rightTab === 'pack'} className={rightTab === 'pack' ? 'active' : ''} onClick={() => setRightTab('pack')}>Pack</button>
+              <button role="tab" aria-selected={rightTab === 'bulletin'} className={rightTab === 'bulletin' ? 'active' : ''} onClick={() => setRightTab('bulletin')}>Bulletin</button>
+            </div>
 
-        {/* ── §10 What happens next ── */}
-        <section className="dd-next" aria-label="What happens next">
-          <div className="dd-next-step"><span>NEXT NISAR PASS · {formatDate(nextPass)}</span><strong>Re-test persistence</strong><p>Same track {bundle.reach.track.relative_orbit}, frame {bundle.reach.track.frame}. Candidates that survive a comparable stage climb the protocol; candidates that re-flood were stage emergence. Sentinel-1 (Freihardt &amp; Frey lineage) is the designed tie-breaker between NISAR cycles. <Stamp kind="derived">DERIVED · 12-day cycle</Stamp></p></div>
-          <div className="dd-next-step"><span>FIELD VERIFICATION WINDOW</span><strong>Task → observe → review</strong><p>{taskedCount} of 24 screening candidates are in the workflow in this browser. An observation alone never verifies — a recorded reviewer conclusion does.</p></div>
-          <div className="dd-next-step"><span>V3 PRODUCT</span><strong>Verdict revisits, per candidate</strong><p>CONFIRMED / STAGE ARTEFACT / STILL UNRESOLVED — decided candidate by candidate at rung 3+, never as one blanket number.</p></div>
-        </section>
+            <div className="dd3-rpanels">
+              {/* ── Evidence tab ── */}
+              <div className={`dd3-panel ${rightTab === 'evidence' ? 'is-active' : ''}`} role="tabpanel" aria-label="Evidence">
+                {selected && centroidOf && (
+                  <>
+                    <div className="desk-factlist">
+                      <div><span>Mapped transition</span><strong>{selected.properties.area_ha.toFixed(2)} ha <Stamp kind="real">REAL</Stamp></strong></div>
+                      <div><span>Observed between</span><strong>{formatDate(selected.properties.t0)} → {formatDate(selected.properties.t1)}</strong></div>
+                      <div><span>Centroid</span><strong><Crosshair size={12} /> {formatCoord(centroidOf)}</strong></div>
+                      <div><span>Evidence maturity</span><strong>{maturityHeadline(selRecord)}</strong></div>
+                    </div>
 
-        <footer className="desk-footer">
-          <span className="desk-footer-mark">FLUVISAR · EVIDENCE FIRST</span>
-          <span>Decision Desk only: look → verify → issue. Records stay in this browser; print the brief or a site pack for the field handoff.</span>
-          <a href="/methods">Methods &amp; provenance <ChevronRight size={13} /></a>
-        </footer>
+                    <div id="desk-hydro">
+                      <StageHydro stage={bundle.stage} t0Label={formatDate(firstDate)} t1Label={formatDate(lastDate)} />
+                    </div>
+
+                    <div className="dd-ladder" aria-label="FluviSAR evidence protocol">
+                      <strong>FLUVISAR EVIDENCE PROTOCOL <span>— our own protocol, informed by Leonard et al. (2020) and Olofsson et al. (2014); not a NISAR/USGS standard</span></strong>
+                      <ol>
+                        {selMaturity.map((rung) => (
+                          <li key={rung.n} className={`rung is-${rung.state}`}>
+                            <span className="rung-n">{rung.n}</span>
+                            <span className="rung-body"><b>{rung.label}</b> <em>{rung.state.replace(/_/g, ' ').toUpperCase()}</em><small>{rung.note}</small></span>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+
+                    <div className="dd-dims" aria-label="Three separate dimensions — deliberately not a score">
+                      <div className="dd-dim">
+                        <strong>EVIDENCE QUALITY</strong>
+                        <p>Run-level only in this bundle — every candidate inherits the pair’s gates: {failedChecks} FAIL · {warningChecks} WARN · {notEvaluated} NOT EVALUATED.
+                          Per-candidate DSWx confirmation: <b>{selected.properties.confirmed_by_dswx == null ? 'NOT EVALUATED (null in bundle)' : String(selected.properties.confirmed_by_dswx)}</b>.
+                          Per-candidate QC does not exist in this data yet — claiming otherwise would be fabrication.</p>
+                      </div>
+                      <div className="dd-dim">
+                        <strong>OPERATIONAL CONTEXT</strong>
+                        <p>Nearest settlement (bundle field): <b>{selected.properties.nearest_place ?? 'UNAVAILABLE — null in bundle'}</b>.<br />
+                          CEGIS reach membership: <b>{selected.properties.in_cegis_reach ?? 'UNAVAILABLE — null in bundle'}</b>.<br />
+                          Absence of a layer is shown, never filled in.</p>
+                      </div>
+                      <div className="dd-dim">
+                        <strong>VERIFICATION STATUS</strong>
+                        <p><b>{STATUS_LABEL[persona][selRecord.status]}</b>
+                          {selRecord.owner && <> · owner: {selRecord.owner}</>}
+                          {selRecord.deadline && <> · deadline: {selRecord.deadline}</>}
+                          {selRecord.review && <> · review: {selRecord.review.conclusion} by {selRecord.review.reviewerRole}</>}
+                          <br />Status lives in this browser (localStorage) and prints into the brief and the pack.</p>
+                      </div>
+                    </div>
+
+                    <div className="dd-realkill">
+                      <div className="dd-realkill-col is-real">
+                        <strong>WHAT WOULD MAKE THIS REAL</strong>
+                        <ul>
+                          <li>Persists in the next same-track pass ({formatDate(nextPass)}) at comparable stage</li>
+                          <li>A same-date independent water product agrees the bank material is gone (the bundle’s OPERA layer is 17 Jun — too early to count)</li>
+                          <li>A recorded field observation of a fresh scarp / collapsed bank, confirmed by a reviewer</li>
+                        </ul>
+                      </div>
+                      <div className="dd-realkill-col is-kill">
+                        <strong>WHAT WOULD KILL IT</strong>
+                        <ul>
+                          <li>Re-floods next pass → it was stage emergence, not bank loss</li>
+                          <li>Shift sits inside co-registration tolerance (that check is not yet evaluated)</li>
+                          <li>Polygon lies on a low bar inside the HAND mask (≤ {thresholds?.hand_max_m ?? '—'} m)</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <div className="dd-readiness" aria-label="Decision readiness">
+                  <div className="dd3-subhead">
+                    <span className="desk-eyebrow"><ShieldAlert size={13} /> DECISION READINESS · WHY WE CANNOT CONCLUDE — GATE BY GATE</span>
+                    <strong className="dd3-subh">Every gate, its status, and exactly what it blocks.</strong>
+                    <span className="dd3-submeta"><strong>{failedChecks}</strong> failed · <strong>{warningChecks}</strong> warned · <strong>{notEvaluated}</strong> not evaluated</span>
+                    <span className="dd3-submeta">NOT EVALUATED means the evidence does not exist yet — it is never a pass.</span>
+                  </div>
+                  <div className="dd-ready-table" role="table" aria-label="QC gates and consequences">
+                    {qcChecks.map((check: QCCheck) => (
+                      <div key={check.id} className="dd-ready-row" role="row">
+                        <span className="dd-ready-gate"><strong>{check.label ?? check.id}</strong><small>{check.explanation}</small></span>
+                        <span><span className={`qc-status s-${QC_STYLE[check.status] ?? 'off'}`}>{check.status.replace(/_/g, ' ')}</span></span>
+                        <span className="dd-ready-val">{check.value == null ? '—' : `${check.value}${check.unit ? ` ${check.unit}` : ''}`}</span>
+                        <span className="dd-ready-blocks">{BLOCKS[check.id] ?? 'Blocks any claim that depends on this gate until it is evaluated.'}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <details className="dd-verdict-reasons">
+                    <summary>Reach verdict reasons, as recorded in the bundle</summary>
+                    <ul>{bundle.reach.verdict_reasons.map((r) => <li key={r.slice(0, 32)}>{r}</li>)}</ul>
+                  </details>
+                </div>
+
+                <div className="dd-cegis" aria-label="Position alongside CEGIS">
+                  <div className="desk-eyebrow">WORKS ALONGSIDE CEGIS · NOT INSTEAD OF IT</div>
+                  <h3>The annual prediction already exists. This desk fills the 12 days between.</h3>
+                  <p>
+                    CEGIS has published annual Jamuna erosion predictions since <strong>2004</strong> — multi-decadal bankline history,
+                    vulnerable reaches classed at 70 / 50 / 30% probability, checked retrospectively each year, and used by BWDB.
+                    FluviSAR does not compete with that and does not predict erosion. Its job is narrower and newer:
+                    <strong> 12-day, cloud-independent NISAR screening inside the season</strong>, between CEGIS cycles — grouping fresh
+                    candidates into visitable sites and closing the loop with field verification. Freihardt &amp; Frey (2023, NHESS)
+                    showed real Jamuna erosion also occurs <em>outside</em> the previous CEGIS hotspot map — exactly the gap a
+                    within-season triage exists to catch.
+                  </p>
+                </div>
+
+                <div className="dd3-prov">
+                  <span className="desk-eyebrow-soft">PROVENANCE · THIS RUN</span>
+                  <p>Granules: {(erosionMetric?.inputs ?? []).map((i) => i.granule ?? '').filter(Boolean).join(' · ') || 'see manifest'}</p>
+                  <p>Product: NISAR L2 GCOV Provisional (CRID P05023) — calibrated, validation ongoing, RFI-screened · Otsu thresholds {thresholds?.threshold_db_t0 != null ? `${thresholds.threshold_db_t0.toFixed(2)} dB → ${thresholds.threshold_db_t1?.toFixed(2)} dB` : '—'} · median filter {thresholds?.median_filter ?? '—'} · MMU {thresholds?.mmu_px ?? '—'} px · HAND ≤ {thresholds?.hand_max_m ?? '—'} m · grid EPSG:32645 · pixel {erosionMetric?.pixel_area_m2 ?? '—'} m²</p>
+                  <p>Context: GPM IMERG rainfall (doi 10.5067/GPM/IMERGDL/DAY/07) · OPERA DSWx-S1 (NASA/JPL, layer acquired 17 Jun 2026 — pre-pair context) · stage: bundle proxy (no gauge) · FFWC bulletin context dated 14 Oct 2026 · <a href="/methods">Methods &amp; provenance <ChevronRight size={11} /></a></p>
+                </div>
+
+                <div className="dd-next" aria-label="What happens next">
+                  <div className="dd-next-step"><span>NEXT NISAR PASS · {formatDate(nextPass)}</span><strong>Re-test persistence</strong><p>Same track {bundle.reach.track.relative_orbit}, frame {bundle.reach.track.frame}. Candidates that survive a comparable stage climb the protocol; candidates that re-flood were stage emergence. Sentinel-1 (Freihardt &amp; Frey lineage) is the designed tie-breaker between NISAR cycles. <Stamp kind="derived">DERIVED · 12-day cycle</Stamp></p></div>
+                  <div className="dd-next-step"><span>FIELD VERIFICATION WINDOW</span><strong>Task → observe → review</strong><p>{taskedCount} of 24 screening candidates are in the workflow in this browser. An observation alone never verifies — a recorded reviewer conclusion does.</p></div>
+                  <div className="dd-next-step"><span>V3 PRODUCT</span><strong>Verdict revisits, per candidate</strong><p>CONFIRMED / STAGE ARTEFACT / STILL UNRESOLVED — decided candidate by candidate at rung 3+, never as one blanket number.</p></div>
+                </div>
+              </div>
+
+              {/* ── Field tab ── */}
+              <div className={`dd3-panel ${rightTab === 'field' ? 'is-active' : ''}`} role="tabpanel" aria-label="Field verification">
+                {selected && (
+                  <div className="dd-lifecycle">
+                    <strong>FIELD VERIFICATION · STATUS IS A VERB, WITH AN OWNER AND A REVIEW</strong>
+                    <p className="dd-lifecycle-flow">
+                      UNREVIEWED → TASKED → MONITORING → OBSERVATION RECEIVED → REVIEWED → VERIFIED / REJECTED / back to MONITORING.
+                      A field visit records an observation; only a reviewer’s recorded conclusion can verify. There is no one-click verify on this desk.
+                    </p>
+                    {(selRecord.status === 'UNREVIEWED' || selRecord.status === 'TASKED' || selRecord.status === 'MONITORING') && (
+                      <>
+                        <div className="dd-tasking-fields">
+                          <label>Owner / role<input value={selRecord.owner} onChange={(e) => patchRecord({ owner: e.target.value })} placeholder="e.g. Upazila field officer (role, not a name)" /></label>
+                          <label>Deadline<input type="date" value={selRecord.deadline} onChange={(e) => patchRecord({ deadline: e.target.value })} /></label>
+                          <label>Dismiss reason (required to dismiss)<input value={selRecord.dismissReason} onChange={(e) => patchRecord({ dismissReason: e.target.value })} placeholder="e.g. re-flooded on next pass — stage emergence" /></label>
+                        </div>
+                        <div className="dd-tasking-actions">
+                          <button className="desk-btn primary" onClick={doTask}><ClipboardList size={13} /> Task field verification</button>
+                          <button className="desk-btn" onClick={doMonitor}>Monitor next pass</button>
+                          <button className="desk-btn" onClick={doDismiss}>Dismiss</button>
+                        </div>
+                        <fieldset className="dd-obs-form">
+                          <legend>Record a field observation</legend>
+                          <div className="dd-tasking-fields">
+                            <label>Observer role (required)<input value={obsRole} onChange={(e) => setObsRole(e.target.value)} placeholder="e.g. NGO field enumerator" /></label>
+                            <label>Observation time<input type="datetime-local" value={obsAt} onChange={(e) => setObsAt(e.target.value)} /></label>
+                            <label>GPS / position note<input value={obsGps} onChange={(e) => setObsGps(e.target.value)} placeholder="e.g. stood at anchor point, ±5 m" /></label>
+                            <label>Observed bank condition
+                              <select value={obsCondition} onChange={(e) => setObsCondition(e.target.value as BankCondition)}>
+                                <option value="erosion">Active erosion / fresh scarp</option>
+                                <option value="deposition">Fresh deposition</option>
+                                <option value="stable">Bank stable</option>
+                                <option value="uncertain">Uncertain / could not reach</option>
+                              </select>
+                            </label>
+                            <label>Photo reference<input value={obsPhoto} onChange={(e) => setObsPhoto(e.target.value)} placeholder="e.g. IMG_2041–2043 (field phone)" /></label>
+                          </div>
+                          <button className="desk-btn primary" onClick={doObservation}>Record observation → OBSERVATION RECEIVED</button>
+                        </fieldset>
+                      </>
+                    )}
+                    {selRecord.status === 'OBSERVATION_RECEIVED' && selRecord.observation && (
+                      <fieldset className="dd-obs-form">
+                        <legend>Observation on record — awaiting review</legend>
+                        <p className="dd-obs-summary">
+                          {selRecord.observation.observerRole} · {formatDate(selRecord.observation.observedAt)} · bank condition: <b>{selRecord.observation.bankCondition}</b>
+                          {selRecord.observation.gpsNote && <> · {selRecord.observation.gpsNote}</>}
+                          {selRecord.observation.photoRef && <> · photos: {selRecord.observation.photoRef}</>}
+                        </p>
+                        <div className="dd-tasking-fields">
+                          <label>Reviewer conclusion
+                            <select value={revConclusion} onChange={(e) => setRevConclusion(e.target.value as ReviewConclusion)}>
+                              <option value="CORROBORATES">Corroborates the candidate</option>
+                              <option value="CONTRADICTS">Contradicts the candidate</option>
+                              <option value="UNRESOLVED">Unresolved — keep monitoring</option>
+                            </select>
+                          </label>
+                          <label>Reviewer role (required)<input value={revRole} onChange={(e) => setRevRole(e.target.value)} placeholder="e.g. BWDB sub-divisional engineer" /></label>
+                          <label>Reason (required)<input value={revReason} onChange={(e) => setRevReason(e.target.value)} placeholder="what in the observation decides it" /></label>
+                        </div>
+                        <button className="desk-btn primary" onClick={doReview}>Record review</button>
+                      </fieldset>
+                    )}
+                    {(selRecord.status === 'VERIFIED' || selRecord.status === 'REJECTED') && (
+                      <div className="dd-closed">
+                        <p>
+                          <b>{selRecord.status}</b>
+                          {selRecord.review
+                            ? <> — review {selRecord.review.conclusion} by {selRecord.review.reviewerRole}: “{selRecord.review.reason}”</>
+                            : selRecord.dismissReason
+                              ? <> — dismissed: “{selRecord.dismissReason}”</>
+                              : ''}
+                        </p>
+                        <button className="desk-btn" onClick={doReopen}>Reopen to monitoring</button>
+                      </div>
+                    )}
+                    <div className="dd-tasking-actions">
+                      <button className="desk-btn" onClick={exportCasePacket}><FileJson2 size={14} /> Case packet (JSON · TRACE Field handoff)</button>
+                      <button className="desk-btn" onClick={copyCaseLink}><Copy size={13} /> Copy deep link</button>
+                    </div>
+                    <p className="desk-note">{UNOSAT_LINE} Records stay in this browser (localStorage, labelled local-only) and print into the brief. A field record is independent evidence — it never edits the satellite finding.</p>
+                  </div>
+                )}
+                <div className="dd3-audit">
+                  <strong>AUDIT LOG ({audit.length} entr{audit.length === 1 ? 'y' : 'ies'}) — local to this browser, labelled local-only</strong>
+                  {audit.length === 0 ? <p>No lifecycle decisions recorded yet in this browser.</p> : (
+                    <ul>{audit.slice(0, 30).map((a, i) => <li key={i}>{a.ts} · {a.featureId} · {a.action} · {a.detail}</li>)}</ul>
+                  )}
+                </div>
+              </div>
+
+              {/* ── Pack tab ── */}
+              <div className={`dd3-panel dd3-panel-pack ${rightTab === 'pack' ? 'is-active' : ''}`} role="tabpanel" aria-label="Investigation pack and brief">
+                {selSite && (
+                  <section className={`dd-pack ${printTarget === 'pack' ? 'is-print-target' : ''}`} id="desk-pack" aria-label="Investigation pack">
+                    <div className="dd-brief-top">
+                      <div>
+                        <div className="desk-eyebrow"><Package size={13} /> THE ARTEFACT YOU LEAVE WITH</div>
+                        <h3>Investigation Pack · {selSite.id}</h3>
+                        <p>One site, one document a field team can navigate by: coordinates, stage context, maturity, the ground-truth checklist, and the members to inspect. Print it, or take the GeoJSON into any GIS. {UNOSAT_LINE}</p>
+                      </div>
+                      <div className="dd-pack-actions">
+                        <button className="desk-btn primary" onClick={() => printSheet('pack')}><Printer size={14} /> Print pack</button>
+                        <button className="desk-btn" onClick={() => exportPackGeoJson(selSite)}><FileJson2 size={14} /> GeoJSON</button>
+                        <button className="desk-btn" onClick={() => { downloadJson(`fluvisar-${selSite.id.toLowerCase()}-pack.json`, packJson(selSite)); setNoticeOk(true); setNotice(`${selSite.id} pack JSON exported.`); }}><FileJson2 size={14} /> Pack JSON</button>
+                      </div>
+                    </div>
+                    <div className="dd-sheet">
+                      <div className="dd-sheet-head">FLUVISAR · INVESTIGATION PACK · ACTIVATION CHILMARI-2026-01 · {selSite.id} · {selSite.reachPart.toUpperCase()} · VERDICT: STAGE-CONFOUNDED PAIR · {UNOSAT_LINE.toUpperCase()}</div>
+                      <div className="dd-sheet-grid">
+                        <div><span>Site anchor</span><strong>{selSite.anchorId} · {formatCoord(selSite.centroid)}</strong></div>
+                        <div><span>Members</span><strong>{selSite.members.length} candidates ({selSite.erosionCount} land→water · {selSite.accretionCount} water→land)</strong></div>
+                        <div><span>Grouped area</span><strong>{formatNumber(selSite.totalArea)} ha of candidates (not verified change)</strong></div>
+                        <div><span>Stage context</span><strong>pair typed later/lower · stage proxy Δ +0.039 (tolerance ±0.02) · FFWC Chilmari context in brief</strong></div>
+                        <div><span>Evidence maturity</span><strong>site anchor: {maturityHeadline(records[selSite.anchorId] ?? EMPTY_RECORD)} · rung 3 PENDING — resolves {formatDate(nextPass)}</strong></div>
+                        <div><span>Readiness</span><strong>{failedChecks} FAIL · {warningChecks} WARN · {notEvaluated} NOT EVALUATED (run-level)</strong></div>
+                      </div>
+                      <table className="dd-brief-table">
+                        <thead><tr><th>Candidate</th><th>Class</th><th>Area (ha)</th><th>Centroid</th><th>Field status</th></tr></thead>
+                        <tbody>
+                          {selSite.members.slice(0, 15).map((f) => (
+                            <tr key={String(f.properties.id)}>
+                              <td>{String(f.properties.id)}</td>
+                              <td>{f.properties.class}</td>
+                              <td>{f.properties.area_ha.toFixed(2)}</td>
+                              <td>{formatCoord(featureCentroid(f))}</td>
+                              <td>{statusOf(f)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {selSite.members.length > 15 && <p className="dd-sheet-note">+{selSite.members.length - 15} further members in the Pack JSON / GeoJSON export.</p>}
+                      <div className="dd-checklist">
+                        <strong>GROUND-TRUTH CHECKLIST — WHAT TO DO AT THIS SITE</strong>
+                        <ol>{GROUND_TRUTH_CHECKLIST.map((item) => <li key={item.slice(0, 24)}>{item}</li>)}</ol>
+                      </div>
+                      <footer className="dd-brief-footer">
+                        <span>PROVENANCE · Granules: {(erosionMetric?.inputs ?? []).map((i) => i.granule ?? '').filter(Boolean).join(' · ') || 'see manifest'}</span>
+                        <span>Product: NISAR L2 GCOV Provisional (CRID P05023) — calibrated, validation ongoing, RFI-screened · Otsu thresholds {thresholds?.threshold_db_t0 != null ? `${thresholds.threshold_db_t0.toFixed(2)} dB → ${thresholds.threshold_db_t1?.toFixed(2)} dB` : '—'} · median filter {thresholds?.median_filter ?? '—'} · MMU {thresholds?.mmu_px ?? '—'} px · HAND ≤ {thresholds?.hand_max_m ?? '—'} m · grid EPSG:32645 · pixel {erosionMetric?.pixel_area_m2 ?? '—'} m²</span>
+                        <span>Context: GPM IMERG rainfall (doi 10.5067/GPM/IMERGDL/DAY/07) · OPERA DSWx-S1 (NASA/JPL, layer acquired 17 Jun 2026 — pre-pair context) · stage: bundle proxy (no gauge) · FFWC bulletin context dated 14 Oct 2026</span>
+                      </footer>
+                    </div>
+                  </section>
+                )}
+
+                <section className={`dd-brief ${printTarget === 'brief' ? 'is-print-target' : ''}`} id="desk-brief" aria-label="Field verification brief">
+                  <div className="dd-brief-top">
+                    <div>
+                      <div className="desk-eyebrow"><Printer size={13} /> THE RUN-LEVEL ARTEFACT</div>
+                      <h3>Field Verification Brief</h3>
+                      <p>One click, one printed page-set: activation header, the qualified numbers, the screening 24 with their lifecycle
+                        states, the Allowed / Not Allowed box, and the full audit footer. This is a verification request — <strong>not an evacuation order</strong>. {UNOSAT_LINE}</p>
+                    </div>
+                    <button className="desk-btn primary" onClick={() => printSheet('brief')}><Printer size={14} /> {personaDef.exportLabel}</button>
+                  </div>
+                  <div className="dd-sheet">
+                    <div className="dd-sheet-head">FLUVISAR · ACTIVATION CHILMARI-2026-01 · NISAR L-BAND GCOV HH (PROVISIONAL, CRID P05023) · PAIR {formatDate(firstDate)} → {formatDate(lastDate)} · VERDICT: STAGE-CONFOUNDED PAIR · GENERATED {new Date().toLocaleDateString('en-GB')} · MODE: {personaDef.label.toUpperCase()}</div>
+                    <div className="dd-sheet-grid">
+                      <span><strong>{sites.length}</strong> investigation sites from {candidates.length.toLocaleString()} candidates screened</span>
+                      <span><strong>{formatNumber(erosionMetric?.value)} ha</strong> land→water candidates (range {formatNumber(erosionMetric?.low, 0)}–{formatNumber(erosionMetric?.high, 0)} ha, ±1 dB)</span>
+                      <span><strong>{formatNumber(accretionMetric?.value)} ha</strong> water→land candidates</span>
+                      <span><strong>{verifiedCount}</strong> confirmed losses · rung 3 PENDING — resolves {formatDate(nextPass)}</span>
+                    </div>
+                    <table className="dd-brief-table">
+                      <thead><tr><th>#</th><th>Candidate</th><th>Site</th><th>Class</th><th>Area (ha)</th><th>Field status</th><th>Review</th><th>Owner</th><th>Deadline</th></tr></thead>
+                      <tbody>
+                        {queue.map((f, i) => {
+                          const id = String(f.properties.id);
+                          const r = records[id] ?? EMPTY_RECORD;
+                          return (
+                            <tr key={id}>
+                              <td>{i + 1}</td><td>{id}</td><td>{siteOfFeature.get(id)?.id ?? '—'}</td><td>{f.properties.class}</td>
+                              <td>{f.properties.area_ha.toFixed(2)}</td><td>{r.status}</td>
+                              <td>{r.review ? r.review.conclusion : '—'}</td><td>{r.owner || '—'}</td><td>{r.deadline || '—'}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                    <div className="dd-brief-allowed"><strong>ALLOWED:</strong> field verification only. <strong>NOT ALLOWED:</strong> response, evacuation, or loss claims on this pair alone. <strong>RESOLVES IT:</strong> next same-track pass {formatDate(nextPass)} at comparable stage + Sentinel-1 tie-breaker.</div>
+                    <div className="dd-brief-audit">
+                      <strong>AUDIT LOG ({audit.length} entr{audit.length === 1 ? 'y' : 'ies'}) — local to this browser, labelled local-only</strong>
+                      {audit.length === 0 ? <p>No lifecycle decisions recorded yet in this browser.</p> : (
+                        <ul>{audit.slice(0, 30).map((a, i) => <li key={i}>{a.ts} · {a.featureId} · {a.action} · {a.detail}</li>)}</ul>
+                      )}
+                    </div>
+                    <footer className="dd-brief-footer">
+                      <span>PROVENANCE · Granules: {(erosionMetric?.inputs ?? []).map((i) => i.granule ?? '').filter(Boolean).join(' · ') || 'see manifest'}</span>
+                      <span>Pipeline: Otsu thresholds {thresholds?.threshold_db_t0 != null ? `${thresholds.threshold_db_t0.toFixed(2)} dB → ${thresholds.threshold_db_t1?.toFixed(2)} dB` : '—'} · median filter {thresholds?.median_filter ?? '—'} · MMU {thresholds?.mmu_px ?? '—'} px · HAND ≤ {thresholds?.hand_max_m ?? '—'} m · grid EPSG:32645 · pixel {erosionMetric?.pixel_area_m2 ?? '—'} m²</span>
+                      <span>Context: GPM IMERG rainfall (doi 10.5067/GPM/IMERGDL/DAY/07) · OPERA DSWx-S1 (layer acquired 17 Jun 2026 — pre-pair context, not same-date confirmation) · stage: bundle proxy (no gauge); FFWC bulletin context 14 Oct 2026 · Methods: <a href={NISAR_URL} target="_blank" rel="noreferrer">NISAR data</a> · <a href={QC_URL} target="_blank" rel="noreferrer">OPERA DSWx</a> · <a href={OSM_URL} target="_blank" rel="noreferrer">OSM ODbL</a></span>
+                    </footer>
+                  </div>
+                </section>
+              </div>
+
+              {/* ── Bulletin tab ── */}
+              <div className={`dd3-panel dd3-panel-bulletin ${rightTab === 'bulletin' ? 'is-active' : ''}`} role="tabpanel" aria-label="Community evidence bulletin">
+                <section className={`dd-bulletin ${printTarget === 'bulletin' ? 'is-print-target' : ''}`} id="desk-bulletin" aria-label="Community evidence bulletin">
+                  <div className="dd-brief-top">
+                    <div>
+                      <div className="desk-eyebrow"><Printer size={13} /> COMMUNITY EVIDENCE BULLETIN</div>
+                      <h3>For the Union Parishad, Chilmari — print and pin it.</h3>
+                      <p>One page, Bangla first: what the satellite saw, what it does <em>not</em> prove, and what happens next. Written to be read aloud at the Parishad office — not a warning, not a forecast.</p>
+                    </div>
+                    <button className="desk-btn primary" onClick={() => printSheet('bulletin')}><Printer size={14} /> Print bulletin</button>
+                  </div>
+                  <div className="dd-sheet dd-bulletin-sheet" lang="bn">
+                    <div className="dd-sheet-head">ফ্লুভিসার · কমিউনিটি এভিডেন্স বুলেটিন · FLUVISAR · COMMUNITY EVIDENCE BULLETIN · প্রাপক: ইউনিয়ন পরিষদ, চিলমারী (কুড়িগ্রাম)</div>
+                    <h3>জামুনা নদী — চিলমারী: উপগ্রহ যা দেখেছে, আর যা এখনও প্রমাণ হয়নি</h3>
+                    <p className="dd-bulletin-sub">Jamuna River — Chilmari: what the satellite observed, and what it has NOT yet proven.</p>
+                    <div className="dd-bulletin-cols">
+                      <div>
+                        <strong>যা দেখা গেছে · What was observed</strong>
+                        <p>NISAR উপগ্রহ {formatDate(firstDate)} ও {formatDate(lastDate)} তারিখে এই এলাকার ছবি তুলেছে।
+                          রাডারে <b>{erosionCount.toLocaleString()}টি</b> জায়গায় জমি→পানি এবং <b>{accretionCount.toLocaleString()}টি</b> জায়গায় পানি→জমি
+                          ধরনের বদলের <em>সম্ভাব্য</em> চিহ্ন পাওয়া গেছে। দুটি তারিখের মধ্যে নদীর পানির স্তর বদলেছে — তাই এসব বদলের
+                          বড় অংশ হতে পারে পানি নেমে যাওয়ায় চর জেগে ওঠা।</p>
+                        <p className="dd-bulletin-en">The NISAR satellite imaged this reach on {formatDate(firstDate)} and {formatDate(lastDate)}. Radar mapped
+                          {' '}{erosionCount.toLocaleString()} possible land→water and {accretionCount.toLocaleString()} possible water→land switches.
+                          The river’s water level changed between the two dates, so much of this may be falling water exposing sandbars.</p>
+                      </div>
+                      <div>
+                        <strong>যা জানা যায়নি · What this does NOT establish</strong>
+                        <p>এখনও <b>কোনো ভাঙন নিশ্চিত হয়নি</b>। কোনো বাড়ি, ফসল বা জমির ক্ষতি এই ছবি থেকে প্রমাণিত নয়।
+                          <b> এটি কোনো সরিয়ে নেওয়ার নির্দেশ নয় এবং বন্যার সতর্কবার্তাও নয়।</b></p>
+                        <p className="dd-bulletin-en">No erosion is confirmed yet. No damage to any home, crop or plot is proven by these images.
+                          This bulletin is <b>not an evacuation notice and not a flood warning</b>.</p>
+                      </div>
+                      <div>
+                        <strong>এরপর যা হবে · What happens next</strong>
+                        <p>মাঠকর্মীরা তালিকাভুক্ত {sites.length}টি জায়গা (investigation sites) যাচাই করবেন। পরের উপগ্রহ ছবি আসবে
+                          {' '}{formatDate(nextPass)} — তখন বোঝা যাবে কোন বদল টিকে আছে। যাচাইয়ের পরেই কোনো সিদ্ধান্ত।</p>
+                        <p className="dd-bulletin-en">Field teams will check the {sites.length} listed investigation sites. The next satellite pass
+                          ({formatDate(nextPass)}) will show which changes persist. Decisions come after verification — not before.</p>
+                      </div>
+                    </div>
+                    <p className="dd-bulletin-foot">
+                      সরকারি বন্যা তথ্যের জন্য: Flood Forecasting &amp; Warning Centre (FFWC) — <a href={FFWC_URL} target="_blank" rel="noreferrer">ffwc.gov.bd</a>
+                      {' '}· Official flood information: FFWC (BWDB). · {UNOSAT_LINE} · প্রাথমিক বিশ্লেষণ — মাঠে এখনও যাচাই হয়নি।
+                    </p>
+                  </div>
+                </section>
+              </div>
+            </div>
+          </aside>
+        </div>
 
         {/* ── Judge view bar ── */}
         {judgeStep > 0 && (
@@ -1037,7 +1094,7 @@ export function DecisionDesk() {
               <button className="desk-btn slim" disabled={judgeStep <= 1} onClick={() => judgeGo(judgeStep - 1)}>Back</button>
               {judgeStep < 3
                 ? <button className="desk-btn slim primary" onClick={() => judgeGo(judgeStep + 1)}>Next</button>
-                : <button className="desk-btn slim primary" onClick={() => selSite && printSheet('pack')}>Print the pack</button>}
+                : <button className="desk-btn slim primary" onClick={() => { setRightTab('pack'); if (selSite) printSheet('pack'); }}>Print the pack</button>}
               <button className="desk-btn slim" onClick={() => setJudgeStep(0)}>Exit</button>
             </div>
           </div>
