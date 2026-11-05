@@ -18,6 +18,9 @@ import {
   EMPTY_RECORD, candidateMaturity, maturityHeadline, statusAfterReview,
   type AuditEntry, type BankCondition, type FieldRecord, type ReviewConclusion,
 } from '../decision/lifecycle';
+import {
+  candidateAttribution, surveyObjective, blockingGateList, stageContextLine,
+} from '../decision/attribution';
 import '../styles/decision-desk.css';
 
 const REACH_ID = 'jamuna-chilmari';
@@ -312,8 +315,28 @@ export function DecisionDesk() {
     setNoticeOk(true); setNotice('Case packet exported (TRACE Field handoff format).');
   };
 
+  // V5 — change attribution + generated survey objective (decision/attribution.ts).
+  // Standings and objectives are computed from the bundle's own QC checks and the
+  // field records at render time; nothing is scored, weighted or hard-coded twice.
+  const sensitivityTriple = erosionMetric && erosionMetric.low != null && erosionMetric.high != null
+    ? { low: erosionMetric.low, value: erosionMetric.value, high: erosionMetric.high }
+    : null;
+  const pixelAreaM2 = erosionMetric?.pixel_area_m2 ?? accretionMetric?.pixel_area_m2 ?? 400;
+  const attributionFor = (feature: ChangeFeature, record: FieldRecord) => candidateAttribution(feature, record, qcChecks, {
+    nextPassLabel: formatDate(nextPass),
+    sensitivity: sensitivityTriple,
+  });
+  const selAttribution = selected ? attributionFor(selected, selRecord) : [];
+  const selPxHa = selected ? (selected.properties.pixel_count * pixelAreaM2) / 10000 : 0;
+  const objectiveFor = (site: InvestigationSite): string => surveyObjective(site, {
+    blockingGates: blockingGateList(qcChecks),
+    stageLine: stageContextLine(qcChecks),
+    nextPassLabel: formatDate(nextPass),
+    checklist: GROUND_TRUTH_CHECKLIST,
+  });
+
   const packJson = (site: InvestigationSite) => ({
-    schema: 'fluvisar.decision-desk.investigation-pack.v1',
+    schema: 'fluvisar.decision-desk.investigation-pack.v2',
     exported_at: new Date().toISOString(),
     activation: 'CHILMARI-2026-01',
     site: { id: site.id, reach_part: site.reachPart, anchor: site.anchorId, centroid: site.centroid },
@@ -328,11 +351,15 @@ export function DecisionDesk() {
     },
     readiness: qcChecks.map((c: QCCheck) => ({ id: c.id, status: c.status, blocks: BLOCKS[c.id] ?? '' })),
     ground_truth_checklist: GROUND_TRUTH_CHECKLIST,
+    survey_objective: objectiveFor(site),
     members: site.members.map((f) => ({
       id: String(f.properties.id), class: f.properties.class, area_ha: f.properties.area_ha,
       pixel_count: f.properties.pixel_count, centroid: f.properties.centroid,
       field_status: statusOf(f),
     })),
+    attribution: attributionFor(site.anchor, records[site.anchorId] ?? EMPTY_RECORD)
+      .map((r) => ({ hypothesis: r.hypothesis, support: r.support, kill: r.kill, standing: r.standing, reason: r.reason })),
+    audit: audit.filter((a) => site.members.some((f) => String(f.properties.id) === a.featureId)),
     provenance: provenanceText(),
   });
 
@@ -868,6 +895,49 @@ export function DecisionDesk() {
                         </ul>
                       </div>
                     </div>
+
+                    <div className="dd-attr" aria-label="Change attribution — competing explanations">
+                      <div className="dd-attr-head">
+                        <strong>WHY THIS CANDIDATE EXISTS · COMPETING EXPLANATIONS</strong>
+                        <p>Unresolved physical interpretation — no hypothesis is confirmed by a two-date bundle. Each standing below is computed from this run’s QC checks and this candidate’s field record; nothing is scored or weighted.</p>
+                      </div>
+                      <div className="dd-attr-strip" aria-label="How this candidate was produced — run level">
+                        <div>
+                          <span>CLASS RULE</span>
+                          <strong>{selected.properties.class === 'erosion'
+                            ? 'Land → water: classified water at t1, not water at t0'
+                            : 'Water → land: classified land at t1, water at t0'}</strong>
+                        </div>
+                        <div>
+                          <span>CLASSIFICATION INPUTS · RUN LEVEL</span>
+                          <strong>Otsu thresholds {thresholds?.threshold_db_t0 != null ? `${thresholds.threshold_db_t0.toFixed(2)} dB (t0) → ${thresholds.threshold_db_t1?.toFixed(2)} dB (t1)` : '—'} · median filter {thresholds?.median_filter ?? '—'} · MMU {thresholds?.mmu_px ?? '—'} px · HAND ≤ {thresholds?.hand_max_m ?? '—'} m</strong>
+                        </div>
+                        <div>
+                          <span>PAIR</span>
+                          <strong>{formatDate(selected.properties.t0)} → {formatDate(selected.properties.t1)} · NISAR GCOV HH — single polarisation</strong>
+                        </div>
+                        <div>
+                          <span>PIXEL CROSS-CHECK</span>
+                          <strong>{selected.properties.pixel_count} px × {pixelAreaM2} m² = {selPxHa.toFixed(2)} ha vs mapped {selected.properties.area_ha.toFixed(2)} ha — {Math.abs(selPxHa - selected.properties.area_ha) <= 0.05 ? 'agrees' : `differs by ${Math.abs(selPxHa - selected.properties.area_ha).toFixed(2)} ha; the mapped area_ha is the figure of record`}</strong>
+                        </div>
+                        <p className="dd-attr-note">Per-candidate backscatter values are not carried in this bundle — classification inputs are shown at run level.</p>
+                      </div>
+                      <div className="dd-attr-rows">
+                        {selAttribution.map((row) => (
+                          <div key={row.id} className="dd-attr-row">
+                            <div className="dd-attr-hyp">
+                              <strong>{row.hypothesis}</strong>
+                              <span className="dd-attr-standing">{row.standing}</span>
+                            </div>
+                            <p className="dd-attr-reason">{row.reason}</p>
+                            <div className="dd-attr-sk">
+                              <p><b>WHAT WOULD SUPPORT IT</b>{row.support}</p>
+                              <p><b>WHAT WOULD KILL IT</b>{row.kill}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </>
                 )}
               </div>
@@ -936,6 +1006,16 @@ export function DecisionDesk() {
                 <button role="tab" aria-selected={rightTab === 'pack'} className={rightTab === 'pack' ? 'active' : ''} onClick={() => setRightTab('pack')}>Pack &amp; brief</button>
               </div>
             </div>
+
+            {selSite && (
+              <div className="dd4-objective" aria-label={`Survey objective for ${selSite.id}`}>
+                <div className="dd4-objective-head">
+                  <span className="desk-eyebrow"><Crosshair size={13} /> SURVEY OBJECTIVE · {selSite.id} · GENERATED FROM BUNDLE DATA</span>
+                  <Stamp kind="derived">DERIVED · templated from site + QC state — not a damage assessment</Stamp>
+                </div>
+                <p>{objectiveFor(selSite)}</p>
+              </div>
+            )}
 
             {rightTab !== 'pack' && selected && (
               <>
@@ -1093,6 +1173,10 @@ export function DecisionDesk() {
                         </tbody>
                       </table>
                       {selSite.members.length > 15 && <p className="dd-sheet-note">+{selSite.members.length - 15} further members in the Pack JSON / GeoJSON export.</p>}
+                      <div className="dd-sheet-objective">
+                        <strong>SURVEY OBJECTIVE — GENERATED FROM BUNDLE DATA · NOT A DAMAGE ASSESSMENT</strong>
+                        <p>{objectiveFor(selSite)}</p>
+                      </div>
                       <div className="dd-checklist">
                         <strong>GROUND-TRUTH CHECKLIST — WHAT TO DO AT THIS SITE</strong>
                         <ol>{GROUND_TRUTH_CHECKLIST.map((item) => <li key={item.slice(0, 24)}>{item}</li>)}</ol>
