@@ -1,5 +1,7 @@
 # Plausibility Checks
 
+> **Current interpretation (2026-11-05):** The September review below documents the current two-date Jamuna run and its key unresolved plausibility concern. Its opening “Quicklook confirmed” note is a historical development note and must not be read as scientific confirmation of erosion or as validation of the current estimate. The Decision Desk and ML evidence workbench preserve the inconclusive verdict. See [Decision Desk guide](DECISION_DESK.md) and [methods](submission/methods.md).
+
 ## Quicklook confirmed (P2.5)
 Quicklook confirmed: water is distinct from land in dB.
 (Confirmed on synthetic/surrogate data as actual download is blocked. PNGs skipped due to lack of real data).

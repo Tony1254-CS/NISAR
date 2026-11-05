@@ -1,5 +1,7 @@
 # Verification of Assumptions
 
+> **Scope note (2026-11-05):** This file records selected metadata checks from September 2026; it is not a current application feature inventory or a validation statement for the November UI. Current user-facing documentation is in [README.md](../README.md), [SAR_LAB.md](SAR_LAB.md), [ML_INTELLIGENCE.md](ML_INTELLIGENCE.md), and [DECISION_DESK.md](DECISION_DESK.md). The current Jamuna result remains inconclusive; the metadata checks below do not establish erosion accuracy.
+
 ## NISAR GCOV Metadata (Task P0.7)
 *Date: 2026-09-24*
 

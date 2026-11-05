@@ -1,5 +1,7 @@
 # SAME RIVER TWICE — Comprehensive Project Audit & Feature Inventory
 
+> **Historical audit warning (2026-11-05):** This audit is dated September 29, 2026 and includes strong claims that the current bundle does not support, including confirmed stage matching, validated erosion, multi-site coverage, impact forecasts, and operational AI. Do not use those claims in the submission script. The live product now has dedicated SAR Lab, ML Intelligence, and Decision Desk surfaces; their current functions and limitations are documented in [docs/SAR_LAB.md](docs/SAR_LAB.md), [docs/ML_INTELLIGENCE.md](docs/ML_INTELLIGENCE.md), and [docs/DECISION_DESK.md](docs/DECISION_DESK.md). See the [current README](README.md) for the evidence status and routes.
+
 **Project Repository:** `sakibul-shovon/nasa-space-app-challenge`  
 **Hackathon Theme:** NASA Space Apps Challenge 2026 — *Dancing with the SARs*  
 **Mission Statement:** *"Measuring what the monsoon takes — not where it floods, but what it permanently erodes."*  

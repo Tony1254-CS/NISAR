@@ -5,6 +5,8 @@
 
 FluviSAR is a web application for exploring a Jamuna River case study with NISAR L-band SAR data. It combines a documented processing workflow, mapped outputs, quality checks, and an interactive SAR Science Lab. The Lab helps visitors understand radar concepts; its teaching simulations are clearly distinguished from the project’s measured inputs and analysis products.
 
+The current app also includes **ML Intelligence** and the **Decision Desk**. ML Intelligence demonstrates a Random Forest and Temporal MLP on generated scenarios, then separately exposes the Jamuna evidence and its validation gaps. The Decision Desk helps analysts and planners inspect area-ranked change candidates, provenance, quality checks, and a hypothetical corridor before considering field review. A JSON packet can be manually handed to the separate TRACE Field app.
+
 NISAR launched on July 30, 2025. Its L-band and S-band instruments support observations in day and night and are generally much less affected by ordinary cloud cover than visible/near-infrared optical imagery. Heavy precipitation, surface conditions, sensor mode, and data availability still matter; SAR does not guarantee a usable observation in every situation. The cloud-density control in FluviSAR is an illustration, not an availability model.
 
 ## What visitors can explore
@@ -22,9 +24,15 @@ NISAR launched on July 30, 2025. Its L-band and S-band instruments support obser
 
 Each teaching panel states its assumptions and limits. The complete panel-by-panel guide is [docs/SAR_LAB.md](../SAR_LAB.md).
 
+## ML Intelligence and Decision Desk
+
+The model sandbox uses generated examples and reports scenario-only diagnostics. It does not train on the Jamuna scene, and its scores are not calibrated probabilities. In the separate real-case workbench, independent reference labels and later-pass persistence are unavailable, so accuracy and F1 are not evaluated. The [ML guide](../ML_INTELLIGENCE.md) describes the model and every diagnostic.
+
+The Decision Desk sorts candidate polygons by area for human review, shows a maximum of 15 per class on the initial map, and exposes bundle provenance and QC. Its user-defined corridor is hypothetical. Optional OpenStreetMap building and road counts are mapped objects only; they are not people at risk or an impact forecast. Review statuses are local to the browser. The TRACE Field case packet is a manual export, not live sync. See the [Decision Desk guide](../DECISION_DESK.md).
+
 ## Analysis status and limits
 
-The configured Jamuna comparison has two dates, and the current checks do not support a stage-matched, persistent erosion estimate. Its mapped land-to-water area fails plausibility review, so the verdict remains **INCONCLUSIVE**. The application does not claim that the Lab’s synthetic H/α, coherence, InSAR, speckle, threshold, dielectric, or target-scale examples are measurements from the Jamuna scene. See [docs/PLAUSIBILITY.md](../PLAUSIBILITY.md) and [docs/submission/methods.md](methods.md).
+The configured Jamuna comparison has two dates, and the current checks do not support a stage-matched, persistent erosion estimate. Its mapped land-to-water area fails plausibility review, so the verdict remains **INCONCLUSIVE**. The application does not claim that the Lab’s synthetic H/α, coherence, InSAR, speckle, threshold, dielectric, or target-scale examples are measurements from the Jamuna scene, or that synthetic ML diagnostics validate real-case predictions. See [docs/PLAUSIBILITY.md](../PLAUSIBILITY.md) and [docs/submission/methods.md](methods.md).
 
 ## References
 

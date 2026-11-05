@@ -127,12 +127,16 @@ The band selector compares wavelength and qualitative target interactions. Canop
 
 ## Recent changes reflected here
 
+- **2026-11-04–05 SAR Lab refresh:** the mission specification cards were compacted and icon sizing standardized; the scientific-reference footer was regrouped by category with direct external-link chips. The changes improve scannability and source access without changing the analysis pipeline.
+- **2026-11-03 SAR Lab overhaul:** SweepSAR and dual-frequency/L/S-band teaching views were added alongside expanded radar-physics explainers, flood-scattering scenarios, and explicit source attribution. The present page contains both project-linked viewers and conceptual/synthetic panels; those categories are described above.
 - Added the interactive flood scattering scenarios and the target-size L/S-band comparison.
 - Reframed dielectric values as ideal-interface Fresnel reflectance and clarified that it is not SAR backscatter.
 - Kept H/α explicitly theory-only and synthetic; removed the implication that the project calculates those metrics from Jamuna covariance data.
 - Replaced empirical-looking coherence curves with the parameterized exponential temporal term and explicit omitted effects.
 - Clarified that the map lens is a water/change layer comparison, not Pauli decomposition.
 - Reorganized the dielectric controls and visualization so the angle slider is adjacent to the live ray diagram and the card uses a responsive layout.
+
+The panel list and statements above are based on the current `SARLab.tsx` implementation. Visual polish commits do not convert an explainer into a scientific processing output. The only SAR Lab content tied to the Jamuna case is the content explicitly described as reading project quicklooks, masks, manifest values, or pipeline narration; other calculations remain synthetic or conceptual.
 
 ## Scientific references
 

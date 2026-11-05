@@ -1,5 +1,7 @@
 # TASKS.md — SAME RIVER TWICE execution checklist
 
+> **Historical tracker notice (2026-11-05):** The checklist below records the earlier build plan and may contain stale dates, acceptance criteria, or claims. Recent SAR Lab, ML Intelligence, and Decision Desk work is not represented as a live checklist here. For current user-facing behavior and limits see `docs/SAR_LAB.md`, `docs/ML_INTELLIGENCE.md`, and `docs/DECISION_DESK.md`; for current scientific status see `docs/PLAUSIBILITY.md`.
+
 > This file is the **only** place that tracks progress. `plan.md` is the spec (never re-explained here — every task links to the section that defines it). Any LLM session starts by reading this file, not by re-reading all of `plan.md` from scratch.
 >
 > **Protocol for every session:** see `plan.md` §0.4 "Execution loop protocol". Summary: read this file top to bottom → find the first task with `[ ]` whose `Depends` are all `[x]` → do only that task → run its `Test` → check it off **only if the test passes** → commit `phase-N.M: <summary>` → **immediately continue to the next eligible task in the same session — do not stop.** If a test fails or a task hits a real external blocker, mark it `[!]`, write to `docs/BLOCKERS.md`, and move on to the next eligible task instead of halting.

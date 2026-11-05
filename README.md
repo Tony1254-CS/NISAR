@@ -5,7 +5,9 @@ https://nasa-2026-web.vercel.app/
 **Challenge:** NASA Space Apps 2026 — *Dancing with the SARs*
 **Stack:** React 18 + TypeScript + Vite + MapLibre GL + D3.js + Zustand + Python (Backend Pipeline)
 
-FluviSAR is a full-stack scientific intelligence platform that uses NASA's NISAR L-band Synthetic Aperture Radar to detect, verify, and predict catastrophic riverbank erosion across 4 global sites and 3 continents — through clouds, darkness, and monsoon weather. This document is the **absolute exhaustive encyclopedia** of every component, button, slider, calculation, animation, and interactive element in the platform.
+> **Current-status note (2026-11-05):** This encyclopedia contains earlier implementation descriptions and some planned capabilities that may no longer match the current build. The present application is centered on the Jamuna case; its two-date transition result remains **INCONCLUSIVE** and is not confirmed erosion or a forecast. For the latest SAR Lab, ML Intelligence, and Decision Desk behavior, use the detailed guides linked in **Current feature documentation** at the end of this README. Keep this historical material for context, and verify any feature against the current app before using it in a demo script.
+
+FluviSAR is a web platform for examining a Jamuna River NISAR L-band SAR change case, learning about radar, exploring generated ML scenarios, and organizing human review of mapped transition candidates. It does not currently establish confirmed riverbank erosion across multiple sites or provide an operational forecast. This document preserves the original platform encyclopedia; the current feature guides linked below document the recent work and its evidence limits.
 
 ---
 
@@ -638,3 +640,27 @@ Client-side routing via `window.location.pathname`:
 
 ## Live Analysis Button
 Triggers full 6-step agentic workflow with processing state.
+
+---
+
+# Current feature documentation (2026-11-05)
+
+The encyclopedia above retains earlier descriptions. These guides document the current implementation of the three recently updated areas and are the preferred reference for the demo/video script:
+
+- [SAR Lab: panel-by-panel science, controls, formulas, data types, and limitations](docs/SAR_LAB.md)
+- [ML Intelligence: synthetic sample design, Random Forest and Temporal MLP, each diagnostic, Jamuna evidence tab, and interpretation boundaries](docs/ML_INTELLIGENCE.md)
+- [Decision Desk: map layers, area-ranked candidate ledger, QC/provenance, hypothetical corridor, OSM query, audience briefs, and TRACE Field JSON handoff](docs/DECISION_DESK.md)
+- [240-second submission video script](docs/submission/video_script.md)
+- [Demo walkthrough and current interaction checklist](docs/submission/demo_walkthrough.md)
+- [Methods and claim boundaries](docs/submission/methods.md)
+
+## Current case status
+
+The configured Jamuna comparison uses two usable NISAR acquisitions (2026-08-26 and 2026-09-19). Its polygons are threshold-derived land↔water transition candidates. The reported area fails the plausibility review, stage matching and later-pass persistence are unresolved, and independent water-reference agreement and real-data ML performance have not been evaluated. The verdict remains **INCONCLUSIVE**. Do not narrate these candidates as verified erosion or use synthetic model scores as real-case performance.
+
+## Current platform boundaries
+
+- ML Intelligence's model sandbox is generated-data demonstration. Its real Jamuna tab displays bundle evidence and validation gaps; it does not run those demo classifiers on the Jamuna pixels.
+- Decision Desk sorting is by mapped area. Its impact envelope is hypothetical; optional OpenStreetMap counts are mapped features, not people or damages.
+- FluviSAR and TRACE Field are separate platforms. The Decision Desk exports a JSON packet for manual handoff; it does not synchronize automatically.
+- `web/tests/fixtures/PROVENANCE.md` is test-fixture provenance and remains a record of the fixture, not product documentation.

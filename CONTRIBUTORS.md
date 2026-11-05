@@ -1,5 +1,7 @@
 # Project Contributors & Architectural Attribution
 
+> **Attribution and feature-status note (2026-11-05):** The detailed technical bullets below are historical attribution text, not an independently audited inventory of the current application. In particular, descriptions of validated erosion, forecasting, economic/displacement modeling, full live cross-sensor validation, or simulated physics should not be treated as current delivered capability without matching implementation and evidence. Current behavior is documented in [README.md](README.md) and the SAR Lab, ML Intelligence, and Decision Desk guides under `docs/`.
+
 ## FluviSAR: "Same River Twice" — NASA Space Apps Challenge 2026
 **Challenge Track:** *Dancing with the SARs: Tracking Earth’s Changing Surface with Radar Remote Sensing*  
 **Repository:** [https://github.com/Tony1254-CS/nasa-2026-web](https://github.com/Tony1254-CS/nasa-2026-web)

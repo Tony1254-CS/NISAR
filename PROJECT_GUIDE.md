@@ -1,5 +1,7 @@
 # SAME RIVER TWICE — The Complete Project Guide
 
+> **Current implementation note (2026-11-05):** This long guide was written for an earlier product state and contains descriptions of planned or obsolete features. For current documentation of the three recently updated areas, use [SAR Lab](docs/SAR_LAB.md), [ML Intelligence](docs/ML_INTELLIGENCE.md), and [Decision Desk](docs/DECISION_DESK.md). The current Jamuna case is inconclusive; treat this file's older “satellite-verified,” stage-match, forecast, sign-in, evidence drawer, multi-site, and AI claims as historical unless verified against current code and data. Project overview: [README.md](README.md).
+
 > **Measuring what the monsoon takes — not where it floods, but what it permanently erodes.**
 
 This guide explains **everything** about SAME RIVER TWICE in plain English — what it is, why it matters, how the science works, how the code is organized, and what every folder and file does. If you've never worked with satellite data before, start at the top and read straight through. If you're a developer or a judge, jump to the section you need from the table of contents.

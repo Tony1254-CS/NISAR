@@ -1,6 +1,15 @@
 # Blockers
 
-Currently no blockers.
+# Blockers and current evidence gaps
+
+This page contains older pipeline notes below. The current application-level status is:
+
+- **Scientific result:** the Jamuna two-date transition estimate remains `INCONCLUSIVE`; plausibility, stage matching, persistence, and independent reference evidence limit what can be claimed. This is an evidence gap, not a frontend loading blocker. Details: [plausibility review](PLAUSIBILITY.md).
+- **Decision Desk:** the optional OpenStreetMap Overpass lookup needs network access. If unavailable, corridor geometry and candidate review remain usable, but no OSM counts should be invented.
+- **TRACE Field:** FluviSAR exports a JSON case packet for manual handoff; the web project does not provide automatic cross-app synchronization.
+- **ML validation:** scenario diagnostics use generated data. Real-case accuracy/F1 are not evaluated without independent reference labels and a spatially separate test set.
+
+The older entries below are chronological records of earlier pipeline work. Read their dates and compare against the current code/data before treating them as active blockers.
 
 ## RESOLVED 2026-09-25: P1.1/P1.2 Earthdata credentials
 `.env` now has working `EARTHDATA_USERNAME`/`EARTHDATA_PASSWORD`; `earthaccess.login()` succeeds.

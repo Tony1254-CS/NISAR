@@ -1,6 +1,8 @@
 # plan.md — SAME RIVER TWICE
 ### NASA Space Apps Challenge 2026 · "Dancing with the SARs" · Execution specification for Claude Code
 
+> **Status note (2026-11-05):** This file is the original planning/specification record, not a guarantee that every planned feature exists or remains scientifically defensible. Current SAR Lab, ML Intelligence, and Decision Desk behavior is documented in `docs/SAR_LAB.md`, `docs/ML_INTELLIGENCE.md`, and `docs/DECISION_DESK.md`. Those current guides and the actual bundle/code take precedence when writing demos. The Jamuna estimate remains inconclusive; intended stage matching or validation in this plan must not be narrated as completed unless verified in the current data.
+
 > **Read Section 0 before doing anything.** This file is the single source of truth. It is a technical specification, a data-pipeline specification, a scientific-method document, a UI/UX specification and an implementation roadmap. When this file and your own instincts disagree, this file wins. When this file is silent, stop and ask the team — do not invent.
 
 ---
