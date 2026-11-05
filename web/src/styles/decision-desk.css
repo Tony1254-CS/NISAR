@@ -454,18 +454,62 @@
   gap: 16px;
 }
 
+/* The Jamuna scene is nearly portrait in geographic aspect. Keep the map
+   viewport close to that shape instead of stretching the raster into a wide card. */
+.desk-map-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(205px, 232px);
+  align-items: stretch;
+  gap: 11px;
+}
+
 .desk-map-frame {
   position: relative;
-  height: clamp(520px, 62vh, 680px);
+  width: 100%;
+  height: auto;
+  aspect-ratio: .82;
   overflow: hidden;
   border-radius: 16px;
   border: var(--desk-card-border);
   background: #050809;
   box-shadow: var(--desk-card-shadow), inset 0 0 0 1px rgba(0, 0, 0, .3);
-  aspect-ratio: auto;
 }
 .decision-map { position: absolute; inset: 0; }
 .decision-map canvas { outline: none; }
+
+.desk-map-readout {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+  overflow: hidden;
+  border: var(--desk-card-border);
+  border-radius: 14px;
+  background:
+    linear-gradient(160deg, rgba(21, 31, 33, .96), rgba(11, 16, 18, .94)),
+    var(--desk-card-bg-strong);
+  box-shadow: var(--desk-card-shadow);
+}
+.desk-readout-block { padding: 17px 15px; border-bottom: var(--desk-hair); }
+.desk-readout-label,
+.desk-readout-verdict > span {
+  display: block;
+  color: var(--text-3);
+  font-family: var(--font-num);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.desk-readout-block > strong { display: block; margin-top: 10px; color: var(--text); font-family: var(--font-num); font-size: 20px; letter-spacing: -.03em; }
+.desk-readout-block > small { display: block; margin-top: 6px; color: var(--text-3); font-size: 10px; line-height: 1.55; }
+.desk-readout-block > p { margin: 10px 0 0; color: var(--text-2); font-size: 11px; line-height: 1.65; }
+.desk-readout-block.is-selected { background: rgba(57, 196, 217, .055); }
+.desk-readout-block.is-selected > strong { color: var(--water); font-size: 17px; }
+.desk-readout-block > button { display: flex; align-items: center; gap: 5px; margin-top: 13px; padding: 0; border: 0; background: transparent; color: var(--water); font-size: 10px; font-weight: 600; cursor: pointer; }
+.desk-readout-verdict { margin: 12px; padding: 13px; border: 1px solid rgba(224, 179, 74, .24); background: rgba(224, 179, 74, .055); }
+.desk-readout-verdict > strong { display: block; margin-top: 7px; color: #f0c873; font-family: var(--font-num); font-size: 14px; letter-spacing: .1em; }
+.desk-readout-verdict > small { display: block; margin-top: 6px; color: var(--text-3); font-size: 9px; line-height: 1.55; }
 
 .desk-map-chip {
   position: absolute;
@@ -1978,7 +2022,7 @@
   .desk-passes-grid { flex-wrap: wrap; gap: 4px 10px; }
   .desk-passes-grid button { flex: 1 1 44%; }
   .desk-pass-link { display: none; }
-  .desk-map-frame { height: clamp(340px, 55vw, 460px); }
+  .desk-map-stage { grid-template-columns: minmax(0, 1fr); }
   .desk-map-layers { gap: 3px; }
   .desk-map-layers button { padding: 6px 8px; font-size: 8.5px; }
   .desk-map-legend { font-size: 9.5px; gap: 4px 12px; }
