@@ -1,14 +1,24 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type PointerEvent as ReactPointerEvent } from 'react';
 import maplibregl, { type ImageSource, type Map as MlMap } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { Bounds, ChangeFeature, ChangeFeatureCollection, ReachDetail } from '../data/types';
 
 const EMPTY: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
 
-function asGeoJson(data: ChangeFeatureCollection | null): GeoJSON.FeatureCollection {
-  return (data ?? EMPTY) as unknown as GeoJSON.FeatureCollection;
+export interface MapSwipe {
+  t0: string;
+  t1: string;
+  /** Divider position, percent of map width (left of divider = t0, right = t1). */
+  position: number;
+  onPositionChange: (n: number) => void;
 }
-void asGeoJson;
+
+export interface SiteMarker {
+  id: string;
+  label: string;
+  centroid: [number, number];
+  active: boolean;
+}
 
 interface DecisionMapProps {
   reach: ReachDetail;
@@ -25,17 +35,29 @@ interface DecisionMapProps {
   osm: GeoJSON.FeatureCollection | null;
   topN: number;
   onSelectFeature?: (id: string) => void;
+  /** In-canvas before/after swipe. When set, the primary canvas shows t0 radar and a
+   *  second, camera-synced MapLibre canvas clipped to the right of the divider shows
+   *  t1 radar — the comparison lives inside the map, not in a separate image panel. */
+  swipe?: MapSwipe | null;
+  siteMarkers?: SiteMarker[];
+  onSelectSite?: (id: string) => void;
 }
 
 function imageCoordinates(bounds: Bounds): [[number, number], [number, number], [number, number], [number, number]] {
   return bounds.coordinates as [[number, number], [number, number], [number, number], [number, number]];
 }
 
-function addImage(map: MlMap, id: string, url: string, coordinates: DecisionMapProps['bounds']['coordinates']) {
-  map.addSource(id, { type: 'image', url, coordinates: coordinates as [[number, number], [number, number], [number, number], [number, number]] });
+function baseStyle(): maplibregl.StyleSpecification {
+  return {
+    version: 8,
+    sources: { satellite: { type: 'raster', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize: 256, attribution: 'Imagery © Esri, Maxar, Earthstar Geographics' } },
+    layers: [
+      { id: 'background', type: 'background', paint: { 'background-color': '#10171a' } },
+      { id: 'satellite', type: 'raster', source: 'satellite', paint: { 'raster-saturation': -0.35, 'raster-contrast': 0.12 } },
+    ],
+  } as maplibregl.StyleSpecification;
 }
 
-/* ransack: chips (top-N) and timeline swipe (t0 vs t1) */
 function filterToTopN(data: ChangeFeatureCollection | null, topN: number): GeoJSON.FeatureCollection {
   if (!data?.features?.length) return EMPTY;
   const sorted = [...data.features].sort((a, b) => (b.properties.area_ha ?? 0) - (a.properties.area_ha ?? 0));
@@ -44,26 +66,27 @@ function filterToTopN(data: ChangeFeatureCollection | null, topN: number): GeoJS
 
 export function DecisionMap(props: DecisionMapProps) {
   const { reach, bounds, dates, selectedDate, selectedFeatureId, erosion, accretion,
-    showRadar, showWater, showOpera, scenario, osm, topN, onSelectFeature } = props;
+    showRadar, showWater, showOpera, scenario, osm, topN, onSelectFeature, swipe, siteMarkers, onSelectSite } = props;
   const element = useRef<HTMLDivElement>(null);
+  const swipeElement = useRef<HTMLDivElement>(null);
+  const wrapElement = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MlMap | null>(null);
+  const swipeMapRef = useRef<MlMap | null>(null);
+  const markersRef = useRef<maplibregl.Marker[]>([]);
   const coordinates = imageCoordinates(bounds);
   const base = `/data/v1/${reach.reach_id}`;
   const selectRef = useRef(onSelectFeature);
   selectRef.current = onSelectFeature;
+  const selectSiteRef = useRef(onSelectSite);
+  selectSiteRef.current = onSelectSite;
+  const swipeActive = !!swipe;
+  const radarDate = swipe ? swipe.t0 : selectedDate;
 
   useEffect(() => {
     if (!element.current || mapRef.current) return;
     const map = new maplibregl.Map({
       container: element.current,
-      style: {
-        version: 8,
-        sources: { satellite: { type: 'raster', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize: 256, attribution: 'Imagery © Esri, Maxar, Earthstar Geographics' } },
-        layers: [
-          { id: 'background', type: 'background', paint: { 'background-color': '#10171a' } },
-          { id: 'satellite', type: 'raster', source: 'satellite', paint: { 'raster-saturation': -0.35, 'raster-contrast': 0.12 } },
-        ],
-      },
+      style: baseStyle(),
       center: [89.75, 25.56], zoom: 8, minZoom: 5, maxZoom: 17,
       attributionControl: { compact: true },
     });
@@ -75,10 +98,10 @@ export function DecisionMap(props: DecisionMapProps) {
 
     map.once('load', () => {
       try {
-        const date = selectedDate || dates[0];
-        addImage(map, 'nisar-radar', `${base}/img/radar_${date}.png`, coordinates);
+        const date = radarDate || dates[0];
+        map.addSource('nisar-radar', { type: 'image', url: `${base}/img/radar_${date}.png`, coordinates });
         map.addLayer({ id: 'nisar-radar-layer', type: 'raster', source: 'nisar-radar', paint: { 'raster-opacity': showRadar ? 0.97 : 0, 'raster-contrast': 0.14 } });
-        addImage(map, 'nisar-water', `${base}/img/water_${date}.png`, coordinates);
+        map.addSource('nisar-water', { type: 'image', url: `${base}/img/water_${date}.png`, coordinates });
         map.addLayer({ id: 'nisar-water-layer', type: 'raster', source: 'nisar-water', paint: { 'raster-opacity': showWater ? 0.9 : 0 } });
         map.addSource('candidate-erosion', { type: 'geojson', data: filterToTopN(erosion, topN) });
         map.addLayer({ id: 'candidate-erosion-fill', type: 'fill', source: 'candidate-erosion', paint: { 'fill-color': '#f07957', 'fill-opacity': 0.48 } });
@@ -111,13 +134,66 @@ export function DecisionMap(props: DecisionMapProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /* ── In-canvas swipe: second MapLibre canvas (t1) clipped right of the divider ── */
+  useEffect(() => {
+    const primary = mapRef.current;
+    if (!swipe || !primary || !swipeElement.current) {
+      if (swipeMapRef.current) { swipeMapRef.current.remove(); swipeMapRef.current = null; }
+      return;
+    }
+    if (!swipeMapRef.current) {
+      const secondary = new maplibregl.Map({
+        container: swipeElement.current,
+        style: baseStyle(),
+        center: primary.getCenter(), zoom: primary.getZoom(),
+        bearing: primary.getBearing(), pitch: primary.getPitch(),
+        interactive: false, attributionControl: false, fadeDuration: 0,
+      });
+      swipeMapRef.current = secondary;
+      secondary.on('load', () => {
+        try {
+          secondary.addSource('swipe-radar', { type: 'image', url: `${base}/img/radar_${swipe.t1}.png`, coordinates });
+          secondary.addLayer({ id: 'swipe-radar-layer', type: 'raster', source: 'swipe-radar', paint: { 'raster-opacity': 0.97, 'raster-contrast': 0.14 } });
+        } catch (error) { console.error('Unable to initialize swipe map', error); }
+      });
+      const sync = () => secondary.jumpTo({ center: primary.getCenter(), zoom: primary.getZoom(), bearing: primary.getBearing(), pitch: primary.getPitch() });
+      primary.on('move', sync);
+      sync();
+      return () => { primary.off('move', sync); };
+    }
+    const source = swipeMapRef.current.getSource('swipe-radar') as ImageSource | undefined;
+    if (source) source.updateImage({ url: `${base}/img/radar_${swipe.t1}.png`, coordinates });
+    return undefined;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [swipeActive, swipe?.t1, base]);
+
+  /* ── Site markers (HTML markers — the desk style has no glyph source) ── */
+  const markersKey = JSON.stringify((siteMarkers ?? []).map((m) => [m.id, m.active]));
+  useEffect(() => {
+    const map = mapRef.current;
+    markersRef.current.forEach((m) => m.remove());
+    markersRef.current = [];
+    if (!map || !siteMarkers?.length) return;
+    for (const site of siteMarkers) {
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.className = `dd-site-marker${site.active ? ' is-active' : ''}`;
+      el.textContent = site.label;
+      el.setAttribute('aria-label', `Open ${site.id}`);
+      el.addEventListener('click', () => selectSiteRef.current?.(site.id));
+      markersRef.current.push(new maplibregl.Marker({ element: el }).setLngLat(site.centroid).addTo(map));
+    }
+    return () => { markersRef.current.forEach((m) => m.remove()); markersRef.current = []; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [markersKey]);
+
   useEffect(() => {
     const map = mapRef.current; if (!map?.isStyleLoaded()) return;
     const source = map.getSource('nisar-radar') as ImageSource | undefined;
-    if (source && selectedDate) source.updateImage({ url: `${base}/img/radar_${selectedDate}.png`, coordinates });
+    if (source && radarDate) source.updateImage({ url: `${base}/img/radar_${radarDate}.png`, coordinates });
     const water = map.getSource('nisar-water') as ImageSource | undefined;
     if (water && selectedDate) water.updateImage({ url: `${base}/img/water_${selectedDate}.png`, coordinates });
-  }, [selectedDate, base, coordinates]);
+  }, [radarDate, selectedDate, base, coordinates]);
 
   useEffect(() => {
     const map = mapRef.current; if (!map) return;
@@ -137,7 +213,59 @@ export function DecisionMap(props: DecisionMapProps) {
 
   useEffect(() => { const map = mapRef.current; if (map) (map.getSource('scenario-zone') as maplibregl.GeoJSONSource | undefined)?.setData(scenario ?? EMPTY); }, [scenario]);
   useEffect(() => { const map = mapRef.current; if (map) (map.getSource('osm-context') as maplibregl.GeoJSONSource | undefined)?.setData(osm ?? EMPTY); }, [osm]);
-  return <div className="decision-map" ref={element} aria-label="NISAR radar map — Jamuna Chilmari reach" />;
+
+  const dragRef = useRef(false);
+  const handleSwipeDown = (e: ReactPointerEvent) => {
+    dragRef.current = true;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  };
+  const handleSwipeMove = (e: ReactPointerEvent) => {
+    if (!dragRef.current || !wrapElement.current || !swipe) return;
+    const rect = wrapElement.current.getBoundingClientRect();
+    const pct = ((e.clientX - rect.left) / rect.width) * 100;
+    swipe.onPositionChange(Math.max(3, Math.min(97, pct)));
+  };
+  const handleSwipeUp = (e: ReactPointerEvent) => {
+    dragRef.current = false;
+    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+  };
+
+  return (
+    <div className="dd-map-wrap" ref={wrapElement}>
+      <div className="decision-map" ref={element} aria-label="NISAR radar map — Jamuna Chilmari reach" />
+      {swipe && (
+        <>
+          <div
+            ref={swipeElement}
+            className="decision-map decision-map-swipe"
+            style={{ clipPath: `inset(0 0 0 ${swipe.position}%)` }}
+            aria-hidden="true"
+          />
+          <span className="dd-swipe-tag is-t0" style={{ left: `${Math.max(swipe.position - 2, 1)}%` }}>t0 · {swipe.t0}</span>
+          <span className="dd-swipe-tag is-t1" style={{ left: `${Math.min(swipe.position + 2, 82)}%` }}>t1 · {swipe.t1}</span>
+          <div
+            className="dd-swipe-handle"
+            role="slider"
+            aria-label="Swipe between the two NISAR dates"
+            aria-valuenow={Math.round(swipe.position)}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            tabIndex={0}
+            style={{ left: `${swipe.position}%` }}
+            onPointerDown={handleSwipeDown}
+            onPointerMove={handleSwipeMove}
+            onPointerUp={handleSwipeUp}
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowLeft') swipe.onPositionChange(Math.max(3, swipe.position - 4));
+              if (e.key === 'ArrowRight') swipe.onPositionChange(Math.min(97, swipe.position + 4));
+            }}
+          >
+            <span className="dd-swipe-grip">⇆</span>
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
 
 export function featureCentroid(feature: ChangeFeature): [number, number] {
