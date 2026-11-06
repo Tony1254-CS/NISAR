@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  ArrowUpRight, Check, ChevronLeft, ChevronRight, ClipboardList, Copy, Crosshair, FileJson2,
-  Layers3, LayoutGrid, MapPin, Package, Pause, Play, Printer, ShieldAlert, Waves, Eye,
-  Sparkles, Table2, X,
+  AlertCircle, ArrowUpRight, CalendarClock, Camera, Check, ChevronLeft, ChevronRight, ClipboardList,
+  Compass, Copy, Crosshair, FileJson2, Layers3, LayoutGrid, MapPin, Package,
+  Pause, Play, Printer, Radio, Send, ShieldAlert, ShieldCheck, Waves, Eye,
+  Sparkles, Table2, UserCheck, X,
 } from 'lucide-react';
 import { Navbar } from '../components/Navbar';
 import { DecisionMap, featureCentroid } from '../map/DecisionMap';
@@ -1353,64 +1354,304 @@ export function DecisionDesk() {
 
                 <div className="dd4-panel dd4-field-panel">
                   <div className="dd-lifecycle">
-                    <strong>FIELD VERIFICATION · {selId}</strong>
-                    <p className="dd-lifecycle-flow">
-                      UNREVIEWED → TASKED → MONITORING → OBSERVATION RECEIVED → REVIEWED → VERIFIED / REJECTED / back to MONITORING.
-                      A field visit records an observation; only a reviewer’s recorded conclusion can verify. There is no one-click verify on this desk.
-                    </p>
+                    <strong className="dd-lifecycle-title"><ClipboardList size={15} /> FIELD VERIFICATION · {selId}</strong>
+                    <div className="dd-lifecycle-flow">
+                      <code>UNREVIEWED → TASKED → MONITORING → OBSERVATION RECEIVED → REVIEWED → VERIFIED / REJECTED / back to MONITORING</code>
+                      <span>A field visit records an observation; only a reviewer’s recorded conclusion can verify. There is no one-click verify on this desk.</span>
+                    </div>
                     {(selRecord.status === 'UNREVIEWED' || selRecord.status === 'TASKED' || selRecord.status === 'MONITORING') && (
                       <>
-                        <div className="dd-tasking-fields">
-                          <label>Owner / role<input value={selRecord.owner} onChange={(e) => patchRecord({ owner: e.target.value })} placeholder="e.g. Upazila field officer (role, not a name)" /></label>
-                          <label>Deadline<input type="date" value={selRecord.deadline} onChange={(e) => patchRecord({ deadline: e.target.value })} /></label>
-                          <label>Dismiss reason (required to dismiss)<input value={selRecord.dismissReason} onChange={(e) => patchRecord({ dismissReason: e.target.value })} placeholder="e.g. re-flooded on next pass — stage emergence" /></label>
-                        </div>
-                        <div className="dd-tasking-actions">
-                          <button className="desk-btn primary" onClick={doTask}><ClipboardList size={13} /> Task field verification</button>
-                          <button className="desk-btn" onClick={doMonitor}>Monitor next pass</button>
-                          <button className="desk-btn" onClick={doDismiss}>Dismiss</button>
-                        </div>
-                        <fieldset className="dd-obs-form">
-                          <legend>Record a field observation</legend>
-                          <div className="dd-tasking-fields">
-                            <label>Observer role (required)<input value={obsRole} onChange={(e) => setObsRole(e.target.value)} placeholder="e.g. NGO field enumerator" /></label>
-                            <label>Observation time<input type="datetime-local" value={obsAt} onChange={(e) => setObsAt(e.target.value)} /></label>
-                            <label>GPS / position note<input value={obsGps} onChange={(e) => setObsGps(e.target.value)} placeholder="e.g. stood at anchor point, ±5 m" /></label>
-                            <label>Observed bank condition
-                              <select value={obsCondition} onChange={(e) => setObsCondition(e.target.value as BankCondition)}>
-                                <option value="erosion">Active erosion / fresh scarp</option>
-                                <option value="deposition">Fresh deposition</option>
-                                <option value="stable">Bank stable</option>
-                                <option value="uncertain">Uncertain / could not reach</option>
-                              </select>
-                            </label>
-                            <label>Photo reference<input value={obsPhoto} onChange={(e) => setObsPhoto(e.target.value)} placeholder="e.g. IMG_2041–2043 (field phone)" /></label>
+                        <div className="dd-obs-card dd-tasking-card">
+                          <div className="dd-obs-header">
+                            <div className="dd-obs-header-left">
+                              <span className="dd-obs-badge dd-tasking-badge">
+                                <ClipboardList size={12} /> PHASE 1 · LIFECYCLE TASKING &amp; DISPATCH
+                              </span>
+                              <h4 className="dd-obs-title">Task Verification or Triage</h4>
+                              <p className="dd-obs-subtitle">
+                                Assign field enumerator roles, schedule verification deadlines, or triage candidate <strong>{selId}</strong> for next satellite pass.
+                              </p>
+                            </div>
+                            <span className="dd-obs-target-pill">Status: {selRecord.status}</span>
                           </div>
-                          <button className="desk-btn primary" onClick={doObservation}>Record observation → OBSERVATION RECEIVED</button>
-                        </fieldset>
+
+                          <div className="dd-obs-grid">
+                            <div className="dd-field-group">
+                              <label className="dd-field-label">
+                                <span className="dd-fl-left">
+                                  <UserCheck size={14} className="dd-field-icon" /> Task Owner / Institutional Role
+                                </span>
+                              </label>
+                              <div className="dd-input-wrap">
+                                <input
+                                  type="text"
+                                  className="dd-field-input"
+                                  value={selRecord.owner}
+                                  onChange={(e) => patchRecord({ owner: e.target.value })}
+                                  placeholder="e.g. Upazila field officer / BWDB sub-divisional surveyor"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="dd-field-group">
+                              <label className="dd-field-label">
+                                <span className="dd-fl-left">
+                                  <CalendarClock size={15} strokeWidth={2.2} className="dd-field-icon" /> Verification Deadline
+                                </span>
+                              </label>
+                              <div className="dd-input-wrap">
+                                <input
+                                  type="date"
+                                  className="dd-field-input dd-date-input"
+                                  value={selRecord.deadline}
+                                  onChange={(e) => patchRecord({ deadline: e.target.value })}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="dd-field-group dd-field-full">
+                              <label className="dd-field-label">
+                                <span className="dd-fl-left">
+                                  <AlertCircle size={14} className="dd-field-icon" /> Dismiss Reason (Required to Dismiss)
+                                </span>
+                              </label>
+                              <div className="dd-input-wrap">
+                                <input
+                                  type="text"
+                                  className="dd-field-input"
+                                  value={selRecord.dismissReason}
+                                  onChange={(e) => patchRecord({ dismissReason: e.target.value })}
+                                  placeholder="e.g. Re-flooded on next pass — stage emergence (resolves candidate)"
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="dd-tasking-footer">
+                            <button className="desk-btn primary" onClick={doTask}>
+                              <ClipboardList size={14} /> Task Field Verification
+                            </button>
+                            <button className="desk-btn secondary" onClick={doMonitor}>
+                              <Eye size={14} /> Monitor Next Pass
+                            </button>
+                            <button className="desk-btn ghost" onClick={doDismiss}>
+                              <X size={14} /> Dismiss Candidate
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="dd-obs-card">
+                          <div className="dd-obs-header">
+                            <div className="dd-obs-header-left">
+                              <span className="dd-obs-badge">
+                                <Radio size={12} className="dd-pulse-icon" /> PHASE 2 · GROUND-TRUTH FIELD OBSERVATION
+                              </span>
+                              <h4 className="dd-obs-title">Record a Field Observation</h4>
+                              <p className="dd-obs-subtitle">
+                                Input verified physical bank condition notes &amp; photos to close candidate <strong>{selId}</strong>.
+                              </p>
+                            </div>
+                            <span className="dd-obs-target-pill">Target Candidate: {selId}</span>
+                          </div>
+
+                          <div className="dd-obs-grid">
+                            <div className="dd-field-group">
+                              <label className="dd-field-label">
+                                <span className="dd-fl-left">
+                                  <UserCheck size={14} className="dd-field-icon" /> Observer Role
+                                </span>
+                                <span className="dd-field-req">Required</span>
+                              </label>
+                              <div className="dd-input-wrap">
+                                <input
+                                  type="text"
+                                  className="dd-field-input"
+                                  value={obsRole}
+                                  onChange={(e) => setObsRole(e.target.value)}
+                                  placeholder="e.g. NGO field enumerator / BWDB engineer"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="dd-field-group">
+                              <label className="dd-field-label">
+                                <span className="dd-fl-left">
+                                  <CalendarClock size={15} strokeWidth={2.2} className="dd-field-icon" /> Observation Time
+                                </span>
+                              </label>
+                              <div className="dd-input-wrap">
+                                <input
+                                  type="datetime-local"
+                                  className="dd-field-input dd-date-input"
+                                  value={obsAt}
+                                  onChange={(e) => setObsAt(e.target.value)}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="dd-field-group">
+                              <label className="dd-field-label">
+                                <span className="dd-fl-left">
+                                  <MapPin size={14} className="dd-field-icon" /> GPS / Position Note
+                                </span>
+                              </label>
+                              <div className="dd-input-wrap">
+                                <input
+                                  type="text"
+                                  className="dd-field-input"
+                                  value={obsGps}
+                                  onChange={(e) => setObsGps(e.target.value)}
+                                  placeholder="e.g. Stood at anchor point, ±5 m"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="dd-field-group">
+                              <label className="dd-field-label">
+                                <span className="dd-fl-left">
+                                  <Compass size={14} className="dd-field-icon" /> Observed Bank Condition
+                                </span>
+                              </label>
+                              <div className="dd-input-wrap dd-select-wrap">
+                                <select
+                                  className="dd-field-select"
+                                  value={obsCondition}
+                                  onChange={(e) => setObsCondition(e.target.value as BankCondition)}
+                                >
+                                  <option value="erosion">Active erosion / fresh scarp</option>
+                                  <option value="deposition">Fresh deposition</option>
+                                  <option value="stable">Bank stable</option>
+                                  <option value="uncertain">Uncertain / could not reach</option>
+                                </select>
+                              </div>
+                            </div>
+
+                            <div className="dd-field-group dd-field-full">
+                              <label className="dd-field-label">
+                                <span className="dd-fl-left">
+                                  <Camera size={14} className="dd-field-icon" /> Photo Reference / Survey Tag
+                                </span>
+                              </label>
+                              <div className="dd-input-wrap">
+                                <input
+                                  type="text"
+                                  className="dd-field-input"
+                                  value={obsPhoto}
+                                  onChange={(e) => setObsPhoto(e.target.value)}
+                                  placeholder="e.g. IMG_2041–2043 (field phone survey brief)"
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="dd-obs-footer">
+                            <button
+                              type="button"
+                              className="dd-obs-submit-btn"
+                              onClick={doObservation}
+                            >
+                              <Send size={15} />
+                              <span>Record Observation</span>
+                              <span className="dd-btn-tag">→ OBSERVATION RECEIVED</span>
+                            </button>
+                          </div>
+                        </div>
                       </>
                     )}
                     {selRecord.status === 'OBSERVATION_RECEIVED' && selRecord.observation && (
-                      <fieldset className="dd-obs-form">
-                        <legend>Observation on record — awaiting review</legend>
-                        <p className="dd-obs-summary">
-                          {selRecord.observation.observerRole} · {formatDate(selRecord.observation.observedAt)} · bank condition: <b>{selRecord.observation.bankCondition}</b>
-                          {selRecord.observation.gpsNote && <> · {selRecord.observation.gpsNote}</>}
-                          {selRecord.observation.photoRef && <> · photos: {selRecord.observation.photoRef}</>}
-                        </p>
-                        <div className="dd-tasking-fields">
-                          <label>Reviewer conclusion
-                            <select value={revConclusion} onChange={(e) => setRevConclusion(e.target.value as ReviewConclusion)}>
-                              <option value="CORROBORATES">Corroborates the candidate</option>
-                              <option value="CONTRADICTS">Contradicts the candidate</option>
-                              <option value="UNRESOLVED">Unresolved — keep monitoring</option>
-                            </select>
-                          </label>
-                          <label>Reviewer role (required)<input value={revRole} onChange={(e) => setRevRole(e.target.value)} placeholder="e.g. BWDB sub-divisional engineer" /></label>
-                          <label>Reason (required)<input value={revReason} onChange={(e) => setRevReason(e.target.value)} placeholder="what in the observation decides it" /></label>
+                      <div className="dd-obs-card is-review">
+                        <div className="dd-obs-header">
+                          <div className="dd-obs-header-left">
+                            <span className="dd-obs-badge is-review">
+                              <ShieldCheck size={12} /> OBSERVATION ON RECORD
+                            </span>
+                            <h4 className="dd-obs-title">Observation Awaiting Review</h4>
+                            <p className="dd-obs-subtitle">
+                              Recorded by <strong>{selRecord.observation.observerRole}</strong> at {formatDate(selRecord.observation.observedAt)}.
+                            </p>
+                          </div>
+                          <span className="dd-obs-target-pill is-review">Condition: {selRecord.observation.bankCondition.toUpperCase()}</span>
                         </div>
-                        <button className="desk-btn primary" onClick={doReview}>Record review</button>
-                      </fieldset>
+
+                        <div className="dd-obs-summary-box">
+                          <div className="dd-obs-summary-item">
+                            <span>Observer:</span>
+                            <strong>{selRecord.observation.observerRole}</strong>
+                          </div>
+                          <div className="dd-obs-summary-item">
+                            <span>Condition:</span>
+                            <strong className={`status-${selRecord.observation.bankCondition}`}>{selRecord.observation.bankCondition}</strong>
+                          </div>
+                          {selRecord.observation.gpsNote && (
+                            <div className="dd-obs-summary-item">
+                              <span>GPS Note:</span>
+                              <strong>{selRecord.observation.gpsNote}</strong>
+                            </div>
+                          )}
+                          {selRecord.observation.photoRef && (
+                            <div className="dd-obs-summary-item">
+                              <span>Photos:</span>
+                              <strong>{selRecord.observation.photoRef}</strong>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="dd-obs-grid">
+                          <div className="dd-field-group">
+                            <label className="dd-field-label">
+                              <span className="dd-fl-left">Reviewer Conclusion</span>
+                            </label>
+                            <div className="dd-input-wrap dd-select-wrap">
+                              <select
+                                className="dd-field-select"
+                                value={revConclusion}
+                                onChange={(e) => setRevConclusion(e.target.value as ReviewConclusion)}
+                              >
+                                <option value="CORROBORATES">Corroborates the candidate</option>
+                                <option value="CONTRADICTS">Contradicts the candidate</option>
+                                <option value="UNRESOLVED">Unresolved — keep monitoring</option>
+                              </select>
+                            </div>
+                          </div>
+                          <div className="dd-field-group">
+                            <label className="dd-field-label">
+                              <span className="dd-fl-left">Reviewer Role</span>
+                              <span className="dd-field-req">Required</span>
+                            </label>
+                            <input
+                              type="text"
+                              className="dd-field-input"
+                              value={revRole}
+                              onChange={(e) => setRevRole(e.target.value)}
+                              placeholder="e.g. BWDB sub-divisional engineer"
+                            />
+                          </div>
+                          <div className="dd-field-group dd-field-full">
+                            <label className="dd-field-label">
+                              <span className="dd-fl-left">Reason / Decision Basis</span>
+                              <span className="dd-field-req">Required</span>
+                            </label>
+                            <input
+                              type="text"
+                              className="dd-field-input"
+                              value={revReason}
+                              onChange={(e) => setRevReason(e.target.value)}
+                              placeholder="What in the field observation decides this conclusion?"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="dd-obs-footer">
+                          <button
+                            type="button"
+                            className="dd-obs-submit-btn"
+                            onClick={doReview}
+                          >
+                            <Check size={15} />
+                            <span>Confirm &amp; Record Review</span>
+                          </button>
+                        </div>
+                      </div>
                     )}
                     {(selRecord.status === 'VERIFIED' || selRecord.status === 'REJECTED') && (
                       <div className="dd-closed">
@@ -1433,9 +1674,21 @@ export function DecisionDesk() {
                   </div>
 
                   <div className="dd4-audit">
-                    <strong>AUDIT LOG ({audit.length} entr{audit.length === 1 ? 'y' : 'ies'}) — local to this browser, labelled local-only</strong>
-                    {audit.length === 0 ? <p>No lifecycle decisions recorded yet in this browser.</p> : (
-                      <ul>{audit.slice(0, 30).map((a, i) => <li key={i}>{a.ts} · {a.featureId} · {a.action} · {a.detail}</li>)}</ul>
+                    <strong className="dd4-audit-header">
+                      <ShieldAlert size={13} />
+                      AUDIT LOG ({audit.length} entr{audit.length === 1 ? 'y' : 'ies'}) — local to this browser, labelled local-only
+                    </strong>
+                    {audit.length === 0 ? <p className="dd4-audit-empty">No lifecycle decisions recorded yet in this browser.</p> : (
+                      <ul className="dd4-audit-list">
+                        {audit.slice(0, 30).map((a, i) => (
+                          <li key={i} className="dd4-audit-item">
+                            <span className="dd4-audit-ts">{a.ts}</span>
+                            <span className="dd4-audit-id">{a.featureId}</span>
+                            <span className="dd4-audit-action">{a.action}</span>
+                            <span className="dd4-audit-detail">{a.detail}</span>
+                          </li>
+                        ))}
+                      </ul>
                     )}
                   </div>
                 </div>
@@ -1986,34 +2239,26 @@ export function DecisionDesk() {
               </div>
 
               <div className="dd4-modal-footer">
-                <div className="dd4-sm-footer-left">
-                  <button
-                    className="btn-manifest"
-                    onClick={() => {
-                      const target = siteModalSite;
-                      setSiteModalSite(null);
-                      selectSite(target, true);
-                    }}
-                  >
-                    <Layers3 size={15} /> Open In Evidence &amp; Map
-                  </button>
-                  <button
-                    className="desk-btn secondary"
-                    onClick={() => {
-                      setSelectedSiteId(siteModalSite.id);
-                      setRightTab('pack');
-                      setView('field');
-                      setSiteModalSite(null);
-                    }}
-                  >
-                    <FileJson2 size={14} /> View Field Pack
-                  </button>
-                </div>
                 <button
-                  className="btn-close-modal"
-                  onClick={() => setSiteModalSite(null)}
+                  className="desk-btn secondary"
+                  onClick={() => {
+                    setSelectedSiteId(siteModalSite.id);
+                    setRightTab('pack');
+                    setView('field');
+                    setSiteModalSite(null);
+                  }}
                 >
-                  Close Dossier
+                  <FileJson2 size={14} /> View Field Pack
+                </button>
+                <button
+                  className="btn-manifest"
+                  onClick={() => {
+                    const target = siteModalSite;
+                    setSiteModalSite(null);
+                    selectSite(target, true);
+                  }}
+                >
+                  <Layers3 size={15} /> Open In Evidence &amp; Map
                 </button>
               </div>
             </div>
