@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  ArrowUpRight, Check, ChevronRight, ClipboardList, Copy, Crosshair, FileJson2,
-  Layers3, MapPin, Package, Pause, Play, Printer, ShieldAlert, Waves, Eye,
+  AlertCircle, ArrowUpRight, CalendarClock, Camera, Check, ChevronLeft, ChevronRight, ClipboardList,
+  Compass, Copy, Crosshair, FileJson2, Layers3, LayoutGrid, MapPin, Package,
+  Pause, Play, Printer, Radio, Send, ShieldAlert, ShieldCheck, Waves, Eye,
+  Sparkles, Table2, UserCheck, X,
 } from 'lucide-react';
 import { Navbar } from '../components/Navbar';
 import { DecisionMap, featureCentroid } from '../map/DecisionMap';
@@ -87,8 +89,8 @@ function download(filename: string, text: string, type: string) {
 }
 const downloadJson = (filename: string, data: unknown) => download(filename, JSON.stringify(data, null, 2), 'application/json');
 const QC_STYLE: Record<string, string> = { FAIL: 'fail', WARN: 'warn', INFO: 'info', PASS: 'pass', NOT_EVALUATED: 'off' };
-function Stamp({ kind, children }: { kind: 'real' | 'derived' | 'estimated' | 'context'; children: string }) {
-  return <span className={`dd-stamp is-${kind}`}>{children}</span>;
+function Stamp({ kind, children, title }: { kind: 'real' | 'derived' | 'estimated' | 'context'; children: string; title?: string }) {
+  return <span className={`dd-stamp is-${kind}`} title={title}>{children}</span>;
 }
 type PrintTarget = 'brief' | 'pack' | 'bulletin';
 
@@ -120,6 +122,16 @@ export function DecisionDesk() {
   const [rightTab, setRightTab] = useState<'evidence' | 'field' | 'pack' | 'bulletin'>('evidence');
   const [siteQuery, setSiteQuery] = useState('');
   const [verdictOpen, setVerdictOpen] = useState(false);
+  const [scienceModalOpen, setScienceModalOpen] = useState(false);
+  const [scienceModalTab, setScienceModalTab] = useState<'telemetry' | 'qc' | 'ethics'>('telemetry');
+  // Investigation Sites table, pagination & modal states
+  const [siteViewMode, setSiteViewMode] = useState<'table' | 'grid'>('table');
+  const [sitePage, setSitePage] = useState(1);
+  const [siteModalSite, setSiteModalSite] = useState<InvestigationSite | null>(null);
+  const [siteStatusFilter, setSiteStatusFilter] = useState<'all' | 'unreviewed' | 'workflow' | 'verified'>('all');
+  const [siteSortBy, setSiteSortBy] = useState<'area' | 'id' | 'members'>('area');
+  const [siteSortDir, setSiteSortDir] = useState<'asc' | 'desc'>('desc');
+  const [copiedGps, setCopiedGps] = useState(false);
   // V4 page chrome: one focused view at a time (previous-web pattern)
   const [view, setView] = useState<'overview' | 'map' | 'sites' | 'evidence' | 'field' | 'bulletin'>('overview');
   // drawer form drafts
@@ -184,6 +196,13 @@ export function DecisionDesk() {
     setRevConclusion('CORROBORATES'); setRevRole(''); setRevReason('');
   }, [selId]);
 
+  // auto-dismiss toast notice after 3.2s
+  useEffect(() => {
+    if (!notice) return;
+    const t = window.setTimeout(() => setNotice(''), 3200);
+    return () => window.clearTimeout(t);
+  }, [notice]);
+
   const firstDate = bundle?.reach.dates[0]?.date ?? '';
   const lastDate = bundle?.reach.dates[bundle.reach.dates.length - 1]?.date ?? '';
   const passDates = useMemo(() => bundle?.reach.dates.filter((item) => item.status === 'ok').map((item) => item.date) ?? [], [bundle]);
@@ -212,6 +231,40 @@ export function DecisionDesk() {
   const verifiedCount = candidates.filter((f) => statusOf(f) === 'VERIFIED').length;
   const erosionCount = bundle?.erosion?.features.length ?? 0;
   const accretionCount = bundle?.accretion?.features.length ?? 0;
+
+  // Investigation Sites filtering, sorting and 10-per-page pagination
+  const filteredSites = useMemo(() => {
+    let list = sitesByArea.filter((s) => {
+      const q = siteQuery.trim().toLowerCase();
+      const matchesQ = !q || s.id.toLowerCase().includes(q) || s.reachPart.toLowerCase().includes(q) || s.anchorId.toLowerCase().includes(q);
+      if (!matchesQ) return false;
+
+      const verifiedInSite = s.members.filter((f) => statusOf(f) === 'VERIFIED').length;
+      const taskedInSite = s.members.filter((f) => statusOf(f) !== 'UNREVIEWED').length;
+
+      if (siteStatusFilter === 'verified') return verifiedInSite > 0;
+      if (siteStatusFilter === 'workflow') return taskedInSite > 0 && verifiedInSite === 0;
+      if (siteStatusFilter === 'unreviewed') return taskedInSite === 0;
+      return true;
+    });
+
+    list = [...list].sort((a, b) => {
+      let cmp = 0;
+      if (siteSortBy === 'area') cmp = a.totalArea - b.totalArea;
+      else if (siteSortBy === 'id') cmp = a.id.localeCompare(b.id);
+      else if (siteSortBy === 'members') cmp = a.members.length - b.members.length;
+      return siteSortDir === 'desc' ? -cmp : cmp;
+    });
+
+    return list;
+  }, [sitesByArea, siteQuery, siteStatusFilter, siteSortBy, siteSortDir, records]);
+
+  const SITES_PER_PAGE = 10;
+  const totalSitePages = Math.max(1, Math.ceil(filteredSites.length / SITES_PER_PAGE));
+  const pagedSites = useMemo(() => {
+    const start = (sitePage - 1) * SITES_PER_PAGE;
+    return filteredSites.slice(start, start + SITES_PER_PAGE);
+  }, [filteredSites, sitePage]);
 
   // ±1 dB slider: piecewise-linear reading of the manifest's published sensitivity
   // triple (low @ −1 dB, value @ 0, high @ +1 dB). A reading aid, NOT a re-run.
@@ -406,9 +459,9 @@ export function DecisionDesk() {
 
   const selMaturity = candidateMaturity(selRecord, qcChecks, formatDate(nextPass));
 
-  // Judge view: a 30-second guided walk over real page state — no demo data.
+  // Guided Walkthrough: 60-second guided walk over real page state — no demo data.
   const judgeTopSite = sitesByArea[0] ?? null;
-  const judgeGo = (step: number) => {
+  const tourGo = (step: number) => {
     setJudgeStep(step);
     if (step === 1) { setVerdictOpen(true); setView('overview'); scrollTo('desk-hero'); }
     if (step === 2 && judgeTopSite) {
@@ -421,11 +474,22 @@ export function DecisionDesk() {
     }
     if (step === 3) { setView('field'); setRightTab('pack'); }
   };
-  const JUDGE_CAPTIONS = [
-    '',
-    '1 · The stage story — stage moved between the two passes, so the verdict is INCONCLUSIVE and the desk refuses the word “erosion”.',
-    '2 · One investigation site — candidates grouped into a named place a field team can actually visit, with every member id preserved.',
-    '3 · The artefact — a printable Investigation Pack: coordinates, stage context, maturity, ground-truth checklist. Evidence leaves as a document, not a screenshot.',
+  const TOUR_STEPS = [
+    {
+      badge: 'Step 1 of 3 · Science Integrity',
+      title: '1 · Radar Observation & Scientific Verdict',
+      text: 'Between Aug 26 and Sep 19 (24 days), NISAR L-band SAR mapped water transitions over Jamuna. Because river stage fell between passes (exposing sandbars), FluviSAR scientifically marks this pair as INCONCLUSIVE—guarding against false erosion alerts.',
+    },
+    {
+      badge: 'Step 2 of 3 · Candidate Triage',
+      title: '2 · Spatial Prioritization & Sites',
+      text: '4,571 raw transition polygons are filtered and synthesized into 24 actionable investigation sites. Field teams and disaster managers receive clustered GPS anchors with area rankings rather than raw pixel noise.',
+    },
+    {
+      badge: 'Step 3 of 3 · Ground-Truth Action',
+      title: '3 · Actionable Field Verification Pack',
+      text: 'Satellite radar is a screening tool, not a final verdict. FluviSAR generates printable Investigation Packs and standard TRACE Field JSON handoffs for on-the-ground boat and UAV verification teams.',
+    },
   ];
 
   if (error) return <div className="desk-page"><Navbar transparent={false} /><main className="desk-standby error"><ShieldAlert size={30} /><h1>Investigation unavailable</h1><p>{error}</p><a href="/methods">Open methods and data sources <ChevronRight size={14} /></a></main></div>;
@@ -449,8 +513,8 @@ export function DecisionDesk() {
             </div>
             <p className="dd4-mission">Where should we look next?</p>
             <h1 className="dd4-headline">
-              <span className="dd4-headline-main">Separating the river falling</span><br />
-              <span className="dd4-headline-accent">from the bank failing.</span>
+              <span className="dd4-headline-main">Separating The River Falling</span><br />
+              <span className="dd4-headline-accent">From The Bank Failing.</span>
             </h1>
             <p className="dd4-deck">
               Between the two NISAR passes the Jamuna’s stage moved and its bars emerged — most apparent change in
@@ -460,8 +524,52 @@ export function DecisionDesk() {
               any of them erosion until evidence — not area — says so. <strong>None justify action on radar alone.</strong>
             </p>
             <div className="dd4-hero-actions">
-              <button className="dd4-cta-primary" onClick={() => { setView('map'); scrollTo('desk-switcher'); }}>Open the map</button>
-              <button className="dd4-cta-ghost" onClick={() => judgeGo(1)}>Judge view · 30 seconds</button>
+              <button className="dd4-cta-primary" onClick={() => { setView('map'); scrollTo('desk-switcher'); }}>
+                <Layers3 size={17} /> Open the map
+              </button>
+              <button className="dd4-cta-tour" onClick={() => tourGo(1)} aria-label="Start interactive 60 second tour">
+                <span className="dd4-tour-pulse-ring"><Play size={12} fill="currentColor" /></span>
+                <span>Quick Tour (60s)</span>
+              </button>
+              <button className="dd4-cta-science" onClick={() => setScienceModalOpen(true)} aria-label="Open scientific telemetry modal">
+                <Sparkles size={15} />
+                <span>Deep-Dive Science ↗</span>
+              </button>
+            </div>
+
+            {/* Progressive Disclosure: High-level Mission Status & Science Summary */}
+            <div className="dd4-summary-card">
+              <div className="dd4-summary-head">
+                <div className="dd4-summary-status">
+                  <span className="desk-verdict-pulse"><i /></span>
+                  <span className="dd4-summary-status-tag">EVIDENCE INTEGRITY VERDICT: <strong>{bundle.reach.verdict}</strong></span>
+                </div>
+                <button
+                  className="dd4-summary-expand-btn"
+                  onClick={() => setScienceModalOpen(true)}
+                  type="button"
+                >
+                  Inspect Full Telemetry &amp; QC Specs <ArrowUpRight size={13} />
+                </button>
+              </div>
+
+              <div className="dd4-summary-grid">
+                <div className="dd4-summary-col">
+                  <span className="dd4-sc-badge is-pass">● SENSOR READY</span>
+                  <strong>NISAR SAR Acquisition</strong>
+                  <p>24cm L-Band HH active radar. Cloud &amp; forest canopy penetration across Jamuna reach.</p>
+                </div>
+                <div className="dd4-summary-col">
+                  <span className="dd4-sc-badge is-warn">▲ INCONCLUSIVE</span>
+                  <strong>Stage Mismatch Gate</strong>
+                  <p>River stage proxy fell between Aug 26 &amp; Sep 19. Sandbar emergence mimics bank erosion.</p>
+                </div>
+                <div className="dd4-summary-col">
+                  <span className="dd4-sc-badge is-action">◆ ACTION</span>
+                  <strong>24 Ground-Truth Sites</strong>
+                  <p>Synthesized GPS investigation anchors ready for local boat and UAV verification.</p>
+                </div>
+              </div>
             </div>
             <div className="dd4-hero-meta">
               <button className={`dd4-verdict-chip ${verdictOpen ? 'open' : ''}`} onClick={() => setVerdictOpen(!verdictOpen)} aria-expanded={verdictOpen} aria-haspopup="true">
@@ -470,22 +578,33 @@ export function DecisionDesk() {
                 <ChevronRight size={13} className="dd4-chip-caret" />
               </button>
               <span className="dd4-hero-verdict-line">Bundle run verdict: {bundle.reach.verdict} · {failedChecks} check failed · {warningChecks} warned · {notEvaluated} not evaluated. Safe to task. Unsafe to conclude.</span>
+
+              {verdictOpen && (
+                <div className="dd4-verdict-pop" role="dialog" aria-label="Evidence verdict — this run">
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                    <div className="desk-verdict-head"><span className="desk-verdict-pulse"><i /></span>EVIDENCE VERDICT · THIS RUN</div>
+                    <button
+                      type="button"
+                      onClick={() => setVerdictOpen(false)}
+                      style={{ background: 'transparent', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
+                      aria-label="Close verdict details"
+                    >
+                      <X size={15} />
+                    </button>
+                  </div>
+                  <div className="dd-verdict-word">STAGE-CONFOUNDED PAIR</div>
+                  <div className="dd-allowed">
+                    <div><strong>ALLOWED NOW</strong><span>Task field verification of the investigation sites · compare against historic banklines · carry the OPERA DSWx layer (17 Jun 2026) as pre-pair context only</span></div>
+                    <div><strong>NOT ALLOWED</strong><span>Publish a candidate area as erosion fact · claim displacement or loss · trigger a response from this map alone</span></div>
+                    <div><strong>RESOLVES IT</strong><span>Next same-track pass ({formatDate(nextPass)}) at comparable stage, with Sentinel-1 as tie-breaker — persistence separates emergence from bank loss</span></div>
+                  </div>
+                  <div className="dd4-pop-foot">
+                    <div className="desk-verdict-meta"><span>{taskedCount}/24 screening candidates tasked or beyond</span><span>bundle frozen {formatDate(bundle.manifest.generated_at.slice(0, 10).replace(/-/g, ''))}</span></div>
+                    <button className="desk-btn slim" onClick={() => { setVerdictOpen(false); setView('overview'); window.setTimeout(() => scrollTo('desk-hydro'), 60); }}>Why we can’t conclude <ArrowUpRight size={13} /></button>
+                  </div>
+                </div>
+              )}
             </div>
-            {verdictOpen && (
-              <div className="dd4-verdict-pop" role="dialog" aria-label="Evidence verdict — this run">
-                <div className="desk-verdict-head"><span className="desk-verdict-pulse"><i /></span>EVIDENCE VERDICT · THIS RUN</div>
-                <div className="dd-verdict-word">STAGE-CONFOUNDED PAIR</div>
-                <div className="dd-allowed">
-                  <div><strong>ALLOWED NOW</strong><span>Task field verification of the investigation sites · compare against historic banklines · carry the OPERA DSWx layer (17 Jun 2026) as pre-pair context only</span></div>
-                  <div><strong>NOT ALLOWED</strong><span>Publish a candidate area as erosion fact · claim displacement or loss · trigger a response from this map alone</span></div>
-                  <div><strong>RESOLVES IT</strong><span>Next same-track pass ({formatDate(nextPass)}) at comparable stage, with Sentinel-1 as tie-breaker — persistence separates emergence from bank loss</span></div>
-                </div>
-                <div className="dd4-pop-foot">
-                  <div className="desk-verdict-meta"><span>{taskedCount}/24 screening candidates tasked or beyond</span><span>bundle frozen {formatDate(bundle.manifest.generated_at.slice(0, 10).replace(/-/g, ''))}</span></div>
-                  <button className="desk-btn slim" onClick={() => { setVerdictOpen(false); setView('overview'); window.setTimeout(() => scrollTo('desk-hydro'), 60); }}>Why we can’t conclude <ArrowUpRight size={13} /></button>
-                </div>
-              </div>
-            )}
             <div className="dd4-hero-numbers" aria-label="Qualified headline numbers">
               <div className="dd-num">
                 <strong>24</strong><span>FIELD PRIORITIES</span>
@@ -524,28 +643,58 @@ export function DecisionDesk() {
               <button key={id} role="tab" aria-selected={view === id} className={`dd4-pill ${view === id ? 'active' : ''}`} onClick={() => setView(id)}>{label}</button>
             ))}
           </div>
-          <span className="dd4-switcher-note">ONE VIEW AT A TIME · {sites.length} SITES · {candidates.length.toLocaleString()} CANDIDATES</span>
+
+          <div className="dd4-switcher-right">
+            <button
+              className="dd4-switcher-tour-btn"
+              onClick={() => tourGo(1)}
+              title="Launch 60-second guided walkthrough"
+              type="button"
+            >
+              <Play size={11} fill="currentColor" />
+              <span>Quick Tour (60s)</span>
+            </button>
+            <button
+              className="dd4-switcher-science-btn"
+              onClick={() => setScienceModalOpen(true)}
+              title="Open full scientific telemetry & QC gates"
+              type="button"
+            >
+              <Sparkles size={11} />
+              <span>Science Specs ↗</span>
+            </button>
+            <span className="dd4-switcher-note">{sites.length} SITES · {candidates.length.toLocaleString()} CANDIDATES</span>
+          </div>
         </nav>
 
         {/* ════ 3 · Overview view ════ */}
         {view === 'overview' && (
           <section className="dd4-view dd4-view-overview" aria-label="Overview">
             <div className="dd4-persona-row">
-              <div className="dd4-persona-copy">
-                <span className="dd4-ps-label">YOUR JOB HERE</span>
-                <strong>{personaDef.job}</strong>
-                <span className="dd4-ps-actions">{personaDef.actions.join('  ·  ')}</span>
-              </div>
-              <div className="dd4-persona-side">
+              <div className="dd4-persona-top">
+                <div className="dd4-ps-header">
+                  <span className="dd4-ps-label">OPERATIONAL ROLE / PERSPECTIVE</span>
+                  <span className="dd4-ps-role-tag">Active Mode: <strong>{personaDef.label}</strong></span>
+                </div>
                 <div className="dd4-seg" role="tablist" aria-label="Choose your desk">
                   {PERSONAS.map((p) => (
                     <button key={p.id} role="tab" aria-selected={persona === p.id} className={persona === p.id ? 'active' : ''} onClick={() => setPersona(p.id)}>
-                      {p.label}{p.labelBn ? <small>{p.labelBn}</small> : null}
+                      {p.label}
                     </button>
                   ))}
                 </div>
-                <button className="desk-btn primary" onClick={personaExport}><Printer size={13} /> {personaDef.exportLabel}</button>
-                <small className="dd4-ps-note">{personaDef.sliceNote}</small>
+              </div>
+
+              <div className="dd4-persona-detail">
+                <div className="dd4-persona-copy">
+                  <span className="dd4-ps-label">YOUR MISSION PROFILE</span>
+                  <strong>{personaDef.job}</strong>
+                  <span className="dd4-ps-actions">{personaDef.actions.join('  ·  ')}</span>
+                </div>
+                <div className="dd4-persona-actions">
+                  <button className="desk-btn primary" onClick={personaExport}><Printer size={13} /> {personaDef.exportLabel}</button>
+                  <small className="dd4-ps-note">{personaDef.sliceNote}</small>
+                </div>
               </div>
             </div>
 
@@ -642,8 +791,8 @@ export function DecisionDesk() {
               </div>
               <div className="dd4-threshold">
                 <div className="dd4-threshold-head">
-                  <span>THRESHOLD SENSITIVITY · TOUCH THE UNCERTAINTY</span>
-                  <Stamp kind="derived">DERIVED · reading of the manifest range, not a re-run</Stamp>
+                  <span>THRESHOLD SENSITIVITY</span>
+                  <Stamp kind="derived" title="Reading of the manifest range, not a re-run">DERIVED · MANIFEST</Stamp>
                 </div>
                 <label htmlFor="dd-threshold-slider">Water threshold perturbation <strong>{thresholdDb > 0 ? '+' : ''}{thresholdDb.toFixed(1)} dB</strong></label>
                 <input id="dd-threshold-slider" type="range" min={-1} max={1} step={0.1} value={thresholdDb} onChange={(e) => setThresholdDb(Number(e.target.value))} />
@@ -695,14 +844,139 @@ export function DecisionDesk() {
 
             {leftTab === 'sites' && (
               <>
-                <div className="desk-search dd4-search"><input value={siteQuery} onChange={(e) => setSiteQuery(e.target.value)} placeholder="Search sites — id, reach, anchor…" aria-label="Search investigation sites" /></div>
-                <div className="dd4-site-grid">
-                  {sitesByArea
-                    .filter((s) => {
-                      const q = siteQuery.trim().toLowerCase();
-                      return !q || s.id.toLowerCase().includes(q) || s.reachPart.toLowerCase().includes(q) || s.anchorId.toLowerCase().includes(q);
-                    })
-                    .map((site, i) => {
+                <div className="dd4-sites-toolbar">
+                  <div className="dd4-sites-filters">
+                    <div className="desk-search dd4-search-inline">
+                      <input
+                        value={siteQuery}
+                        onChange={(e) => { setSiteQuery(e.target.value); setSitePage(1); }}
+                        placeholder="Search sites — ID, reach, anchor, GPS…"
+                        aria-label="Filter investigation sites"
+                      />
+                    </div>
+                    <div className="dd4-status-filter-pills" role="radiogroup" aria-label="Status filter">
+                      {(['all', 'unreviewed', 'workflow', 'verified'] as const).map((filter) => (
+                        <button
+                          key={filter}
+                          type="button"
+                          className={`dd4-filter-pill ${siteStatusFilter === filter ? 'active' : ''}`}
+                          onClick={() => { setSiteStatusFilter(filter); setSitePage(1); }}
+                        >
+                          {filter === 'all' && `All (${sites.length})`}
+                          {filter === 'unreviewed' && `Unreviewed (${sites.filter(s => s.members.every(f => statusOf(f) === 'UNREVIEWED')).length})`}
+                          {filter === 'workflow' && `In Workflow (${sites.filter(s => s.members.some(f => statusOf(f) !== 'UNREVIEWED') && s.members.every(f => statusOf(f) !== 'VERIFIED')).length})`}
+                          {filter === 'verified' && `Verified (${sites.filter(s => s.members.some(f => statusOf(f) === 'VERIFIED')).length})`}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="dd4-sites-view-toggle">
+                    <button
+                      type="button"
+                      className={`dd4-toggle-btn ${siteViewMode === 'table' ? 'active' : ''}`}
+                      onClick={() => setSiteViewMode('table')}
+                      title="Switch to Table View"
+                    >
+                      <Table2 size={13} />
+                      <span>Table</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`dd4-toggle-btn ${siteViewMode === 'grid' ? 'active' : ''}`}
+                      onClick={() => setSiteViewMode('grid')}
+                      title="Switch to Card Grid View"
+                    >
+                      <LayoutGrid size={13} />
+                      <span>Grid</span>
+                    </button>
+                  </div>
+                </div>
+
+                {siteViewMode === 'table' ? (
+                  <div className="dd4-table-wrapper">
+                    <table className="dd4-sites-table" aria-label="Investigation Sites Table">
+                      <thead>
+                        <tr>
+                          <th onClick={() => { setSiteSortBy('id'); setSiteSortDir(siteSortDir === 'asc' ? 'desc' : 'asc'); }} className="sortable">
+                            Site ID {siteSortBy === 'id' && (siteSortDir === 'asc' ? '↑' : '↓')}
+                          </th>
+                          <th>River Reach</th>
+                          <th onClick={() => { setSiteSortBy('area'); setSiteSortDir(siteSortDir === 'asc' ? 'desc' : 'asc'); }} className="sortable">
+                            Grouped Area {siteSortBy === 'area' && (siteSortDir === 'asc' ? '↑' : '↓')}
+                          </th>
+                          <th onClick={() => { setSiteSortBy('members'); setSiteSortDir(siteSortDir === 'asc' ? 'desc' : 'asc'); }} className="sortable">
+                            Polygons {siteSortBy === 'members' && (siteSortDir === 'asc' ? '↑' : '↓')}
+                          </th>
+                          <th>Field Anchor &amp; GPS</th>
+                          <th>Verification Status</th>
+                          <th style={{ textAlign: 'right' }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pagedSites.map((site) => {
+                          const verifiedInSite = site.members.filter((f) => statusOf(f) === 'VERIFIED').length;
+                          const taskedInSite = site.members.filter((f) => statusOf(f) !== 'UNREVIEWED').length;
+                          const statusLabel = verifiedInSite > 0 ? `${verifiedInSite} VERIFIED` : taskedInSite > 0 ? 'IN WORKFLOW' : 'UNREVIEWED';
+                          const statusClass = verifiedInSite > 0 ? 'is-pass' : taskedInSite > 0 ? 'is-warn' : 'is-off';
+
+                          return (
+                            <tr
+                              key={site.id}
+                              onClick={() => setSiteModalSite(site)}
+                              className="dd4-table-row"
+                              title="Click row to open site details popup"
+                            >
+                              <td>
+                                <div className="dd4-t-site-id">
+                                  <span className="dd4-t-dot" />
+                                  <strong>{site.id}</strong>
+                                </div>
+                              </td>
+                              <td>
+                                <span className="dd4-t-reach">{site.reachPart}</span>
+                              </td>
+                              <td>
+                                <span className="dd4-t-area">{formatNumber(site.totalArea)} <small>ha</small></span>
+                              </td>
+                              <td>
+                                <div className="dd4-t-members">
+                                  <span>{site.members.length} polygons</span>
+                                  <small>{site.erosionCount} L→W · {site.accretionCount} W→L</small>
+                                </div>
+                              </td>
+                              <td>
+                                <div className="dd4-t-anchor">
+                                  <span>{formatCoord(site.centroid)}</span>
+                                  <small>Anchor {site.anchorId}</small>
+                                </div>
+                              </td>
+                              <td>
+                                <span className={`dd4-t-badge ${statusClass}`}>
+                                  {statusLabel}
+                                </span>
+                              </td>
+                              <td style={{ textAlign: 'right' }}>
+                                <button
+                                  type="button"
+                                  className="dd4-t-action-btn"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSiteModalSite(site);
+                                  }}
+                                >
+                                  <span>Details</span> <ArrowUpRight size={13} />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="dd4-site-grid">
+                    {pagedSites.map((site, i) => {
                       const verifiedInSite = site.members.filter((f) => statusOf(f) === 'VERIFIED').length;
                       const taskedInSite = site.members.filter((f) => statusOf(f) !== 'UNREVIEWED').length;
                       const anchorStatus = statusOf(site.members.find((f) => String(f.properties.id) === site.anchorId) ?? site.members[0]);
@@ -711,7 +985,7 @@ export function DecisionDesk() {
                       return (
                         <article key={site.id} className={`dd4-site-card ${selSite?.id === site.id ? 'selected' : ''}`} style={{ ['--i' as string]: i }}>
                           <span className="dd4-site-strip" style={{ background: stripColor }} aria-hidden="true" />
-                          <button className="dd4-site-main" onClick={() => selectSite(site)}>
+                          <button className="dd4-site-main" onClick={() => setSiteModalSite(site)}>
                             <span className="dd4-site-top">
                               <strong className="dd4-site-id">{site.id}</strong>
                               <span className="dd4-site-verdict" style={{ color: stripColor, borderColor: `${stripColor}66`, background: `${stripColor}14` }}>{verifiedInSite > 0 ? `${verifiedInSite} VERIFIED` : taskedInSite > 0 ? 'IN WORKFLOW' : 'UNREVIEWED'}</span>
@@ -721,7 +995,7 @@ export function DecisionDesk() {
                             <span className="dd4-site-meta">{site.members.length} candidates · {site.erosionCount} land→water · {site.accretionCount} water→land</span>
                             <span className="dd4-site-meta">anchor {site.anchorId} · {formatCoord(site.centroid)}</span>
                             <span className="dd4-site-maturity">{maturityHeadline(records[site.anchorId] ?? EMPTY_RECORD)} · anchor status: {STATUS_LABEL[persona][anchorStatus]}</span>
-                            <span className="dd4-site-cta">Open evidence <ChevronRight size={13} /></span>
+                            <span className="dd4-site-cta">Inspect Details <ArrowUpRight size={13} /></span>
                           </button>
                           <button className="dd4-site-expand" onClick={() => setExpandedSite(open ? null : site.id)} aria-expanded={open}>
                             {open ? 'Hide members' : `Members (${site.members.length})`}
@@ -742,10 +1016,52 @@ export function DecisionDesk() {
                         </article>
                       );
                     })}
-                </div>
-                {sitesByArea.filter((s) => { const q = siteQuery.trim().toLowerCase(); return !q || s.id.toLowerCase().includes(q) || s.reachPart.toLowerCase().includes(q) || s.anchorId.toLowerCase().includes(q); }).length === 0 && (
-                  <p className="dd4-empty">No site matches “{siteQuery}”.</p>
+                  </div>
                 )}
+
+                {filteredSites.length === 0 && (
+                  <p className="dd4-empty">No investigation site matches your filter.</p>
+                )}
+
+                {/* Pagination Controls */}
+                <div className="dd4-pagination">
+                  <span className="dd4-page-info">
+                    Showing <strong>{filteredSites.length === 0 ? 0 : (sitePage - 1) * SITES_PER_PAGE + 1}</strong>–<strong>{Math.min(sitePage * SITES_PER_PAGE, filteredSites.length)}</strong> of <strong>{filteredSites.length}</strong> sites
+                  </span>
+
+                  <div className="dd4-page-controls">
+                    <button
+                      type="button"
+                      className="dd4-page-btn"
+                      disabled={sitePage <= 1}
+                      onClick={() => setSitePage((p) => Math.max(1, p - 1))}
+                      aria-label="Previous page"
+                    >
+                      <ChevronLeft size={14} /> Previous
+                    </button>
+
+                    {Array.from({ length: totalSitePages }, (_, idx) => idx + 1).map((pg) => (
+                      <button
+                        key={pg}
+                        type="button"
+                        className={`dd4-page-num ${sitePage === pg ? 'active' : ''}`}
+                        onClick={() => setSitePage(pg)}
+                      >
+                        {pg}
+                      </button>
+                    ))}
+
+                    <button
+                      type="button"
+                      className="dd4-page-btn"
+                      disabled={sitePage >= totalSitePages}
+                      onClick={() => setSitePage((p) => Math.min(totalSitePages, p + 1))}
+                      aria-label="Next page"
+                    >
+                      Next <ChevronRight size={14} />
+                    </button>
+                  </div>
+                </div>
                 <div className="dd4-sites-foot">
                   <span><strong>{verifiedCount}</strong> candidates field-verified (reviewed)</span>
                   <span><strong>{taskedCount}/24</strong> screening candidates tasked or beyond</span>
@@ -1038,64 +1354,304 @@ export function DecisionDesk() {
 
                 <div className="dd4-panel dd4-field-panel">
                   <div className="dd-lifecycle">
-                    <strong>FIELD VERIFICATION · {selId}</strong>
-                    <p className="dd-lifecycle-flow">
-                      UNREVIEWED → TASKED → MONITORING → OBSERVATION RECEIVED → REVIEWED → VERIFIED / REJECTED / back to MONITORING.
-                      A field visit records an observation; only a reviewer’s recorded conclusion can verify. There is no one-click verify on this desk.
-                    </p>
+                    <strong className="dd-lifecycle-title"><ClipboardList size={15} /> FIELD VERIFICATION · {selId}</strong>
+                    <div className="dd-lifecycle-flow">
+                      <code>UNREVIEWED → TASKED → MONITORING → OBSERVATION RECEIVED → REVIEWED → VERIFIED / REJECTED / back to MONITORING</code>
+                      <span>A field visit records an observation; only a reviewer’s recorded conclusion can verify. There is no one-click verify on this desk.</span>
+                    </div>
                     {(selRecord.status === 'UNREVIEWED' || selRecord.status === 'TASKED' || selRecord.status === 'MONITORING') && (
                       <>
-                        <div className="dd-tasking-fields">
-                          <label>Owner / role<input value={selRecord.owner} onChange={(e) => patchRecord({ owner: e.target.value })} placeholder="e.g. Upazila field officer (role, not a name)" /></label>
-                          <label>Deadline<input type="date" value={selRecord.deadline} onChange={(e) => patchRecord({ deadline: e.target.value })} /></label>
-                          <label>Dismiss reason (required to dismiss)<input value={selRecord.dismissReason} onChange={(e) => patchRecord({ dismissReason: e.target.value })} placeholder="e.g. re-flooded on next pass — stage emergence" /></label>
-                        </div>
-                        <div className="dd-tasking-actions">
-                          <button className="desk-btn primary" onClick={doTask}><ClipboardList size={13} /> Task field verification</button>
-                          <button className="desk-btn" onClick={doMonitor}>Monitor next pass</button>
-                          <button className="desk-btn" onClick={doDismiss}>Dismiss</button>
-                        </div>
-                        <fieldset className="dd-obs-form">
-                          <legend>Record a field observation</legend>
-                          <div className="dd-tasking-fields">
-                            <label>Observer role (required)<input value={obsRole} onChange={(e) => setObsRole(e.target.value)} placeholder="e.g. NGO field enumerator" /></label>
-                            <label>Observation time<input type="datetime-local" value={obsAt} onChange={(e) => setObsAt(e.target.value)} /></label>
-                            <label>GPS / position note<input value={obsGps} onChange={(e) => setObsGps(e.target.value)} placeholder="e.g. stood at anchor point, ±5 m" /></label>
-                            <label>Observed bank condition
-                              <select value={obsCondition} onChange={(e) => setObsCondition(e.target.value as BankCondition)}>
-                                <option value="erosion">Active erosion / fresh scarp</option>
-                                <option value="deposition">Fresh deposition</option>
-                                <option value="stable">Bank stable</option>
-                                <option value="uncertain">Uncertain / could not reach</option>
-                              </select>
-                            </label>
-                            <label>Photo reference<input value={obsPhoto} onChange={(e) => setObsPhoto(e.target.value)} placeholder="e.g. IMG_2041–2043 (field phone)" /></label>
+                        <div className="dd-obs-card dd-tasking-card">
+                          <div className="dd-obs-header">
+                            <div className="dd-obs-header-left">
+                              <span className="dd-obs-badge dd-tasking-badge">
+                                <ClipboardList size={12} /> PHASE 1 · LIFECYCLE TASKING &amp; DISPATCH
+                              </span>
+                              <h4 className="dd-obs-title">Task Verification or Triage</h4>
+                              <p className="dd-obs-subtitle">
+                                Assign field enumerator roles, schedule verification deadlines, or triage candidate <strong>{selId}</strong> for next satellite pass.
+                              </p>
+                            </div>
+                            <span className="dd-obs-target-pill">Status: {selRecord.status}</span>
                           </div>
-                          <button className="desk-btn primary" onClick={doObservation}>Record observation → OBSERVATION RECEIVED</button>
-                        </fieldset>
+
+                          <div className="dd-obs-grid">
+                            <div className="dd-field-group">
+                              <label className="dd-field-label">
+                                <span className="dd-fl-left">
+                                  <UserCheck size={14} className="dd-field-icon" /> Task Owner / Institutional Role
+                                </span>
+                              </label>
+                              <div className="dd-input-wrap">
+                                <input
+                                  type="text"
+                                  className="dd-field-input"
+                                  value={selRecord.owner}
+                                  onChange={(e) => patchRecord({ owner: e.target.value })}
+                                  placeholder="e.g. Upazila field officer / BWDB sub-divisional surveyor"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="dd-field-group">
+                              <label className="dd-field-label">
+                                <span className="dd-fl-left">
+                                  <CalendarClock size={15} strokeWidth={2.2} className="dd-field-icon" /> Verification Deadline
+                                </span>
+                              </label>
+                              <div className="dd-input-wrap">
+                                <input
+                                  type="date"
+                                  className="dd-field-input dd-date-input"
+                                  value={selRecord.deadline}
+                                  onChange={(e) => patchRecord({ deadline: e.target.value })}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="dd-field-group dd-field-full">
+                              <label className="dd-field-label">
+                                <span className="dd-fl-left">
+                                  <AlertCircle size={14} className="dd-field-icon" /> Dismiss Reason (Required to Dismiss)
+                                </span>
+                              </label>
+                              <div className="dd-input-wrap">
+                                <input
+                                  type="text"
+                                  className="dd-field-input"
+                                  value={selRecord.dismissReason}
+                                  onChange={(e) => patchRecord({ dismissReason: e.target.value })}
+                                  placeholder="e.g. Re-flooded on next pass — stage emergence (resolves candidate)"
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="dd-tasking-footer">
+                            <button className="desk-btn primary" onClick={doTask}>
+                              <ClipboardList size={14} /> Task Field Verification
+                            </button>
+                            <button className="desk-btn secondary" onClick={doMonitor}>
+                              <Eye size={14} /> Monitor Next Pass
+                            </button>
+                            <button className="desk-btn ghost" onClick={doDismiss}>
+                              <X size={14} /> Dismiss Candidate
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="dd-obs-card">
+                          <div className="dd-obs-header">
+                            <div className="dd-obs-header-left">
+                              <span className="dd-obs-badge">
+                                <Radio size={12} className="dd-pulse-icon" /> PHASE 2 · GROUND-TRUTH FIELD OBSERVATION
+                              </span>
+                              <h4 className="dd-obs-title">Record a Field Observation</h4>
+                              <p className="dd-obs-subtitle">
+                                Input verified physical bank condition notes &amp; photos to close candidate <strong>{selId}</strong>.
+                              </p>
+                            </div>
+                            <span className="dd-obs-target-pill">Target Candidate: {selId}</span>
+                          </div>
+
+                          <div className="dd-obs-grid">
+                            <div className="dd-field-group">
+                              <label className="dd-field-label">
+                                <span className="dd-fl-left">
+                                  <UserCheck size={14} className="dd-field-icon" /> Observer Role
+                                </span>
+                                <span className="dd-field-req">Required</span>
+                              </label>
+                              <div className="dd-input-wrap">
+                                <input
+                                  type="text"
+                                  className="dd-field-input"
+                                  value={obsRole}
+                                  onChange={(e) => setObsRole(e.target.value)}
+                                  placeholder="e.g. NGO field enumerator / BWDB engineer"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="dd-field-group">
+                              <label className="dd-field-label">
+                                <span className="dd-fl-left">
+                                  <CalendarClock size={15} strokeWidth={2.2} className="dd-field-icon" /> Observation Time
+                                </span>
+                              </label>
+                              <div className="dd-input-wrap">
+                                <input
+                                  type="datetime-local"
+                                  className="dd-field-input dd-date-input"
+                                  value={obsAt}
+                                  onChange={(e) => setObsAt(e.target.value)}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="dd-field-group">
+                              <label className="dd-field-label">
+                                <span className="dd-fl-left">
+                                  <MapPin size={14} className="dd-field-icon" /> GPS / Position Note
+                                </span>
+                              </label>
+                              <div className="dd-input-wrap">
+                                <input
+                                  type="text"
+                                  className="dd-field-input"
+                                  value={obsGps}
+                                  onChange={(e) => setObsGps(e.target.value)}
+                                  placeholder="e.g. Stood at anchor point, ±5 m"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="dd-field-group">
+                              <label className="dd-field-label">
+                                <span className="dd-fl-left">
+                                  <Compass size={14} className="dd-field-icon" /> Observed Bank Condition
+                                </span>
+                              </label>
+                              <div className="dd-input-wrap dd-select-wrap">
+                                <select
+                                  className="dd-field-select"
+                                  value={obsCondition}
+                                  onChange={(e) => setObsCondition(e.target.value as BankCondition)}
+                                >
+                                  <option value="erosion">Active erosion / fresh scarp</option>
+                                  <option value="deposition">Fresh deposition</option>
+                                  <option value="stable">Bank stable</option>
+                                  <option value="uncertain">Uncertain / could not reach</option>
+                                </select>
+                              </div>
+                            </div>
+
+                            <div className="dd-field-group dd-field-full">
+                              <label className="dd-field-label">
+                                <span className="dd-fl-left">
+                                  <Camera size={14} className="dd-field-icon" /> Photo Reference / Survey Tag
+                                </span>
+                              </label>
+                              <div className="dd-input-wrap">
+                                <input
+                                  type="text"
+                                  className="dd-field-input"
+                                  value={obsPhoto}
+                                  onChange={(e) => setObsPhoto(e.target.value)}
+                                  placeholder="e.g. IMG_2041–2043 (field phone survey brief)"
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="dd-obs-footer">
+                            <button
+                              type="button"
+                              className="dd-obs-submit-btn"
+                              onClick={doObservation}
+                            >
+                              <Send size={15} />
+                              <span>Record Observation</span>
+                              <span className="dd-btn-tag">→ OBSERVATION RECEIVED</span>
+                            </button>
+                          </div>
+                        </div>
                       </>
                     )}
                     {selRecord.status === 'OBSERVATION_RECEIVED' && selRecord.observation && (
-                      <fieldset className="dd-obs-form">
-                        <legend>Observation on record — awaiting review</legend>
-                        <p className="dd-obs-summary">
-                          {selRecord.observation.observerRole} · {formatDate(selRecord.observation.observedAt)} · bank condition: <b>{selRecord.observation.bankCondition}</b>
-                          {selRecord.observation.gpsNote && <> · {selRecord.observation.gpsNote}</>}
-                          {selRecord.observation.photoRef && <> · photos: {selRecord.observation.photoRef}</>}
-                        </p>
-                        <div className="dd-tasking-fields">
-                          <label>Reviewer conclusion
-                            <select value={revConclusion} onChange={(e) => setRevConclusion(e.target.value as ReviewConclusion)}>
-                              <option value="CORROBORATES">Corroborates the candidate</option>
-                              <option value="CONTRADICTS">Contradicts the candidate</option>
-                              <option value="UNRESOLVED">Unresolved — keep monitoring</option>
-                            </select>
-                          </label>
-                          <label>Reviewer role (required)<input value={revRole} onChange={(e) => setRevRole(e.target.value)} placeholder="e.g. BWDB sub-divisional engineer" /></label>
-                          <label>Reason (required)<input value={revReason} onChange={(e) => setRevReason(e.target.value)} placeholder="what in the observation decides it" /></label>
+                      <div className="dd-obs-card is-review">
+                        <div className="dd-obs-header">
+                          <div className="dd-obs-header-left">
+                            <span className="dd-obs-badge is-review">
+                              <ShieldCheck size={12} /> OBSERVATION ON RECORD
+                            </span>
+                            <h4 className="dd-obs-title">Observation Awaiting Review</h4>
+                            <p className="dd-obs-subtitle">
+                              Recorded by <strong>{selRecord.observation.observerRole}</strong> at {formatDate(selRecord.observation.observedAt)}.
+                            </p>
+                          </div>
+                          <span className="dd-obs-target-pill is-review">Condition: {selRecord.observation.bankCondition.toUpperCase()}</span>
                         </div>
-                        <button className="desk-btn primary" onClick={doReview}>Record review</button>
-                      </fieldset>
+
+                        <div className="dd-obs-summary-box">
+                          <div className="dd-obs-summary-item">
+                            <span>Observer:</span>
+                            <strong>{selRecord.observation.observerRole}</strong>
+                          </div>
+                          <div className="dd-obs-summary-item">
+                            <span>Condition:</span>
+                            <strong className={`status-${selRecord.observation.bankCondition}`}>{selRecord.observation.bankCondition}</strong>
+                          </div>
+                          {selRecord.observation.gpsNote && (
+                            <div className="dd-obs-summary-item">
+                              <span>GPS Note:</span>
+                              <strong>{selRecord.observation.gpsNote}</strong>
+                            </div>
+                          )}
+                          {selRecord.observation.photoRef && (
+                            <div className="dd-obs-summary-item">
+                              <span>Photos:</span>
+                              <strong>{selRecord.observation.photoRef}</strong>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="dd-obs-grid">
+                          <div className="dd-field-group">
+                            <label className="dd-field-label">
+                              <span className="dd-fl-left">Reviewer Conclusion</span>
+                            </label>
+                            <div className="dd-input-wrap dd-select-wrap">
+                              <select
+                                className="dd-field-select"
+                                value={revConclusion}
+                                onChange={(e) => setRevConclusion(e.target.value as ReviewConclusion)}
+                              >
+                                <option value="CORROBORATES">Corroborates the candidate</option>
+                                <option value="CONTRADICTS">Contradicts the candidate</option>
+                                <option value="UNRESOLVED">Unresolved — keep monitoring</option>
+                              </select>
+                            </div>
+                          </div>
+                          <div className="dd-field-group">
+                            <label className="dd-field-label">
+                              <span className="dd-fl-left">Reviewer Role</span>
+                              <span className="dd-field-req">Required</span>
+                            </label>
+                            <input
+                              type="text"
+                              className="dd-field-input"
+                              value={revRole}
+                              onChange={(e) => setRevRole(e.target.value)}
+                              placeholder="e.g. BWDB sub-divisional engineer"
+                            />
+                          </div>
+                          <div className="dd-field-group dd-field-full">
+                            <label className="dd-field-label">
+                              <span className="dd-fl-left">Reason / Decision Basis</span>
+                              <span className="dd-field-req">Required</span>
+                            </label>
+                            <input
+                              type="text"
+                              className="dd-field-input"
+                              value={revReason}
+                              onChange={(e) => setRevReason(e.target.value)}
+                              placeholder="What in the field observation decides this conclusion?"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="dd-obs-footer">
+                          <button
+                            type="button"
+                            className="dd-obs-submit-btn"
+                            onClick={doReview}
+                          >
+                            <Check size={15} />
+                            <span>Confirm &amp; Record Review</span>
+                          </button>
+                        </div>
+                      </div>
                     )}
                     {(selRecord.status === 'VERIFIED' || selRecord.status === 'REJECTED') && (
                       <div className="dd-closed">
@@ -1118,9 +1674,21 @@ export function DecisionDesk() {
                   </div>
 
                   <div className="dd4-audit">
-                    <strong>AUDIT LOG ({audit.length} entr{audit.length === 1 ? 'y' : 'ies'}) — local to this browser, labelled local-only</strong>
-                    {audit.length === 0 ? <p>No lifecycle decisions recorded yet in this browser.</p> : (
-                      <ul>{audit.slice(0, 30).map((a, i) => <li key={i}>{a.ts} · {a.featureId} · {a.action} · {a.detail}</li>)}</ul>
+                    <strong className="dd4-audit-header">
+                      <ShieldAlert size={13} />
+                      AUDIT LOG ({audit.length} entr{audit.length === 1 ? 'y' : 'ies'}) — local to this browser, labelled local-only
+                    </strong>
+                    {audit.length === 0 ? <p className="dd4-audit-empty">No lifecycle decisions recorded yet in this browser.</p> : (
+                      <ul className="dd4-audit-list">
+                        {audit.slice(0, 30).map((a, i) => (
+                          <li key={i} className="dd4-audit-item">
+                            <span className="dd4-audit-ts">{a.ts}</span>
+                            <span className="dd4-audit-id">{a.featureId}</span>
+                            <span className="dd4-audit-action">{a.action}</span>
+                            <span className="dd4-audit-detail">{a.detail}</span>
+                          </li>
+                        ))}
+                      </ul>
                     )}
                   </div>
                 </div>
@@ -1301,26 +1869,416 @@ export function DecisionDesk() {
           <a href="/methods">Methods &amp; provenance <ChevronRight size={13} /></a>
         </footer>
 
-        {/* ── Judge view bar ── */}
+        {/* ── Platform Tour HUD ── */}
         {judgeStep > 0 && (
-          <div className="dd-judgebar" role="note">
-            <span className="dd-judgebar-tag">JUDGE VIEW · 30-SECOND WALK · STEP {judgeStep}/3</span>
-            <p>{JUDGE_CAPTIONS[judgeStep]}</p>
-            <div className="dd-judgebar-actions">
-              <button className="desk-btn slim" disabled={judgeStep <= 1} onClick={() => judgeGo(judgeStep - 1)}>Back</button>
-              {judgeStep < 3
-                ? <button className="desk-btn slim primary" onClick={() => judgeGo(judgeStep + 1)}>Next</button>
-                : <button className="desk-btn slim primary" onClick={() => { setView('field'); setRightTab('pack'); if (selSite) printSheet('pack'); }}>Print the pack</button>}
-              <button className="desk-btn slim" onClick={() => setJudgeStep(0)}>Exit</button>
+          <div className="dd4-tour-hud" role="dialog" aria-label="Platform Tour">
+            <div className="dd4-tour-hud-header">
+              <div className="dd4-tour-hud-badge">
+                <span className="dd4-tour-pulse-dot" />
+                <span>PLATFORM WALKTHROUGH · {TOUR_STEPS[judgeStep - 1]?.badge}</span>
+              </div>
+              <div className="dd4-tour-hud-progress">
+                {[1, 2, 3].map((s) => (
+                  <span
+                    key={s}
+                    className={`dd4-tour-step-bar ${s === judgeStep ? 'active' : s < judgeStep ? 'done' : ''}`}
+                    onClick={() => tourGo(s)}
+                    title={`Go to step ${s}`}
+                  />
+                ))}
+              </div>
+              <button className="dd4-tour-hud-close" onClick={() => setJudgeStep(0)} aria-label="Close tour">
+                <X size={15} />
+              </button>
+            </div>
+
+            <div className="dd4-tour-hud-body">
+              <h4 className="dd4-tour-hud-title">{TOUR_STEPS[judgeStep - 1]?.title}</h4>
+              <p className="dd4-tour-hud-text">{TOUR_STEPS[judgeStep - 1]?.text}</p>
+            </div>
+
+            <div className="dd4-tour-hud-actions">
+              <button
+                className="desk-btn secondary"
+                disabled={judgeStep <= 1}
+                onClick={() => tourGo(judgeStep - 1)}
+              >
+                Previous
+              </button>
+              {judgeStep < 3 ? (
+                <button
+                  className="desk-btn primary"
+                  onClick={() => tourGo(judgeStep + 1)}
+                >
+                  Next Step <ChevronRight size={14} />
+                </button>
+              ) : (
+                <button
+                  className="desk-btn primary"
+                  onClick={() => {
+                    setView('field');
+                    setRightTab('pack');
+                    if (selSite) printSheet('pack');
+                  }}
+                >
+                  Print Field Pack <Printer size={14} />
+                </button>
+              )}
+              <button className="desk-btn ghost" onClick={() => setJudgeStep(0)}>
+                <X size={13} /> Exit Tour
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Deep-Dive Science Modal ── */}
+        {scienceModalOpen && (
+          <div
+            className="dd4-modal-backdrop"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setScienceModalOpen(false);
+            }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Scientific Telemetry and QC Gates"
+          >
+            <div className="dd4-modal">
+              <div className="dd4-modal-header">
+                <div>
+                  <div className="dd4-modal-kicker">SCIENTIFIC DOSSIER &amp; SENSOR TELEMETRY</div>
+                  <h3 className="dd4-modal-title">NISAR L-Band SAR Technical Integrity Audit</h3>
+                </div>
+                <button
+                  className="dd4-modal-close"
+                  onClick={() => setScienceModalOpen(false)}
+                  aria-label="Close modal"
+                >
+                  <X size={17} />
+                </button>
+              </div>
+
+              <div className="dd4-modal-tabs">
+                <button
+                  className={`dd4-modal-tab ${scienceModalTab === 'telemetry' ? 'active' : ''}`}
+                  onClick={() => setScienceModalTab('telemetry')}
+                >
+                  🛰️ Sensor &amp; Orbit Telemetry
+                </button>
+                <button
+                  className={`dd4-modal-tab ${scienceModalTab === 'qc' ? 'active' : ''}`}
+                  onClick={() => setScienceModalTab('qc')}
+                >
+                  🛡️ Quality Control (QC) Gates ({qcChecks.length})
+                </button>
+                <button
+                  className={`dd4-modal-tab ${scienceModalTab === 'ethics' ? 'active' : ''}`}
+                  onClick={() => setScienceModalTab('ethics')}
+                >
+                  📜 Operational Protocols &amp; Boundaries
+                </button>
+              </div>
+
+              <div className="dd4-modal-body">
+                {scienceModalTab === 'telemetry' && (
+                  <>
+                    <div className="dd4-modal-grid-2">
+                      <div className="dd4-modal-card">
+                        <div className="dd4-modal-card-label">Sensor &amp; Payload</div>
+                        <div className="dd4-modal-card-value">NISAR L-band SAR (1.25 GHz / 24 cm)</div>
+                        <div className="dd4-modal-card-desc">Active microwave sensing penetrates persistent monsoon clouds and canopy cover to detect water boundaries.</div>
+                      </div>
+                      <div className="dd4-modal-card">
+                        <div className="dd4-modal-card-label">Product Level &amp; CRID</div>
+                        <div className="dd4-modal-card-value">L3 GCOV · CRID P05023</div>
+                        <div className="dd4-modal-card-desc">Geocoded Polarimetric Covariance Matrix. Provisional calibrated release with ongoing calibration validation.</div>
+                      </div>
+                      <div className="dd4-modal-card">
+                        <div className="dd4-modal-card-label">Track &amp; Spatial Footprint</div>
+                        <div className="dd4-modal-card-value">Track {bundle.reach.track.relative_orbit} · Frame {bundle.reach.track.frame} · 30m Grid</div>
+                        <div className="dd4-modal-card-desc">Jamuna–Chilmari Reach AOI clipped to river corridor with Height Above Nearest Drainage (HAND) mask applied.</div>
+                      </div>
+                      <div className="dd4-modal-card">
+                        <div className="dd4-modal-card-label">Acquisition Pair &amp; Delta</div>
+                        <div className="dd4-modal-card-value">{formatDate(firstDate)} → {formatDate(lastDate)} ({pairWindow} Days)</div>
+                        <div className="dd4-modal-card-desc">Exact 2 orbital cycles (12-day repeat). Stage difference: proxy Δ0.039 between passes.</div>
+                      </div>
+                      <div className="dd4-modal-card">
+                        <div className="dd4-modal-card-label">Context Layer (OPERA DSWx-S1)</div>
+                        <div className="dd4-modal-card-value">17 Jun 2026 Sentinel-1 Dynamic Water</div>
+                        <div className="dd4-modal-card-desc">Predates NISAR pair by 2 months; provides independent hydrographic reference context without false same-date claims.</div>
+                      </div>
+                      <div className="dd4-modal-card">
+                        <div className="dd4-modal-card-label">Precipitation Context (GPM IMERG)</div>
+                        <div className="dd4-modal-card-value">{((bundle.manifest.parameters as Record<string, unknown>)?.rainfall_pre_t1_mm as string | number | undefined) ?? '64.48'} mm (1.72× baseline)</div>
+                        <div className="dd4-modal-card-desc">7-day antecedent rainfall prior to T1. Informational context explaining local water logging.</div>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {scienceModalTab === 'qc' && (
+                  <div style={{ display: 'grid', gap: '10px' }}>
+                    <div style={{ fontSize: '13px', color: 'var(--dd-text-2)', marginBottom: '4px' }}>
+                      Each check guards against false certainty. <strong>A single failed or unverified gate prevents automated erosion declarations.</strong>
+                    </div>
+                    {qcChecks.map((qc) => {
+                      const style = QC_STYLE[qc.status] || 'off';
+                      const blockReason = BLOCKS[qc.id] || qc.explanation;
+                      return (
+                        <div key={qc.id} className="dd4-modal-qc-row">
+                          <div>
+                            <div className="dd4-modal-qc-name">{qc.id}</div>
+                            {qc.value !== null && qc.value !== undefined && (
+                              <div style={{ fontSize: '10.5px', color: 'var(--dd-water)', fontFamily: 'var(--font-num, monospace)', marginTop: '2px' }}>
+                                {qc.value} {qc.unit ?? ''}
+                              </div>
+                            )}
+                          </div>
+                          <span className={`dd4-modal-qc-badge is-${style}`}>
+                            {qc.status}
+                          </span>
+                          <div className="dd4-modal-qc-desc">
+                            <strong>{qc.rule}:</strong> {blockReason}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {scienceModalTab === 'ethics' && (
+                  <div style={{ display: 'grid', gap: '16px' }}>
+                    <div className="dd4-modal-card" style={{ borderLeft: '3px solid #7fbf8e' }}>
+                      <div className="dd4-modal-card-label" style={{ color: '#7fbf8e' }}>ALLOWED OPERATIONAL USE</div>
+                      <ul style={{ margin: '8px 0 0', paddingLeft: '18px', fontSize: '13px', color: 'var(--dd-text)', lineHeight: '1.6' }}>
+                        <li>Tasking field verification teams and UAV operators to specific GPS cluster coordinates.</li>
+                        <li>Comparing mapped candidates against historic bankline records and CEGIS reference data.</li>
+                        <li>Using candidate surface area solely for spatial ranking and triage prior to next pass.</li>
+                        <li>Exporting standardized TRACE Field JSON case packets for field teams.</li>
+                      </ul>
+                    </div>
+
+                    <div className="dd4-modal-card" style={{ borderLeft: '3px solid #e4572e' }}>
+                      <div className="dd4-modal-card-label" style={{ color: '#e4572e' }}>STRICTLY PROHIBITED (UNSAFE TO CONCLUDE)</div>
+                      <ul style={{ margin: '8px 0 0', paddingLeft: '18px', fontSize: '13px', color: 'var(--dd-text)', lineHeight: '1.6' }}>
+                        <li>Publishing mapped candidate polygon area as verified land loss or confirmed erosion fact.</li>
+                        <li>Issuing automated public evacuation alerts or claiming verified displacement from radar alone.</li>
+                        <li>Treating OpenStreetMap ways as census counts of affected households.</li>
+                        <li>Using point estimates without publishing the ±1 dB sensitivity range (1,759–8,476 ha).</li>
+                      </ul>
+                    </div>
+
+                    <div className="dd4-modal-card" style={{ borderLeft: '3px solid #e0b34a' }}>
+                      <div className="dd4-modal-card-label" style={{ color: '#e0b34a' }}>VERIFICATION RESOLUTION PATHWAY</div>
+                      <p style={{ margin: '6px 0 0', fontSize: '13px', color: 'var(--dd-text-2)', lineHeight: '1.6' }}>
+                        The next same-track pass on <strong>{formatDate(nextPass)}</strong> at a comparable river stage, combined with Sentinel-1 tie-breakers and local ground truth, will resolve whether candidates persist as permanent bank loss or return to emergent sandbars.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="dd4-modal-footer">
+                <button
+                  className="btn-manifest"
+                  onClick={() => downloadJson(`jamuna_${bundle.reach.id}_manifest.json`, bundle.manifest)}
+                >
+                  <FileJson2 size={16} /> Download Science Manifest (JSON)
+                </button>
+                <button
+                  className="btn-close-modal"
+                  onClick={() => setScienceModalOpen(false)}
+                >
+                  <X size={15} /> Close Window
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Investigation Site Dossier Modal ── */}
+        {siteModalSite && (
+          <div
+            className="dd4-modal-backdrop"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setSiteModalSite(null);
+            }}
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Investigation Site Dossier ${siteModalSite.id}`}
+          >
+            <div className="dd4-modal dd4-site-modal">
+              <div className="dd4-modal-header">
+                <div>
+                  <div className="dd4-modal-kicker">INVESTIGATION SITE DOSSIER · JAMUNA REACH</div>
+                  <h3 className="dd4-modal-title">
+                    {siteModalSite.id} · <span style={{ color: 'var(--dd-water)', textTransform: 'uppercase' }}>{siteModalSite.reachPart}</span>
+                  </h3>
+                </div>
+                <button
+                  className="dd4-modal-close"
+                  onClick={() => setSiteModalSite(null)}
+                  aria-label="Close site dossier"
+                >
+                  <X size={17} />
+                </button>
+              </div>
+
+              <div className="dd4-modal-body">
+                {/* 4 Key Stat Cards */}
+                <div className="dd4-site-modal-stats">
+                  <div className="dd4-sm-card">
+                    <span className="dd4-sm-label">TOTAL GROUPED AREA</span>
+                    <strong className="dd4-sm-val">{formatNumber(siteModalSite.totalArea)} <small>ha</small></strong>
+                    <span className="dd4-sm-sub">
+                      {siteModalSite.erosionCount} Land→Water · {siteModalSite.accretionCount} Water→Land
+                    </span>
+                  </div>
+
+                  <div className="dd4-sm-card">
+                    <span className="dd4-sm-label">FIELD ANCHOR POLYGON</span>
+                    <strong className="dd4-sm-val">{siteModalSite.anchorId}</strong>
+                    <span className="dd4-sm-sub">
+                      Status: {STATUS_LABEL[persona][statusOf(siteModalSite.members.find((f) => String(f.properties.id) === siteModalSite.anchorId) ?? siteModalSite.members[0])]}
+                    </span>
+                  </div>
+
+                  <div className="dd4-sm-card">
+                    <span className="dd4-sm-label">GPS INVESTIGATION TARGET</span>
+                    <strong className="dd4-sm-val">{formatCoord(siteModalSite.centroid)}</strong>
+                    <button
+                      type="button"
+                      className={`dd4-sm-copy-btn ${copiedGps ? 'copied' : ''}`}
+                      onClick={() => {
+                        const coords = `${siteModalSite.centroid[1].toFixed(5)}, ${siteModalSite.centroid[0].toFixed(5)}`;
+                        navigator.clipboard?.writeText(coords);
+                        setCopiedGps(true);
+                        setNotice(`GPS target copied: ${coords}`);
+                        setNoticeOk(true);
+                        window.setTimeout(() => setCopiedGps(false), 2000);
+                      }}
+                      title="Copy GPS latitude, longitude"
+                    >
+                      {copiedGps ? (
+                        <>
+                          <Check size={12} /> Copied!
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={11} /> Copy Coordinates
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  <div className="dd4-sm-card">
+                    <span className="dd4-sm-label">CLUSTER RADIUS</span>
+                    <strong className="dd4-sm-val">2,000 m</strong>
+                    <span className="dd4-sm-sub">~1 Boat Landing + Walk</span>
+                  </div>
+                </div>
+
+                {/* Transition Polarity Distribution Bar */}
+                <div className="dd4-sm-breakdown">
+                  <div className="dd4-sm-bhead">
+                    <span>TRANSITION POLARITY RATIO</span>
+                    <span>{siteModalSite.members.length} Member Polygons Grouped</span>
+                  </div>
+                  <div className="dd4-sm-bar">
+                    <div
+                      className="dd4-sm-bar-erosion"
+                      style={{ width: `${Math.max(5, (siteModalSite.erosionArea / Math.max(0.1, siteModalSite.totalArea)) * 100)}%` }}
+                      title={`Land to Water: ${formatNumber(siteModalSite.erosionArea)} ha`}
+                    />
+                    <div
+                      className="dd4-sm-bar-accretion"
+                      style={{ width: `${Math.max(5, (siteModalSite.accretionArea / Math.max(0.1, siteModalSite.totalArea)) * 100)}%` }}
+                      title={`Water to Land: ${formatNumber(siteModalSite.accretionArea)} ha`}
+                    />
+                  </div>
+                  <div className="dd4-sm-blegend">
+                    <span className="is-erosion">● Land→Water: <strong>{formatNumber(siteModalSite.erosionArea)} ha</strong> ({siteModalSite.erosionCount} polygons)</span>
+                    <span className="is-accretion">● Water→Land: <strong>{formatNumber(siteModalSite.accretionArea)} ha</strong> ({siteModalSite.accretionCount} polygons)</span>
+                  </div>
+                </div>
+
+                {/* Member Candidates List */}
+                <div className="dd4-sm-members-section">
+                  <div className="dd4-sm-mhead">
+                    <h4>MEMBER CANDIDATES IN THIS SITE ({siteModalSite.members.length})</h4>
+                    <span className="dd4-sm-mnote">Click any candidate to inspect radar evidence</span>
+                  </div>
+                  <div className="dd4-sm-members-grid">
+                    {siteModalSite.members.map((f) => {
+                      const id = String(f.properties.id);
+                      const isAnchor = id === siteModalSite.anchorId;
+                      return (
+                        <div
+                          key={id}
+                          className="dd4-sm-member-row"
+                          onClick={() => {
+                            const targetSite = siteModalSite;
+                            setSiteModalSite(null);
+                            setSelectedSiteId(targetSite.id);
+                            focusCandidate(id, targetSite.id);
+                          }}
+                        >
+                          <div className="dd4-sm-m-left">
+                            <span className={`row-swatch ${f.properties.class}`} />
+                            <strong className="dd4-sm-m-id">{id}</strong>
+                            {isAnchor && <span className="dd4-sm-anchor-badge">ANCHOR</span>}
+                          </div>
+                          <span className="dd4-sm-m-area">{formatNumber(f.properties.area_ha, 2)} ha</span>
+                          <span className="dd4-sm-m-status">{STATUS_LABEL[persona][statusOf(f)]}</span>
+                          <span className="dd4-sm-m-inspect">Inspect →</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              <div className="dd4-modal-footer">
+                <button
+                  className="desk-btn secondary"
+                  onClick={() => {
+                    setSelectedSiteId(siteModalSite.id);
+                    setRightTab('pack');
+                    setView('field');
+                    setSiteModalSite(null);
+                  }}
+                >
+                  <FileJson2 size={14} /> View Field Pack
+                </button>
+                <button
+                  className="btn-manifest"
+                  onClick={() => {
+                    const target = siteModalSite;
+                    setSiteModalSite(null);
+                    selectSite(target, true);
+                  }}
+                >
+                  <Layers3 size={15} /> Open In Evidence &amp; Map
+                </button>
+              </div>
             </div>
           </div>
         )}
 
         {notice && (
-          <div className="desk-toast" role="status">
-            <i className={noticeOk ? 'ok' : 'bad'}>{noticeOk ? <Check size={13} /> : <ShieldAlert size={13} />}</i>
-            {notice}
-            <button onClick={() => setNotice('')} aria-label="Dismiss notice">×</button>
+          <div className={`desk-toast ${noticeOk ? 'is-ok' : 'is-bad'}`} role="status">
+            <span className="desk-toast-icon">
+              {noticeOk ? <Check size={14} strokeWidth={2.5} /> : <ShieldAlert size={14} strokeWidth={2.5} />}
+            </span>
+            <span className="desk-toast-msg">{notice}</span>
+            <button
+              type="button"
+              className="desk-toast-close"
+              onClick={() => setNotice('')}
+              aria-label="Dismiss notice"
+            >
+              <X size={13} strokeWidth={2.2} />
+            </button>
           </div>
         )}
       </main>
