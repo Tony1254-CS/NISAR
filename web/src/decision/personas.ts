@@ -64,13 +64,12 @@ export const PERSONAS: Persona[] = [
   },
   {
     id: 'char',
-    label: 'Union / Char Leader',
-    labelBn: 'ইউনিয়ন / চর নেতা',
+    label: 'Community Leader',
     job: 'Decide which places near the bank should be checked first, and what to prepare to move.',
     actions: [
       'নদীর পাড়ের সবচেয়ে বড় পরিবর্তনগুলো বড় অক্ষরে দেখুন — কোনো কারিগরি শব্দ ছাড়া।',
       'দুটি তারিখের রাডার ছবি মানচিত্রের ভেতরেই টেনে তুলনা করুন (সোয়াইপ)।',
-      'Community Evidence Bulletin ছাপুন — Union Parishad-এর জন্য, যাচাই ছাড়া কোনো সিদ্ধান্ত নয়।',
+      'Community Evidence Bulletin ছাপুন — Union Parishad ও স্থানীয় চরবাসীর জন্য, যাচাই ছাড়া কোনো সিদ্ধান্ত নয়।',
     ],
     exportLabel: 'Print Community Evidence Bulletin',
     sliceNote: 'Radar saw the water change. We are not sure yet the land is gone. A field check comes first — no jargon, no dB.',
